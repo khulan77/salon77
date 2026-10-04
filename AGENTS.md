@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## UI language
+
+All user-facing Salon77 text must be natural Mongolian Cyrillic by default, including validation, errors, accessibility labels, dates, role labels, and future modules. Keep code identifiers, database models/enums, routes, and developer documentation in English. Preserve brand names and machine-readable addresses when appropriate. Update language-sensitive tests alongside UI text changes.

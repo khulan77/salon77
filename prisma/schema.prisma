@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  SALON_OWNER
+  MANAGER
+  RECEPTIONIST
+  STAFF
+}
+
+enum SalonStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model User {
+  id           String        @id @db.Uuid
+  email        String        @unique
+  name         String?
+  isSuperAdmin Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  memberships  SalonMember[]
+}
+
+model Salon {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  phone       String
+  email       String?
+  instagram   String?
+  logoUrl     String?
+  coverUrl    String?
+  status      SalonStatus   @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  members     SalonMember[]
+  branches    Branch[]
+  invitations Invitation[]
+}
+
+model SalonMember {
+  id        String         @id @default(cuid())
+  salonId   String
+  userId    String         @db.Uuid
+  role      Role
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  salon     Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branches  MemberBranch[]
+
+  @@unique([salonId, userId])
+  @@unique([id, salonId])
+  @@index([userId, active])
+}
+
+model Branch {
+  id          String             @id @default(cuid())
+  salonId     String
+  name        String
+  district    String
+  address     String
+  phone       String
+  latitude    Float?
+  longitude   Float?
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  salon       Salon              @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  members     MemberBranch[]
+  invitations InvitationBranch[]
+
+  @@unique([id, salonId])
+  @@index([salonId, active])
+}
+
+model MemberBranch {
+  memberId String
+  branchId String
+  salonId  String
+  member   SalonMember @relation(fields: [memberId, salonId], references: [id, salonId], onDelete: Cascade)
+  branch   Branch      @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@id([memberId, branchId])
+}
+
+model Invitation {
+  id         String             @id @default(cuid())
+  salonId    String
+  name       String
+  email      String
+  role       Role
+  tokenHash  String             @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime           @default(now())
+  salon      Salon              @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  branches   InvitationBranch[]
+
+  @@unique([id, salonId])
+  @@index([salonId, email])
+}
+
+model InvitationBranch {
+  invitationId String
+  branchId     String
+  salonId      String
+  invitation   Invitation @relation(fields: [invitationId, salonId], references: [id, salonId], onDelete: Cascade)
+  branch       Branch     @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@id([invitationId, branchId])
+}
