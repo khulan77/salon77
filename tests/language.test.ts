@@ -13,9 +13,9 @@ import {
 } from "../lib/ui-language";
 
 test("role labels are Mongolian without changing internal role values", () => {
-  assert.equal(roleLabel("SALON_OWNER"), "Салоны эзэн");
+  assert.equal(roleLabel("SALON_OWNER"), "Эзэмшигч");
   assert.equal(roleLabel("MANAGER"), "Менежер");
-  assert.equal(roleLabel("RECEPTIONIST"), "Угтах ажилтан");
+  assert.equal(roleLabel("RECEPTIONIST"), "Ресепшн");
   assert.equal(roleLabel("STAFF"), "Ажилтан");
   assert.equal(roleLabel("SUPER_ADMIN"), "Системийн админ");
   assert.equal(roleLabel("UNKNOWN"), "Тодорхойгүй эрх");

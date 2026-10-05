@@ -2,9 +2,9 @@ import type { z } from "zod";
 
 const roleLabels: Record<string, string> = {
   SUPER_ADMIN: "Системийн админ",
-  SALON_OWNER: "Салоны эзэн",
+  SALON_OWNER: "Эзэмшигч",
   MANAGER: "Менежер",
-  RECEPTIONIST: "Угтах ажилтан",
+  RECEPTIONIST: "Ресепшн",
   STAFF: "Ажилтан",
 };
 export function roleLabel(role: string) {
@@ -19,6 +19,23 @@ export function userFacingError(error: unknown, fallback: string) {
 }
 
 const fieldLabels: Record<string, string> = {
+  categoryId: "Ангилал",
+  priceMnt: "Үнэ",
+  durationMinutes: "Хугацаа",
+  sortOrder: "Эрэмбэ",
+  title: "Албан тушаал",
+  bio: "Товч танилцуулга",
+  memberId: "Гишүүн",
+  serviceIds: "Үйлчилгээнүүд",
+  staffId: "Ажилтан",
+  branchId: "Салбар",
+  dayOfWeek: "Гараг",
+  startMinute: "Эхлэх цаг",
+  endMinute: "Дуусах цаг",
+  startsAt: "Эхлэх хугацаа",
+  endsAt: "Дуусах хугацаа",
+  reason: "Шалтгаан",
+  breaks: "Завсарлага",
   name: "Нэр",
   district: "Дүүрэг",
   address: "Хаяг",
@@ -47,14 +64,16 @@ export function validationMessage(issue: z.core.$ZodIssue) {
       return `${field}: доод тал нь ${issue.minimum} тэмдэгт оруулна уу.`;
     case "too_big":
       if (issue.origin === "array")
-        return `Хамгийн ихдээ ${issue.maximum} салбар сонгоно уу.`;
+        return `${field}: хамгийн ихдээ ${issue.maximum} сонголт зөвшөөрнө.`;
       if (issue.origin === "number")
         return `${field}: ${issue.maximum}-аас ихгүй утга оруулна уу.`;
       return `${field}: ${issue.maximum}-аас ихгүй тэмдэгт оруулна уу.`;
     case "invalid_format":
       return issue.format === "email"
         ? "Зөв имэйл хаяг оруулна уу."
-        : "Цахим хаягт латин жижиг үсэг, тоо, дан зураас ашиглана уу.";
+        : issue.path.at(-1) === "slug"
+          ? "Цахим хаягт латин жижиг үсэг, тоо, дан зураас ашиглана уу."
+          : `${field}: зөв хэлбэрээр оруулна уу.`;
     case "invalid_value":
       return `${field}: жагсаалтаас зөв утга сонгоно уу.`;
     case "unrecognized_keys":

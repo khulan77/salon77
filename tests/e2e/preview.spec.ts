@@ -92,15 +92,15 @@ test("preview APIs reject writes and external origins", async ({
     (await request.delete("/api/branches?id=another-salon")).status(),
   ).toBe(405);
 });
-test("team draft never claims to send an invitation", async ({ page }) => {
+test("preview invitations do not pretend to send email", async ({ page }) => {
   await page.goto("/team");
   await page.getByRole("button", { name: "Гишүүн урих" }).click();
   await expect(
     page.getByText(
-      "Урилга ноорог хэлбэрээр хадгалагдана. Имэйл илгээхгүй, нэвтрэх эрх үүсэхгүй.",
+      "Имэйл илгээх үйлчилгээ хараахан холбогдоогүй. Урилга үүсгэсний дараа хөгжүүлэлтийн холбоосыг зөвхөн танд харуулна.",
     ),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Ноорог хадгалах" }),
+    page.getByRole("button", { name: "Урилга үүсгэх" }),
   ).toBeDisabled();
 });

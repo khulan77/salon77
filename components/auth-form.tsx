@@ -11,9 +11,11 @@ import { Button } from "./ui/button";
 export function AuthForm({
   signup,
   configured,
+  next = "/",
 }: {
   signup: boolean;
   configured: boolean;
+  next?: string;
 }) {
   const [state, action, pending] = useActionState(authenticate, {});
   return (
@@ -69,6 +71,7 @@ export function AuthForm({
             onInputCapture={clearFieldValidity}
             action={action}
           >
+            <input type="hidden" name="next" value={next} />
             <input
               type="hidden"
               name="mode"
@@ -115,7 +118,9 @@ export function AuthForm({
           </form>
           <div className="auth-switch">
             {signup ? "Бүртгэлтэй юу?" : "Salon77-д шинээр нэгдэх үү?"}{" "}
-            <Link href={signup ? "/sign-in" : "/sign-up"}>
+            <Link
+              href={`${signup ? "/sign-in" : "/sign-up"}?next=${encodeURIComponent(next)}`}
+            >
               {signup ? "Нэвтрэх" : "Бүртгүүлэх"}
             </Link>
           </div>

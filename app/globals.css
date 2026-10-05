@@ -2119,3 +2119,117 @@ legend {
 .native-dialog .form-dialog {
   max-width: 100%;
 }
+
+.feature-toolbar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.feature-toolbar .field {
+  min-width: 160px;
+  margin-bottom: 0;
+}
+.category-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.service-price {
+  font-size: 22px;
+  font-weight: 500;
+  margin: 15px 0;
+}
+.service-price span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  margin-left: 10px;
+  color: #8c789c;
+}
+.field-hint {
+  font-size: 10px;
+  color: #94829f;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+.notice input[readonly] {
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .feature-toolbar .field {
+    flex: 1;
+    min-width: 135px;
+  }
+  .heading-controls {
+    flex-wrap: wrap;
+  }
+}
+
+.schedule-week {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr));
+  gap: 16px;
+}
+.schedule-day {
+  padding: 20px;
+  min-width: 0;
+}
+.schedule-day h2 {
+  font-size: 15px;
+  margin-bottom: 16px;
+}
+.schedule-period + .schedule-period {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+.schedule-period p {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.schedule-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.time-off-panel {
+  margin-top: 24px;
+  padding: 24px;
+}
+.time-off-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.time-off-row p {
+  margin-top: 6px;
+}
+.break-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.break-row .field {
+  flex: 1;
+  min-width: 0;
+}
+.break-row input {
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .time-off-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .time-off-panel {
+    padding: 18px;
+  }
+}

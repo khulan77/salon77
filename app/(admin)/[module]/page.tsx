@@ -1,3 +1,13 @@
+import { StaffDirectory } from "@/components/staff-directory";
+import { StaffSchedules } from "@/components/staff-schedules";
+import { readStaff, readSchedules } from "@/lib/services/staff";
+import { moduleAllowed } from "@/lib/access";
+import { ServiceCatalog } from "@/components/service-catalog";
+import { configured } from "@/lib/env";
+import { db } from "@/lib/db";
+import { membership } from "@/lib/auth";
+import { actorFromMember } from "@/lib/access";
+import { readCatalog } from "@/lib/services/catalog";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
@@ -22,8 +32,10 @@ const descriptions: Record<string, string> = {
 };
 export default async function Page({
   params,
+  searchParams,
 }: {
   params: Promise<{ module: string }>;
+  searchParams: Promise<{ staffId?: string }>;
 }) {
   const { module } = await params;
   const item = navigation
@@ -31,8 +43,46 @@ export default async function Page({
     .find((i) => i.href === `/${module}`);
   if (!item) notFound();
   const data = await adminData();
+  if (!moduleAllowed(data.role, `/${module}`))
+    return (
+      <section className="panel empty-page">
+        <h1>Хандах эрхгүй</h1>
+        <p>Энэ хэсэгт хандах эрхгүй байна.</p>
+        <Link href="/">Хяналтын самбарт буцах</Link>
+      </section>
+    );
   if (module === "branches") return <Branches data={data} />;
   if (module === "team") return <Team data={data} />;
+  if (module === "services")
+    return (
+      <ServiceCatalog
+        data={data}
+        catalog={
+          configured
+            ? await readCatalog(db, actorFromMember(await membership()))
+            : { categories: [], services: [] }
+        }
+      />
+    );
+  if (module === "employees") {
+    const actor = configured ? actorFromMember(await membership()) : null;
+    const [staff, catalog] = actor
+      ? await Promise.all([readStaff(db, actor), readCatalog(db, actor)])
+      : [[], { services: [], categories: [] }];
+    return <StaffDirectory data={data} staff={staff} catalog={catalog} />;
+  }
+  if (module === "schedules")
+    return (
+      <StaffSchedules
+        data={data}
+        schedule={
+          configured
+            ? await readSchedules(db, actorFromMember(await membership()))
+            : { staff: [], hours: [], timeOff: [] }
+        }
+        initialStaff={(await searchParams).staffId}
+      />
+    );
   return (
     <>
       <div className="page-heading">

@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { validationMessage } from "./ui-language";
-import { HttpError } from "./auth";
+import { HttpError } from "./errors";
 export function sameOrigin(request: Request) {
   // Next may construct request.url with an internal hostname behind a proxy.
   // Host is browser-controlled only through the target URL, unlike arbitrary
@@ -28,6 +28,17 @@ export function failure(error: unknown) {
   )
     return Response.json(
       { error: "Энэ хаяг эсвэл бүртгэл өмнө нь үүссэн байна." },
+      { status: 409 },
+    );
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    ["P2034", "P2003", "P2004"].includes(error.code)
+  )
+    return Response.json(
+      {
+        error:
+          "Мэдээлэл өөрчлөгдсөн эсвэл давхцаж байна. Хуудсаа шинэчлээд дахин оролдоно уу.",
+      },
       { status: 409 },
     );
   console.error(

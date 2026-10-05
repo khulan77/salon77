@@ -1,53 +1,46 @@
-import { createHash, randomBytes } from "node:crypto";
-import { tenant, HttpError } from "@/lib/auth";
+import { tenant } from "@/lib/auth";
+import { actorFromMember } from "@/lib/access";
 import { db } from "@/lib/db";
-import { inviteSchema } from "@/lib/validation";
 import { failure, sameOrigin } from "@/lib/http";
+import {
+  createInvitation,
+  cancelInvitation,
+  recordId,
+} from "@/lib/services/team";
+import { HttpError } from "@/lib/errors";
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const member = await tenant();
-    const input = inviteSchema.parse(await request.json());
-    const ids = [...new Set(input.branchIds)];
-    const result = await db.$transaction(async (tx) => {
-      const count = await tx.branch.count({
-        where: { id: { in: ids }, salonId: member.salonId, active: true },
-      });
-      if (count !== ids.length)
-        throw new HttpError(
-          400,
-          "Өөрийн салоны идэвхтэй салбаруудаас сонгоно уу.",
-        );
-      // Persist only a token hash. Delivery and verified-email acceptance ship together later.
-      const tokenHash = createHash("sha256")
-        .update(randomBytes(32))
-        .digest("hex");
-      return tx.invitation.create({
-        data: {
-          salonId: member.salonId,
-          name: input.name,
-          email: input.email,
-          role: input.role,
-          tokenHash,
-          expiresAt: new Date(Date.now() + 7 * 86400000),
-          branches: {
-            create: ids.map((branchId) => ({
-              branchId,
-              salonId: member.salonId,
-            })),
-          },
-        },
-        select: { id: true },
-      });
-    });
+    const actor = actorFromMember(await tenant());
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.ALLOW_DEVELOPMENT_INVITE_LINKS !== "true"
+    )
+      throw new HttpError(
+        503,
+        "Имэйл илгээлт тохируулагдаагүй байна. Админ туршилтын холбоосын горимыг идэвхжүүлэх шаардлагатай.",
+      );
+    const result = await createInvitation(db, actor, await request.json());
     return Response.json(
       {
-        ...result,
+        id: result.id,
+        invitePath: `/invite?token=${result.token}`,
         message:
-          "Урилгын нооргийг хадгаллаа. Илгээх боломж хараахан нээгдээгүй байна.",
+          "Урилга үүслээ. Туршилтын горим: имэйл илгээгээгүй. Холбоосыг зөвхөн уригдсан хүнд дамжуулна уу.",
       },
-      { status: 201 },
+      { status: 201, headers: { "Cache-Control": "no-store" } },
     );
+  } catch (e) {
+    return failure(e);
+  }
+}
+export async function PATCH(request: Request) {
+  try {
+    sameOrigin(request);
+    const actor = actorFromMember(await tenant());
+    const id = recordId.parse(new URL(request.url).searchParams.get("id"));
+    await cancelInvitation(db, actor, id);
+    return Response.json({ success: true });
   } catch (e) {
     return failure(e);
   }

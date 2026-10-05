@@ -15,6 +15,14 @@ enum Role {
   STAFF
 }
 
+enum InvitationStatus {
+  DRAFT
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
 enum SalonStatus {
   ACTIVE
   SUSPENDED
@@ -30,21 +38,24 @@ model User {
 }
 
 model Salon {
-  id          String        @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
-  slug        String        @unique
+  slug        String            @unique
   description String?
   phone       String
   email       String?
   instagram   String?
   logoUrl     String?
   coverUrl    String?
-  status      SalonStatus   @default(ACTIVE)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  status      SalonStatus       @default(ACTIVE)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   members     SalonMember[]
   branches    Branch[]
   invitations Invitation[]
+  staff       Staff[]
+  categories  ServiceCategory[]
+  services    Service[]
 }
 
 model SalonMember {
@@ -57,6 +68,7 @@ model SalonMember {
   salon     Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   branches  MemberBranch[]
+  staff     Staff?
 
   @@unique([salonId, userId])
   @@unique([id, salonId])
@@ -78,6 +90,8 @@ model Branch {
   salon       Salon              @relation(fields: [salonId], references: [id], onDelete: Cascade)
   members     MemberBranch[]
   invitations InvitationBranch[]
+  services    ServiceBranch[]
+  staff       StaffBranch[]
 
   @@unique([id, salonId])
   @@index([salonId, active])
@@ -99,6 +113,7 @@ model Invitation {
   name       String
   email      String
   role       Role
+  status     InvitationStatus   @default(PENDING)
   tokenHash  String             @unique
   expiresAt  DateTime
   acceptedAt DateTime?
@@ -119,4 +134,138 @@ model InvitationBranch {
   branch       Branch     @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Cascade)
 
   @@id([invitationId, branchId])
+}
+
+model ServiceCategory {
+  id        String    @id @default(cuid())
+  salonId   String
+  name      String
+  sortOrder Int       @default(0)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  salon     Salon     @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  services  Service[]
+
+  @@unique([id, salonId])
+  @@unique([salonId, name])
+}
+
+model Service {
+  id              String          @id @default(cuid())
+  salonId         String
+  categoryId      String
+  name            String
+  description     String?
+  priceMnt        Int
+  durationMinutes Int
+  onlineBookable  Boolean         @default(false)
+  active          Boolean         @default(true)
+  imageUrl        String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  salon           Salon           @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  category        ServiceCategory @relation(fields: [categoryId, salonId], references: [id, salonId])
+  branches        ServiceBranch[]
+  staff           StaffService[]
+
+  @@unique([id, salonId])
+  @@index([salonId, active])
+}
+
+model ServiceBranch {
+  serviceId String
+  branchId  String
+  salonId   String
+  service   Service @relation(fields: [serviceId, salonId], references: [id, salonId], onDelete: Cascade)
+  branch    Branch  @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@id([serviceId, branchId])
+  @@unique([serviceId, branchId, salonId])
+}
+
+model Staff {
+  id        String         @id @default(cuid())
+  salonId   String
+  memberId  String?
+  name      String
+  title     String
+  phone     String?
+  bio       String?
+  imageUrl  String?
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  salon     Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  member    SalonMember?   @relation(fields: [memberId, salonId], references: [id, salonId])
+  branches  StaffBranch[]
+  services  StaffService[]
+
+  @@unique([id, salonId])
+  @@unique([memberId, salonId])
+  @@index([salonId, active])
+}
+
+model StaffBranch {
+  staffId  String
+  branchId String
+  salonId  String
+  staff    Staff          @relation(fields: [staffId, salonId], references: [id, salonId], onDelete: Cascade)
+  branch   Branch         @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Cascade)
+  hours    WorkingHours[]
+  timeOff  TimeOff[]
+
+  @@id([staffId, branchId])
+  @@unique([staffId, branchId, salonId])
+}
+
+model StaffService {
+  staffId   String
+  serviceId String
+  salonId   String
+  staff     Staff   @relation(fields: [staffId, salonId], references: [id, salonId], onDelete: Cascade)
+  service   Service @relation(fields: [serviceId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@id([staffId, serviceId])
+}
+
+model WorkingHours {
+  id          String         @id @default(cuid())
+  salonId     String
+  staffId     String
+  branchId    String
+  dayOfWeek   Int
+  startMinute Int
+  endMinute   Int
+  active      Boolean        @default(true)
+  assignment  StaffBranch    @relation(fields: [staffId, branchId, salonId], references: [staffId, branchId, salonId], onDelete: Restrict)
+  breaks      WorkingBreak[]
+
+  @@unique([id, salonId])
+  @@index([salonId, branchId, staffId])
+}
+
+model WorkingBreak {
+  id             String       @id @default(cuid())
+  salonId        String
+  workingHoursId String
+  startMinute    Int
+  endMinute      Int
+  hours          WorkingHours @relation(fields: [workingHoursId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@index([salonId])
+}
+
+model TimeOff {
+  id         String      @id @default(cuid())
+  salonId    String
+  staffId    String
+  branchId   String
+  startsAt   DateTime
+  endsAt     DateTime
+  fullDay    Boolean     @default(false)
+  reason     String?
+  assignment StaffBranch @relation(fields: [staffId, branchId, salonId], references: [staffId, branchId, salonId], onDelete: Restrict)
+
+  @@index([salonId, branchId, staffId, startsAt])
 }

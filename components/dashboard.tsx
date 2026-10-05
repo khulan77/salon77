@@ -31,6 +31,9 @@ export function Dashboard({ data }: { data: AdminData }) {
   const complete = [
     !data.preview,
     data.branches.length > 0,
+    data.setup.services,
+    data.setup.staff,
+    data.setup.hours,
     data.members.length > 1,
   ];
   const done = complete.filter(Boolean).length;
@@ -67,14 +70,16 @@ export function Dashboard({ data }: { data: AdminData }) {
             </select>
             <ChevronDown size={13} />
           </div>
-          <Button variant="outline" asChild>
-            <Link href="/salon-page">
-              Салоны хуудас <ArrowUpRight size={15} />
-            </Link>
-          </Button>
+          {data.role === "SALON_OWNER" && (
+            <Button variant="outline" asChild>
+              <Link href="/salon-page">
+                Салоны хуудас <ArrowUpRight size={15} />
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
-      {welcome && (
+      {welcome && data.role === "SALON_OWNER" && done < complete.length && (
         <section className="welcome-banner">
           <div className="welcome-copy">
             <span className="pill">
@@ -242,65 +247,91 @@ export function Dashboard({ data }: { data: AdminData }) {
             <span className="quiet-badge">Захиалга · Удахгүй</span>
           </div>
         </section>
-        <section className="panel setup-panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow purple-text">ЭХЛЭХ АЛХМУУД</span>
-              <h2>Салоноо ажилд бэлдэе</h2>
+        {data.role === "SALON_OWNER" && done < complete.length && (
+          <section className="panel setup-panel">
+            <div className="panel-heading">
+              <div>
+                <span className="eyebrow purple-text">ЭХЛЭХ АЛХМУУД</span>
+                <h2>Салоноо ажилд бэлдэе</h2>
+              </div>
+              <span className="setup-spark">✧</span>
             </div>
-            <span className="setup-spark">✧</span>
-          </div>
-          <div className="setup-progress">
-            <div>
-              <span>Эхний тохиргоонууд</span>
-              <strong>3 алхмаас {done} нь бэлэн</strong>
+            <div className="setup-progress">
+              <div>
+                <span>Эхний тохиргоонууд</span>
+                <strong>
+                  {complete.length} алхмаас {done} нь бэлэн
+                </strong>
+              </div>
+              <div className="progress-track">
+                <span style={{ width: `${(done / complete.length) * 100}%` }} />
+              </div>
             </div>
-            <div className="progress-track">
-              <span style={{ width: `${(done / 3) * 100}%` }} />
+            <div className="checklist">
+              {[
+                {
+                  title: "Салон үүсгэх",
+                  text: "Салоныхоо мэдээллийг бүртгэх",
+                  href: "/onboarding",
+                  icon: Store,
+                },
+                {
+                  title: "Эхний салбараа нэмэх",
+                  text: "Салбарынхаа байршлыг оруулах",
+                  href: "/branches",
+                  icon: MapPin,
+                },
+                {
+                  title: "Үйлчилгээ нэмэх",
+                  text: "Үнэ, хугацаа, салбараа тохируулах",
+                  href: "/services",
+                  icon: Store,
+                },
+                {
+                  title: "Ажилтан нэмэх",
+                  text: "Үйлчилгээг ажилтанд оноох",
+                  href: "/employees",
+                  icon: Users,
+                },
+                {
+                  title: "Ажлын хуваарь тохируулах",
+                  text: "Ажлын цаг, завсарлагаа бүртгэх",
+                  href: "/schedules",
+                  icon: Clock3,
+                },
+                {
+                  title: "Багаа бүрдүүлэх",
+                  text: "Хамт олноо нэгтгээрэй",
+                  href: "/team",
+                  icon: Users,
+                },
+              ].map((item, i) => (
+                <Link
+                  href={item.href}
+                  className={`checklist-item ${complete[i] ? "complete" : ""}`}
+                  key={item.title}
+                >
+                  <span className="check-circle">
+                    {complete[i] ? (
+                      <Check size={12} />
+                    ) : (
+                      <item.icon size={15} />
+                    )}
+                  </span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.text}</span>
+                  </div>
+                  <ArrowRight size={15} />
+                </Link>
+              ))}
             </div>
-          </div>
-          <div className="checklist">
-            {[
-              {
-                title: "Салон үүсгэх",
-                text: "Салоныхоо мэдээллийг бүртгэх",
-                href: "/onboarding",
-                icon: Store,
-              },
-              {
-                title: "Эхний салбараа нэмэх",
-                text: "Салбарынхаа байршлыг оруулах",
-                href: "/branches",
-                icon: MapPin,
-              },
-              {
-                title: "Багаа бүрдүүлэх",
-                text: "Хамт олноо нэгтгээрэй",
-                href: "/team",
-                icon: Users,
-              },
-            ].map((item, i) => (
-              <Link
-                href={item.href}
-                className={`checklist-item ${complete[i] ? "complete" : ""}`}
-                key={item.title}
-              >
-                <span className="check-circle">
-                  {complete[i] ? <Check size={12} /> : <item.icon size={15} />}
-                </span>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.text}</span>
-                </div>
-                <ArrowRight size={15} />
-              </Link>
-            ))}
-          </div>
-          <div className="setup-note">
-            <ShieldCheck size={15} />
-            <span>Өөрт тохирсон хурдаар эхлээрэй.</span>
-          </div>
-        </section>
+            <div className="setup-note">
+              <ShieldCheck size={15} />
+              <span>Өөрт тохирсон хурдаар эхлээрэй.</span>
+            </div>
+          </section>
+        )}
       </div>
       <div className="dashboard-bottom">
         <section className="panel insights-panel">

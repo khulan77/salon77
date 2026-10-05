@@ -101,7 +101,7 @@ bun run test:e2e
 
 Unit/validation tests exercise owner isolation, inactive and missing memberships, branch-limited role policies, tenant ID injection, role escalation, malformed fields, reserved slugs, and coordinates. Embedded PostgreSQL tests apply the actual migration and verify unique slugs, composite foreign keys, tenant-scoped mutations, blocked public API roles, and transaction rollback. They use PGlite, not a live Supabase database.
 
-Playwright checks the production preview at desktop and iPhone sizes: layout overflow, empty states, branch form, navigation search, onboarding steps, invitation-draft messaging, and fail-closed mutation endpoints. Install its browser once with `bunx playwright install chromium`. Screenshots are written under ignored `test-results/`. Run preview browser tests without Supabase environment variables; they intentionally assert preview behavior. The browser server can be reused if already running on port 3000.
+Playwright checks the production preview at desktop and iPhone sizes: layout overflow, empty states, branch form, navigation search, onboarding steps, invitation-draft messaging, and fail-closed mutation endpoints. Install its browser once with `bunx playwright install chromium`. Screenshots are written under ignored `test-results/`. Run preview browser tests without Supabase environment variables; they intentionally assert preview behavior. The browser server can be reused if already running on port 3000. Set `PLAYWRIGHT_PORT=32177` to test a fresh production server on an alternate port.
 
 **Live deployment acceptance still required:** real Supabase sign-up/email confirmation/sign-in/sign-out, schema deployment, salon onboarding/persistence, branch edits across sessions, and two authenticated owners attempting each other's record IDs and selected-salon cookies. No live Supabase credentials were supplied, so those flows must not be treated as verified by the local test suite.
 
@@ -111,8 +111,8 @@ Local verification on 2026-10-05:
 
 - ESLint: passed, no warnings.
 - Strict TypeScript: passed.
-- Unit/validation/embedded PostgreSQL: 20 tests passed.
-- Production preview browser suite: 10 tests passed across desktop and mobile Chromium.
+- Unit/validation/embedded PostgreSQL/localization: 24 tests passed.
+- Production preview browser suite: 18 tests passed across desktop and mobile Chromium, including Mongolian text checks for every navigation page, account pages, onboarding, menus, dialogs, and native form validation.
 - Production build: passed with Next.js webpack backend.
 - Desktop/mobile screenshots visually inspected; no horizontal overflow in tested viewports.
 - Live hosted Supabase auth and persistence: not run; credentials were not provided.

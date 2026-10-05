@@ -15,6 +15,7 @@ import {
   CircleHelp,
   ArrowRight,
 } from "lucide-react";
+import { moduleAllowed } from "@/lib/access";
 import { navigation } from "@/lib/navigation";
 import { signOut } from "@/app/auth/actions";
 import type { AdminData } from "@/lib/admin-data";
@@ -63,23 +64,29 @@ export function AdminShell({
           <ChevronsUpDown size={14} />
         </div>
         <nav aria-label="Үндсэн цэс">
-          {navigation.map((group) => (
-            <div className="nav-group" key={group.label}>
-              <p>{group.label}</p>
-              {group.items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={`nav-item ${path === item.href ? "active" : ""}`}
-                >
-                  <item.icon size={17} strokeWidth={1.65} />
-                  <span>{item.title}</span>
-                  {path === item.href && <span className="active-dot" />}
-                </Link>
-              ))}
-            </div>
-          ))}
+          {navigation
+            .map((g) => ({
+              ...g,
+              items: g.items.filter((i) => moduleAllowed(data.role, i.href)),
+            }))
+            .filter((g) => g.items.length)
+            .map((group) => (
+              <div className="nav-group" key={group.label}>
+                <p>{group.label}</p>
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={`nav-item ${path === item.href ? "active" : ""}`}
+                  >
+                    <item.icon size={17} strokeWidth={1.65} />
+                    <span>{item.title}</span>
+                    {path === item.href && <span className="active-dot" />}
+                  </Link>
+                ))}
+              </div>
+            ))}
         </nav>
         <div className="sidebar-footer">
           <div className="small-spark">
@@ -201,6 +208,7 @@ export function AdminShell({
             <div className="search-results">
               {navigation
                 .flatMap((g) => g.items)
+                .filter((i) => moduleAllowed(data.role, i.href))
                 .filter((i) =>
                   i.title.toLowerCase().includes(query.toLowerCase()),
                 )

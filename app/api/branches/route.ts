@@ -1,13 +1,16 @@
-import { tenant, HttpError } from "@/lib/auth";
+import { tenant, membership, HttpError } from "@/lib/auth";
+import { actorFromMember, branchWhere, requireBranch } from "@/lib/access";
 import { db } from "@/lib/db";
 import { branchSchema } from "@/lib/validation";
 import { failure, sameOrigin } from "@/lib/http";
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const member = await tenant();
+    const actor = actorFromMember(await membership());
+    const branchId = new URL(request.url).searchParams.get("branchId");
+    if (branchId) requireBranch(actor, branchId);
     return Response.json(
       await db.branch.findMany({
-        where: { salonId: member.salonId },
+        where: { ...branchWhere(actor), ...(branchId ? { id: branchId } : {}) },
         orderBy: { createdAt: "asc" },
       }),
     );

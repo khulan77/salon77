@@ -71,7 +71,14 @@ test("search, user menu, branch form and invitation form have Mongolian text", a
       page.getByRole("navigation", { name: "Үндсэн цэс" }),
     ).toBeVisible();
     await expectMongolian(page);
-    await page.getByRole("button", { name: "Цэс хаах" }).click();
+    const backdrop = page.getByRole("button", { name: "Цэс хаах" });
+    const bounds = await backdrop.boundingBox();
+    expect(bounds).not.toBeNull();
+    // Tap the exposed backdrop; its center is covered by the mobile drawer.
+    await backdrop.click({
+      position: { x: bounds!.width - 12, y: bounds!.height / 2 },
+    });
+    await expect(backdrop).not.toBeVisible();
   }
   await page.getByRole("button", { name: "Хуудас хайх" }).click();
   await page.getByPlaceholder("Хуудасны нэрээр хайх…").fill("Тохиргоо");

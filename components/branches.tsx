@@ -104,14 +104,16 @@ export function Branches({ data }: { data: AdminData }) {
           </h1>
           <p>Салбаруудынхаа мэдээллийг нэг дороос удирдаарай.</p>
         </div>
-        <Button
-          onClick={() => {
-            setError("");
-            setEditing("new");
-          }}
-        >
-          <Plus size={15} /> Салбар нэмэх
-        </Button>
+        {data.role === "SALON_OWNER" && (
+          <Button
+            onClick={() => {
+              setError("");
+              setEditing("new");
+            }}
+          >
+            <Plus size={15} /> Салбар нэмэх
+          </Button>
+        )}
       </div>
       {data.preview && (
         <div className="notice">
@@ -155,27 +157,29 @@ export function Branches({ data }: { data: AdminData }) {
                   {branch.latitude}, {branch.longitude}
                 </p>
               )}
-              <div className="branch-card-footer">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setError("");
-                    setEditing(branch);
-                  }}
-                >
-                  <Pencil size={13} /> Салбар засах
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => toggle(branch)}
-                >
-                  <Power size={13} />
-                  {branch.active ? "Идэвхгүй болгох" : "Идэвхжүүлэх"}
-                </Button>
-              </div>
+              {data.role === "SALON_OWNER" && (
+                <div className="branch-card-footer">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setError("");
+                      setEditing(branch);
+                    }}
+                  >
+                    <Pencil size={13} /> Салбар засах
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => toggle(branch)}
+                  >
+                    <Power size={13} />
+                    {branch.active ? "Идэвхгүй болгох" : "Идэвхжүүлэх"}
+                  </Button>
+                </div>
+              )}
             </article>
           ))}
         </div>
@@ -190,9 +194,11 @@ export function Branches({ data }: { data: AdminData }) {
             <br />
             Салбарынхаа хаяг, байршлыг нэмээрэй.
           </p>
-          <Button onClick={() => setEditing("new")}>
-            <Plus size={14} /> Эхний салбараа нэмэх
-          </Button>
+          {data.role === "SALON_OWNER" && (
+            <Button onClick={() => setEditing("new")}>
+              <Plus size={14} /> Эхний салбараа нэмэх
+            </Button>
+          )}
         </section>
       )}
       <dialog

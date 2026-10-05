@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
+import { safeAuthNext } from "@/lib/auth-navigation";
 import { configured } from "@/lib/env";
 const credentials = z.object({
   email: z.email(),
@@ -26,6 +27,7 @@ export async function authenticate(
         "Зөв имэйл хаяг болон 8-аас доошгүй тэмдэгттэй нууц үг оруулна уу.",
     };
   const client = await supabase();
+  const next = safeAuthNext(form.get("next"));
   if (form.get("mode") === "sign-up") {
     const name = z.string().trim().min(1).max(100).safeParse(form.get("name"));
     if (!name.success) return { error: "Нэрээ оруулна уу." };
@@ -34,7 +36,11 @@ export async function authenticate(
       ...parsed.data,
       options: {
         data: { name: name.data },
-        ...(origin ? { emailRedirectTo: `${origin}/auth/callback` } : {}),
+        ...(origin
+          ? {
+              emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+            }
+          : {}),
       },
     });
     if (error)
@@ -47,12 +53,12 @@ export async function authenticate(
         success:
           "Имэйлдээ ирсэн холбоосоор бүртгэлээ баталгаажуулаад нэвтэрнэ үү.",
       };
-    redirect("/onboarding");
+    redirect(next === "/" ? "/onboarding" : next);
   }
   const { error } = await client.auth.signInWithPassword(parsed.data);
   if (error)
     return { error: "Нэвтэрч чадсангүй. Имэйл хаяг, нууц үгээ шалгана уу." };
-  redirect("/");
+  redirect(next);
 }
 export async function signOut() {
   if (configured) await (await supabase()).auth.signOut();
