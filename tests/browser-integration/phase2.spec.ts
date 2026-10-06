@@ -35,6 +35,9 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
     .click();
   await page.getByLabel("Ангиллын нэр", { exact: true }).fill(category);
   await save(page);
+  await expect(
+    page.getByRole("button", { name: category, exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Үйлчилгээ нэмэх", exact: true })
     .first()
@@ -42,7 +45,7 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
   let dialog = page.getByRole("dialog");
   await dialog.getByLabel("Үйлчилгээний нэр", { exact: true }).fill(service);
   await dialog
-    .getByLabel("Ангилал", { exact: true })
+    .getByRole("combobox", { name: "Ангилал", exact: true })
     .selectOption({ label: category });
   await dialog.getByLabel("Үнэ · ₮", { exact: true }).fill("65000");
   await dialog.getByLabel("Хугацаа · минут", { exact: true }).fill("60");
@@ -94,8 +97,12 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
     .getByRole("button", { name: "Ажлын цаг нэмэх", exact: true })
     .click();
   dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Салбар", { exact: true }).selectOption("z");
-  await dialog.getByLabel("Гараг", { exact: true }).selectOption("1");
+  await dialog
+    .getByRole("combobox", { name: "Салбар", exact: true })
+    .selectOption("z");
+  await dialog
+    .getByRole("combobox", { name: "Гараг", exact: true })
+    .selectOption("1");
   await dialog.getByLabel("Эхлэх цаг", { exact: true }).fill("10:00");
   await dialog.getByLabel("Дуусах цаг", { exact: true }).fill("19:00");
   await dialog.getByRole("button", { name: "Завсарлага нэмэх" }).click();
@@ -113,12 +120,43 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
   await expect(
     page.getByText("Завсарлага: 16:00 — 16:15", { exact: true }),
   ).toBeVisible();
+  // A shift and break ending at midnight must round-trip through native time inputs.
+  await page
+    .getByRole("button", { name: "Ажлын цаг нэмэх", exact: true })
+    .click();
+  dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("combobox", { name: "Салбар", exact: true })
+    .selectOption("y");
+  await dialog
+    .getByRole("combobox", { name: "Гараг", exact: true })
+    .selectOption("2");
+  await dialog.getByLabel("Эхлэх цаг", { exact: true }).fill("23:00");
+  await dialog.getByLabel("Дуусах цаг", { exact: true }).fill("00:00");
+  await dialog.getByRole("button", { name: "Завсарлага нэмэх" }).click();
+  await dialog.getByLabel("Эхлэх цаг", { exact: true }).nth(1).fill("23:30");
+  await dialog.getByLabel("Дуусах цаг", { exact: true }).nth(1).fill("00:00");
+  await save(page);
+  await expect(
+    page.getByText("Завсарлага: 23:30 — 24:00", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Мягмар хуваарь засах" }).click();
+  dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByLabel("Дуусах цаг", { exact: true }).nth(0),
+  ).toHaveValue("00:00");
+  await expect(
+    dialog.getByLabel("Дуусах цаг", { exact: true }).nth(1),
+  ).toHaveValue("00:00");
+  await dialog.getByRole("button", { name: "Цуцлах", exact: true }).click();
   await page
     .getByRole("button", { name: "Чөлөө нэмэх", exact: true })
     .first()
     .click();
   dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Салбар", { exact: true }).selectOption("z");
+  await dialog
+    .getByRole("combobox", { name: "Салбар", exact: true })
+    .selectOption("z");
   await dialog.getByLabel("Эхлэх өдөр", { exact: true }).fill("2026-10-20");
   await dialog.getByLabel("Дуусах өдөр", { exact: true }).fill("2026-10-20");
   await dialog
@@ -139,7 +177,9 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
   await dialog.getByLabel("Нэр", { exact: true }).fill(`Сараа ${suffix}`);
   const email = mobile ? "invite-mobile@example.test" : "invite@example.test";
   await dialog.getByLabel("Имэйл", { exact: true }).fill(email);
-  await dialog.getByLabel("Эрх", { exact: true }).selectOption("RECEPTIONIST");
+  await dialog
+    .getByRole("combobox", { name: "Эрх", exact: true })
+    .selectOption("RECEPTIONIST");
   await dialog.getByLabel("Зайсан", { exact: true }).check();
   await dialog.getByRole("button", { name: "Урилга үүсгэх" }).click();
   await expect(dialog).not.toBeVisible();
@@ -211,7 +251,9 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
   ).toHaveCount(0);
   await responsive(reception);
   await reception.goto(invitePath);
-  await expect(reception.getByRole("alert")).toContainText("хүчингүй");
+  await expect(
+    reception.getByRole("alert").filter({ hasText: "хүчингүй" }),
+  ).toContainText("хүчингүй");
   await context.close();
 });
 

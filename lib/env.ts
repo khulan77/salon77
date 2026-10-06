@@ -1,22 +1,19 @@
 import { z } from "zod";
 const runtimeEnvSchema = z.object({
-  supabaseUrl: z.url(),
-  supabaseKey: z.string().min(1),
-  databaseUrl: z
-    .string()
-    .startsWith("postgresql://")
-    .or(z.string().startsWith("postgres://")),
+  supabaseUrl: z.url({ protocol: /^https?$/ }),
+  supabaseKey: z.string().regex(/^sb_publishable_[A-Za-z0-9_-]+$/),
+  databaseUrl: z.url({ protocol: /^postgres(?:ql)?$/ }),
 });
 const raw = {
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   databaseUrl: process.env.DATABASE_URL,
 };
-export const configured = Boolean(
-  raw.supabaseUrl && raw.supabaseKey && raw.databaseUrl,
-);
+// Configuration detection and client initialization must use the same validation.
+const parsed = runtimeEnvSchema.safeParse(raw);
+export const configured = parsed.success;
 export function authEnv() {
-  const result = runtimeEnvSchema.safeParse(raw);
+  const result = parsed;
   if (!result.success)
     throw new Error(
       "Invalid Salon77 environment configuration. Check .env.example.",

@@ -20,7 +20,7 @@ export async function testDatabase(port = 0) {
   });
   await server.start();
   const address = server.getServerConn();
-  const url = `postgresql://postgres:postgres@${address}/postgres?connection_limit=1&socket_timeout=30`;
+  const url = `postgresql://postgres:postgres@${address}/postgres?connection_limit=1&socket_timeout=30&statement_cache_size=0&pgbouncer=true`;
   const db = new PrismaClient({ datasources: { db: { url } } });
   await db.$connect();
   return {

@@ -8,6 +8,7 @@ import type { ScheduleData } from "@/lib/services/staff";
 import { requestJson } from "@/lib/client-request";
 import { userFacingError } from "@/lib/ui-language";
 import {
+  timeOffLabel,
   weekdays,
   clockTime,
   parseClock,
@@ -94,7 +95,9 @@ export function StaffSchedules({
             branchId: f.get("branchId"),
             dayOfWeek: Number(f.get("dayOfWeek")),
             startMinute: working ? parseClock(String(f.get("start"))) : 0,
-            endMinute: working ? parseClock(String(f.get("end"))) : 1440,
+            endMinute: working
+              ? parseClock(String(f.get("end"))) || 1440
+              : 1440,
             active: working,
             breaks: working ? breaks : [],
           },
@@ -260,7 +263,7 @@ export function StaffSchedules({
             ))}
           </div>
           <section className="panel time-off-panel">
-            <div className="section-heading">
+            <div className="panel-heading">
               <h2>Чөлөө, амралт</h2>
               {write && (
                 <Button
@@ -277,8 +280,7 @@ export function StaffSchedules({
                 <article className="time-off-row" key={t.id}>
                   <div>
                     <strong>
-                      {localDateTime(t.startsAt).replace("T", " ")} —{" "}
-                      {localDateTime(t.endsAt).replace("T", " ")}
+                      {timeOffLabel(t.startsAt, t.endsAt, t.fullDay)}
                     </strong>
                     <p>
                       {branchName(t.branchId)} ·{" "}
@@ -413,12 +415,15 @@ export function StaffSchedules({
                         required
                         defaultValue={
                           current?.endMinute === 1440
-                            ? "23:59"
+                            ? "00:00"
                             : clockTime(current?.endMinute ?? 1140)
                         }
                       />
                     </label>
                   </div>
+                  <p className="field-hint">
+                    Дуусах цаг 00:00 бол тухайн өдрийн төгсгөл гэж тооцно.
+                  </p>
                   <fieldset>
                     <legend>Завсарлагууд</legend>
                     {breaks.map((b, i) => (
@@ -448,14 +453,19 @@ export function StaffSchedules({
                           <input
                             type="time"
                             required
-                            value={clockTime(b.endMinute)}
+                            value={
+                              b.endMinute === 1440
+                                ? "00:00"
+                                : clockTime(b.endMinute)
+                            }
                             onChange={(e) =>
                               setBreaks(
                                 breaks.map((v, j) =>
                                   j === i
                                     ? {
                                         ...v,
-                                        endMinute: parseClock(e.target.value),
+                                        endMinute:
+                                          parseClock(e.target.value) || 1440,
                                       }
                                     : v,
                                 ),

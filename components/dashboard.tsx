@@ -234,8 +234,9 @@ export function Dashboard({ data }: { data: AdminData }) {
               Захиалгын боломж нээгдэхэд энд харагдана.
             </span>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/calendar">
-                <CalendarDays size={14} /> Календар нээх{" "}
+              <Link href={data.role === "STAFF" ? "/schedules" : "/calendar"}>
+                <CalendarDays size={14} />{" "}
+                {data.role === "STAFF" ? "Ажлын хуваарь" : "Календар нээх"}{" "}
                 <ArrowRight size={14} />
               </Link>
             </Button>

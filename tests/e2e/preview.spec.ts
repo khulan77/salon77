@@ -97,7 +97,7 @@ test("preview invitations do not pretend to send email", async ({ page }) => {
   await page.getByRole("button", { name: "Гишүүн урих" }).click();
   await expect(
     page.getByText(
-      "Имэйл илгээх үйлчилгээ хараахан холбогдоогүй. Урилга үүсгэсний дараа хөгжүүлэлтийн холбоосыг зөвхөн танд харуулна.",
+      "Танилцах горимд урилга үүсгэх боломжгүй. Эхлээд салоноо бүртгэнэ үү.",
     ),
   ).toBeVisible();
   await expect(

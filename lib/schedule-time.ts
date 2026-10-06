@@ -27,3 +27,17 @@ export function nextDate(value: string) {
     .toISOString()
     .slice(0, 10);
 }
+
+export function timeOffLabel(
+  startsAt: string,
+  endsAt: string,
+  fullDay: boolean,
+) {
+  if (!fullDay)
+    return `${localDateTime(startsAt).replace("T", " ")} — ${localDateTime(endsAt).replace("T", " ")}`;
+  const start = localDateTime(startsAt).slice(0, 10);
+  const end = localDateTime(
+    new Date(new Date(endsAt).getTime() - 1).toISOString(),
+  ).slice(0, 10);
+  return start === end ? start : `${start} — ${end}`;
+}

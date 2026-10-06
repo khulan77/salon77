@@ -136,3 +136,28 @@ test("API errors use Mongolian while keeping status codes", async ({
     "Хүсэлтийг зөвшөөрөөгүй эх сурвалжаас илгээсэн байна.",
   );
 });
+
+test("Phase 2 service and staff dialogs remain Mongolian and fit the viewport", async ({
+  page,
+}) => {
+  await page.goto("/services");
+  await page
+    .getByRole("button", { name: "Ангилал нэмэх", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expectMongolian(page);
+  await page.getByRole("button", { name: "Цуцлах", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Үйлчилгээ нэмэх", exact: true })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expectMongolian(page);
+  await page.goto("/employees");
+  await page
+    .getByRole("button", { name: "Ажилтан нэмэх", exact: true })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expectMongolian(page);
+});

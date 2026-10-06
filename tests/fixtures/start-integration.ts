@@ -137,6 +137,7 @@ async function main() {
     auth.listen(55480, "127.0.0.1", resolve),
   );
   await fixture.db.$disconnect();
+  await fixture.pg.exec("DEALLOCATE ALL");
   const port = process.env.PHASE2_PORT ?? "32178";
   const child = spawn(
     process.execPath,
@@ -153,10 +154,11 @@ async function main() {
       stdio: "inherit",
       env: {
         ...process.env,
+        SALON77_INTEGRATION_TEST: "1",
         DATABASE_URL: fixture.url,
         DIRECT_URL: fixture.url,
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:55480",
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: "local-test-anon-key",
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local_test_key",
         ALLOW_DEVELOPMENT_INVITE_LINKS: "true",
       },
     },

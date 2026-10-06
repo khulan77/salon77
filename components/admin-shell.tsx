@@ -88,18 +88,20 @@ export function AdminShell({
               </div>
             ))}
         </nav>
-        <div className="sidebar-footer">
-          <div className="small-spark">
-            <Sparkles size={16} />
+        {data.role === "SALON_OWNER" && (
+          <div className="sidebar-footer">
+            <div className="small-spark">
+              <Sparkles size={16} />
+            </div>
+            <div>
+              <strong>Илүү олон боломж.</strong>
+              <p>Шинэ боломжууд удахгүй.</p>
+            </div>
+            <Link href="/plan" aria-label="Багц харах">
+              <ArrowUpRight size={17} />
+            </Link>
           </div>
-          <div>
-            <strong>Илүү олон боломж.</strong>
-            <p>Шинэ боломжууд удахгүй.</p>
-          </div>
-          <Link href="/plan" aria-label="Багц харах">
-            <ArrowUpRight size={17} />
-          </Link>
-        </div>
+        )}
       </aside>
       <div className="main-shell">
         <header className="topbar">

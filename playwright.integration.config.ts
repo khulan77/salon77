@@ -7,7 +7,7 @@ export default defineConfig({
   workers: 1,
   timeout: 120000,
   expect: { timeout: 15000 },
-  use: { baseURL, trace: "retain-on-failure" },
+  use: { baseURL, trace: "retain-on-failure", actionTimeout: 15000 },
   projects: [
     {
       name: "desktop",
