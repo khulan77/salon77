@@ -24,7 +24,16 @@ import {
 import { Button } from "./ui/button";
 import { formatMongolianDate } from "@/lib/ui-language";
 import type { AdminData } from "@/lib/admin-data";
-export function Dashboard({ data }: { data: AdminData }) {
+import type { BookingView } from "@/lib/services/bookings";
+import { localStamp } from "@/lib/business-time";
+import { statusLabels } from "@/lib/booking-validation";
+export function Dashboard({
+  data,
+  bookings = [],
+}: {
+  data: AdminData;
+  bookings?: BookingView[];
+}) {
   const [branch, setBranch] = useState("all");
   const [period, setPeriod] = useState("Энэ сар");
   const [welcome, setWelcome] = useState(true);
@@ -36,6 +45,12 @@ export function Dashboard({ data }: { data: AdminData }) {
     data.setup.hours,
     data.members.length > 1,
   ];
+  const todayBookings = bookings.filter(
+    (b) =>
+      (!branch || branch === "all" || b.branchId === branch) &&
+      b.status !== "CANCELLED",
+  );
+  const canBook = data.role !== "STAFF";
   const done = complete.filter(Boolean).length;
   const date = formatMongolianDate(new Date());
   return (
@@ -155,30 +170,39 @@ export function Dashboard({ data }: { data: AdminData }) {
           {
             title: "Өнөөдрийн захиалгууд",
             icon: CalendarDays,
-            value: "0",
-            text: "Одоогоор захиалга алга.",
+            value: canBook ? String(todayBookings.length) : "—",
+            text: "Цуцалсан захиалгыг тооцохгүй",
             color: "purple",
           },
           {
             title: "Өнөөдрийн үйлчлүүлэгчид",
             icon: Users,
-            value: "0",
-            text: "Шинэ үйлчлүүлэгчээ угтаарай",
+            value: canBook
+              ? String(new Set(todayBookings.map((b) => b.customerId)).size)
+              : "—",
+            text: "Өнөөдөр захиалгатай үйлчлүүлэгчид",
             color: "blue",
           },
           {
-            title: "Өнөөдрийн орлого",
+            title: "Гүйцэтгэсэн үйлчилгээний дүн",
             icon: Wallet,
-            value: "0",
-            text: "Орлогын мэдээлэл энд харагдана",
+            value: canBook
+              ? todayBookings
+                  .filter((b) => b.status === "COMPLETED")
+                  .reduce((sum, b) => sum + b.priceMnt, 0)
+                  .toLocaleString("en-US")
+              : "—",
+            text: "Төлбөрийн бүртгэл биш",
             color: "green",
             suffix: "₮",
           },
           {
-            title: "Өнөөдөр ажиллах хүн",
+            title: "Захиалгатай ажилтан",
             icon: UserRoundCheck,
-            value: "0",
-            text: "Багийн хуваарь нэг дор",
+            value: canBook
+              ? String(new Set(todayBookings.map((b) => b.staffId)).size)
+              : "—",
+            text: "Өнөөдрийн захиалгаар",
             color: "orange",
           },
         ].map((stat) => (
@@ -205,7 +229,8 @@ export function Dashboard({ data }: { data: AdminData }) {
           <div className="panel-heading">
             <div>
               <h2>
-                Өнөөдрийн захиалгууд <span className="count-badge">0</span>
+                Өнөөдрийн захиалгууд{" "}
+                <span className="count-badge">{todayBookings.length}</span>
               </h2>
               <p>Өнөөдрийн ажлаа төлөвлөөрэй.</p>
             </div>
@@ -213,39 +238,62 @@ export function Dashboard({ data }: { data: AdminData }) {
               Календар харах <ArrowUpRight size={14} />
             </Link>
           </div>
-          <div className="appointment-empty">
-            <div className="calendar-illustration">
-              <div className="calendar-tabs">
-                <i />
-                <i />
-              </div>
-              <div className="calendar-grid">
-                {Array.from({ length: 9 }, (_, i) => (
-                  <span key={i} className={i === 4 ? "selected" : ""}>
-                    {i === 4 ? <Check size={13} /> : ""}
+          {todayBookings.length ? (
+            <div className="calendar-day">
+              {todayBookings.map((b) => (
+                <Link className="booking-card" href="/calendar" key={b.id}>
+                  <strong>
+                    {localStamp(b.startAt).slice(11)} —{" "}
+                    {localStamp(b.endAt).slice(11)}
+                  </strong>
+                  <span>
+                    {b.customerName} · {b.serviceName}
                   </span>
-                ))}
-              </div>
-              <span className="calendar-spark">✦</span>
+                  <small>
+                    {b.staffName} · {statusLabels[b.status]}
+                  </small>
+                </Link>
+              ))}
             </div>
-            <h3>Өнөөдөр товлосон захиалга алга</h3>
-            <p>Өнөөдрийн захиалга алга.</p>
-            <span className="empty-detail">
-              Захиалгын боломж нээгдэхэд энд харагдана.
-            </span>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={data.role === "STAFF" ? "/schedules" : "/calendar"}>
-                <CalendarDays size={14} />{" "}
-                {data.role === "STAFF" ? "Ажлын хуваарь" : "Календар нээх"}{" "}
-                <ArrowRight size={14} />
-              </Link>
-            </Button>
-          </div>
+          ) : (
+            <div className="appointment-empty">
+              <div className="calendar-illustration">
+                <div className="calendar-tabs">
+                  <i />
+                  <i />
+                </div>
+                <div className="calendar-grid">
+                  {Array.from({ length: 9 }, (_, i) => (
+                    <span key={i} className={i === 4 ? "selected" : ""}>
+                      {i === 4 ? <Check size={13} /> : ""}
+                    </span>
+                  ))}
+                </div>
+                <span className="calendar-spark">✦</span>
+              </div>
+              <h3>
+                {canBook
+                  ? "Өнөөдөр товлосон захиалга алга"
+                  : "Ажлын хуваариа шалгаарай"}
+              </h3>
+              <p>Өнөөдрийн захиалга алга.</p>
+              <span className="empty-detail">
+                Захиалгаа календар хэсгээс удирдаарай.
+              </span>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={data.role === "STAFF" ? "/schedules" : "/calendar"}>
+                  <CalendarDays size={14} />{" "}
+                  {data.role === "STAFF" ? "Ажлын хуваарь" : "Календар нээх"}{" "}
+                  <ArrowRight size={14} />
+                </Link>
+              </Button>
+            </div>
+          )}
           <div className="panel-bottom">
             <span>
               <Clock3 size={13} /> Улаанбаатарын цагаар (UTC+8)
             </span>
-            <span className="quiet-badge">Захиалга · Удахгүй</span>
+            <span className="quiet-badge">Өнөөдрийн захиалгууд</span>
           </div>
         </section>
         {data.role === "SALON_OWNER" && done < complete.length && (

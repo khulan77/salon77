@@ -1,3 +1,4 @@
+import { localStamp } from "./business-time";
 import { z } from "zod";
 const text = (max: number) => z.string().trim().min(1).max(max);
 export const branchSchema = z
@@ -188,8 +189,7 @@ export const timeOffSchema = z
       v.fullDay &&
       [v.startsAt, v.endsAt].some(
         (d) =>
-          d.getUTCHours() !== 16 ||
-          d.getUTCMinutes() !== 0 ||
+          !localStamp(d).endsWith("T00:00") ||
           d.getUTCSeconds() !== 0 ||
           d.getUTCMilliseconds() !== 0,
       )

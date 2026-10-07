@@ -2233,3 +2233,148 @@ legend {
     padding: 18px;
   }
 }
+
+.booking-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 24px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.booking-steps [aria-current] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.booking-summary {
+  background: var(--background);
+  padding: 20px;
+  border-radius: 12px;
+  margin: 16px 0;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.booking-summary h3,
+.booking-success h2 {
+  font-size: 19px;
+  margin-bottom: 12px;
+}
+.booking-success {
+  padding: 30px 8px;
+  line-height: 2;
+}
+.customer-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.public-booking {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+.public-booking header {
+  margin-bottom: 28px;
+}
+.public-booking h1 {
+  font-size: 28px;
+  margin: 10px 0;
+}
+.public-booking-card {
+  padding: 28px;
+}
+.calendar-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 20px;
+}
+.booking-calendar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.booking-calendar.week-view {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.calendar-day {
+  padding: 16px;
+  min-width: 0;
+}
+.calendar-day h2 {
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+.booking-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  text-align: left;
+  border: 1px solid #e3dcff;
+  border-left: 3px solid var(--accent);
+  background: #faf8ff;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.booking-card small {
+  color: var(--muted);
+}
+.booking-card.cancelled {
+  opacity: 0.6;
+  border-left-color: var(--muted);
+}
+.reschedule-form {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+.customer-card {
+  padding: 24px;
+  text-align: left;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.customer-card h2 {
+  font-size: 17px;
+}
+.customer-search {
+  max-width: 400px;
+}
+.history-title {
+  margin-top: 28px;
+  font-size: 17px;
+}
+@media (max-width: 1100px) {
+  .booking-calendar.week-view {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .booking-calendar.week-view {
+    grid-template-columns: 1fr;
+  }
+  .public-booking {
+    padding: 24px 14px;
+  }
+  .public-booking-card {
+    padding: 20px;
+  }
+  .booking-steps {
+    font-size: 10px;
+  }
+}

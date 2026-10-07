@@ -1,3 +1,6 @@
+import { BookingSettings } from "@/components/booking-settings";
+import { BookingCalendar } from "@/components/booking-calendar";
+import { CustomerDirectory } from "@/components/customer-directory";
 import { StaffDirectory } from "@/components/staff-directory";
 import { StaffSchedules } from "@/components/staff-schedules";
 import { readStaff, readSchedules } from "@/lib/services/staff";
@@ -17,14 +20,6 @@ import { Branches } from "@/components/branches";
 import { Team } from "@/components/team";
 import { Button } from "@/components/ui/button";
 const descriptions: Record<string, string> = {
-  calendar:
-    "Өдрийн ажлаа нэг дороос төлөвлөөрэй. Календар болон сул цаг харах боломж дараагийн шатанд нэмэгдэнэ.",
-  bookings:
-    "Цахим болон ажилтны бүртгэсэн захиалгуудыг удирдах боломж дараагийн шатанд нэмэгдэнэ.",
-  customers:
-    "Үйлчлүүлэгчийн мэдээлэл болон үйлчлүүлсэн түүхийг харах боломж дараагийн шатанд нэмэгдэнэ.",
-  services:
-    "Үйлчилгээний жагсаалт, үнэ, үргэлжлэх хугацааг удирдах боломж дараагийн шатанд нэмэгдэнэ.",
   "salon-page":
     "Салоноо цахимаар танилцуулах хуудас дараагийн шатанд нэмэгдэнэ.",
   support:
@@ -35,7 +30,7 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ module: string }>;
-  searchParams: Promise<{ staffId?: string }>;
+  searchParams: Promise<{ staffId?: string; id?: string }>;
 }) {
   const { module } = await params;
   const item = navigation
@@ -51,6 +46,36 @@ export default async function Page({
         <Link href="/">Хяналтын самбарт буцах</Link>
       </section>
     );
+  if (module === "settings") return <BookingSettings preview={data.preview} />;
+  if (module === "customers")
+    return (
+      <CustomerDirectory
+        preview={data.preview}
+        owner={data.role === "SALON_OWNER"}
+        initialId={(await searchParams).id}
+      />
+    );
+  if (module === "calendar" || module === "bookings") {
+    const actor = configured ? actorFromMember(await membership()) : null;
+    const [staff, catalog] = actor
+      ? await Promise.all([readStaff(db, actor), readCatalog(db, actor)])
+      : [[], { services: [], categories: [] }];
+    return (
+      <BookingCalendar
+        mode={module}
+        preview={data.preview}
+        options={{
+          branches: data.branches.filter((b) => b.active),
+          services: catalog.services.filter(
+            (s) =>
+              s.active &&
+              catalog.categories.some((c) => c.id === s.categoryId && c.active),
+          ),
+          staff: staff.filter((s) => s.active),
+        }}
+      />
+    );
+  }
   if (module === "branches") return <Branches data={data} />;
   if (module === "team") return <Team data={data} />;
   if (module === "services")

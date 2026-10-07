@@ -1,3 +1,4 @@
+import { BUSINESS_TIME_ZONE } from "./business-time";
 import type { z } from "zod";
 
 const roleLabels: Record<string, string> = {
@@ -19,6 +20,13 @@ export function userFacingError(error: unknown, fallback: string) {
 }
 
 const fieldLabels: Record<string, string> = {
+  startAt: "Эхлэх цаг",
+  serviceId: "Үйлчилгээ",
+  customerId: "Үйлчлүүлэгч",
+  date: "Өдөр",
+  notes: "Тэмдэглэл",
+  status: "Төлөв",
+  idempotencyKey: "Захиалгын хүсэлт",
   categoryId: "Ангилал",
   priceMnt: "Үнэ",
   durationMinutes: "Хугацаа",
@@ -86,7 +94,7 @@ export function validationMessage(issue: z.core.$ZodIssue) {
 export function formatMongolianDate(date: Date) {
   // Some browser builds lack Mongolian ICU data; request numeric parts only.
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Ulaanbaatar",
+    timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "numeric",
     day: "numeric",

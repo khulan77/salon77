@@ -2,9 +2,11 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { testDatabase, seed, userIds } from "./database";
+import { bookingSeed } from "./bookings";
 async function main() {
   const fixture = await testDatabase(55479);
   await seed(fixture.db);
+  await bookingSeed(fixture.db);
   const mobileId = "00000000-0000-0000-0000-000000000007";
   await fixture.db.user.create({
     data: { id: mobileId, email: "invite-mobile@example.test", name: "Сараа" },

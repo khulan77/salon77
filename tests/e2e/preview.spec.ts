@@ -35,7 +35,7 @@ test("dashboard is honest, responsive, and links to working branch form", async 
     page.getByRole("heading", { name: "Шинэ салбар нэмэх" }),
   ).not.toBeVisible();
 });
-test("search navigates to an honest future module", async ({ page }) => {
+test("search navigates to the booking calendar", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Хуудас хайх" }).click();
   await page.getByPlaceholder("Хуудасны нэрээр хайх…").fill("Календар");
@@ -44,7 +44,7 @@ test("search navigates to an honest future module", async ({ page }) => {
     .getByRole("link", { name: "Календар", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Шинэ боломж бэлдэж байна" }),
+    page.getByRole("button", { name: "Шинэ захиалга", exact: true }),
   ).toBeVisible();
 });
 test("preview onboarding validates and does not pretend to save", async ({

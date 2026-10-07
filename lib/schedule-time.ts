@@ -1,3 +1,4 @@
+import { localStamp, localInstant } from "./business-time";
 export const weekdays = [
   "Даваа",
   "Мягмар",
@@ -15,12 +16,10 @@ export function parseClock(value: string) {
   return h * 60 + m;
 }
 export function localDateTime(value: string) {
-  return new Date(new Date(value).getTime() + 8 * 3600000)
-    .toISOString()
-    .slice(0, 16);
+  return localStamp(value);
 }
 export function localToISO(value: string) {
-  return new Date(`${value}:00+08:00`).toISOString();
+  return localInstant(value).toISOString();
 }
 export function nextDate(value: string) {
   return new Date(new Date(`${value}T00:00:00Z`).getTime() + 86400000)

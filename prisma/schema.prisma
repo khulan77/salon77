@@ -38,24 +38,27 @@ model User {
 }
 
 model Salon {
-  id          String            @id @default(cuid())
-  name        String
-  slug        String            @unique
-  description String?
-  phone       String
-  email       String?
-  instagram   String?
-  logoUrl     String?
-  coverUrl    String?
-  status      SalonStatus       @default(ACTIVE)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  members     SalonMember[]
-  branches    Branch[]
-  invitations Invitation[]
-  staff       Staff[]
-  categories  ServiceCategory[]
-  services    Service[]
+  id              String            @id @default(cuid())
+  name            String
+  slug            String            @unique
+  description     String?
+  phone           String
+  email           String?
+  instagram       String?
+  logoUrl         String?
+  coverUrl        String?
+  status          SalonStatus       @default(ACTIVE)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  members         SalonMember[]
+  branches        Branch[]
+  invitations     Invitation[]
+  staff           Staff[]
+  categories      ServiceCategory[]
+  services        Service[]
+  bookings        Booking[]
+  bookingSettings BookingSettings?
+  customers       Customer[]
 }
 
 model SalonMember {
@@ -69,6 +72,7 @@ model SalonMember {
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   branches  MemberBranch[]
   staff     Staff?
+  bookings  Booking[]
 
   @@unique([salonId, userId])
   @@unique([id, salonId])
@@ -92,6 +96,7 @@ model Branch {
   invitations InvitationBranch[]
   services    ServiceBranch[]
   staff       StaffBranch[]
+  bookings    Booking[]
 
   @@unique([id, salonId])
   @@index([salonId, active])
@@ -168,6 +173,7 @@ model Service {
   category        ServiceCategory @relation(fields: [categoryId, salonId], references: [id, salonId])
   branches        ServiceBranch[]
   staff           StaffService[]
+  bookings        Booking[]
 
   @@unique([id, salonId])
   @@index([salonId, active])
@@ -200,6 +206,7 @@ model Staff {
   member    SalonMember?   @relation(fields: [memberId, salonId], references: [id, salonId])
   branches  StaffBranch[]
   services  StaffService[]
+  bookings  Booking[]
 
   @@unique([id, salonId])
   @@unique([memberId, salonId])
@@ -268,4 +275,90 @@ model TimeOff {
   assignment StaffBranch @relation(fields: [staffId, branchId, salonId], references: [staffId, branchId, salonId], onDelete: Restrict)
 
   @@index([salonId, branchId, staffId, startsAt])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum BookingSource {
+  ONLINE
+  RECEPTION
+  OWNER
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  salonId   String
+  name      String
+  phone     String
+  email     String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  salon     Salon     @relation(fields: [salonId], references: [id], onDelete: Restrict)
+  bookings  Booking[]
+
+  @@unique([id, salonId])
+  @@unique([salonId, phone])
+  @@index([salonId, name])
+}
+
+model Booking {
+  id                      String        @id @default(cuid())
+  salonId                 String
+  branchId                String
+  customerId              String
+  serviceId               String
+  staffId                 String
+  startAt                 DateTime      @db.Timestamptz(3)
+  endAt                   DateTime      @db.Timestamptz(3)
+  status                  BookingStatus @default(CONFIRMED)
+  source                  BookingSource
+  serviceNameSnapshot     String
+  durationMinutesSnapshot Int
+  priceSnapshot           Int
+  customerNameSnapshot    String
+  customerPhoneSnapshot   String
+  notes                   String?
+  createdByMemberId       String?
+  idempotencyKey          String
+  requestHash             String
+  version                 Int           @default(1)
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  salon                   Salon         @relation(fields: [salonId], references: [id], onDelete: Restrict)
+  branch                  Branch        @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Restrict)
+  customer                Customer      @relation(fields: [customerId, salonId], references: [id, salonId], onDelete: Restrict)
+  service                 Service       @relation(fields: [serviceId, salonId], references: [id, salonId], onDelete: Restrict)
+  staff                   Staff         @relation(fields: [staffId, salonId], references: [id, salonId], onDelete: Restrict)
+  createdBy               SalonMember?  @relation(fields: [createdByMemberId, salonId], references: [id, salonId], onDelete: Restrict)
+
+  @@unique([id, salonId])
+  @@unique([salonId, idempotencyKey])
+  @@index([salonId, branchId, startAt])
+  @@index([salonId, staffId, startAt])
+  @@index([salonId, customerId, startAt])
+  @@index([salonId, status, startAt])
+}
+
+enum BookingConfirmationMode {
+  AUTO_CONFIRM
+  MANUAL_CONFIRM
+}
+
+model BookingSettings {
+  salonId                     String                  @id
+  publicBookingEnabled        Boolean                 @default(true)
+  bookingConfirmationMode     BookingConfirmationMode @default(MANUAL_CONFIRM)
+  advanceBookingDays          Int                     @default(365)
+  minimumBookingNoticeMinutes Int                     @default(0)
+  cancellationNoticeMinutes   Int                     @default(0)
+  slotIntervalMinutes         Int                     @default(15)
+  updatedAt                   DateTime                @default(now()) @updatedAt
+  salon                       Salon                   @relation(fields: [salonId], references: [id], onDelete: Cascade)
 }
