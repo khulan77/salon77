@@ -10,6 +10,12 @@ export function normalizePhone(raw: string) {
   );
 }
 const id = z.string().min(1).max(100);
+// Staff may stretch or shorten an appointment; online guests always get the service length.
+const durationOverride = z.coerce
+  .number({ error: "Үргэлжлэх хугацааг зөв сонгоно уу." })
+  .int()
+  .min(5, "Үргэлжлэх хугацаа хамгийн багадаа 5 минут.")
+  .max(720, "Үргэлжлэх хугацаа 12 цагаас ихгүй байна.");
 export const dateSchema = z.iso.date("Өдрөө зөв сонгоно уу.");
 export const customerInput = z
   .object({
@@ -39,6 +45,7 @@ export const availabilitySchema = z
     date: dateSchema,
     staffId: id.optional(),
     excludeBookingId: id.optional(),
+    durationMinutes: durationOverride.optional(),
   })
   .strict();
 export const bookingSchema = z
@@ -49,6 +56,7 @@ export const bookingSchema = z
     startAt: z.iso.datetime({ offset: true }),
     customerId: id.optional(),
     customer: customerInput.optional(),
+    durationMinutes: durationOverride.optional(),
     notes: z.string().trim().max(2000).default(""),
     idempotencyKey: z.uuid(),
   })

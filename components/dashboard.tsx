@@ -27,15 +27,19 @@ import type { AdminData } from "@/lib/admin-data";
 import type { BookingView } from "@/lib/services/bookings";
 import { localStamp } from "@/lib/business-time";
 import { statusLabels } from "@/lib/booking-validation";
+import type { RevenueReport } from "@/lib/services/reports";
+import { RevenueChart } from "./revenue-chart";
+import { formatMnt } from "@/lib/ui-language";
 export function Dashboard({
   data,
   bookings = [],
+  revenue = null,
 }: {
   data: AdminData;
   bookings?: BookingView[];
+  revenue?: RevenueReport | null;
 }) {
   const [branch, setBranch] = useState("all");
-  const [period, setPeriod] = useState("Энэ сар");
   const [welcome, setWelcome] = useState(true);
   const complete = [
     !data.preview,
@@ -387,55 +391,54 @@ export function Dashboard({
           <div className="panel-heading">
             <div>
               <h2>
-                Бизнесийн тойм удахгүй{" "}
+                Энэ сарын орлого{" "}
                 <span className="subtle-pill">ДҮН ШИНЖИЛГЭЭ</span>
               </h2>
-              <p>Өдөр тутмын үр дүнгээ хянаж, өсөлтөө төлөвлөөрэй.</p>
+              <p>Дууссан захиалгын үнээр тооцсон. Төлбөрийн бүртгэл биш.</p>
             </div>
-            <div className="select-wrap compact">
-              <select
-                aria-label="Тайлангийн хугацаа"
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-              >
-                <option>Энэ сар</option>
-                <option>Өмнөх сар</option>
-                <option>Энэ жил</option>
-              </select>
-              <ChevronDown size={13} />
-            </div>
+            {revenue && (
+              <Link href="/reports" className="text-link">
+                Тайлан харах <ArrowUpRight size={14} />
+              </Link>
+            )}
           </div>
-          <div className="insight-content">
-            <div className="insight-icon">
-              <ChartNoAxesCombined size={24} strokeWidth={1.3} />
+          {revenue ? (
+            <div className="insight-revenue">
+              <div className="insight-figures">
+                <div>
+                  <span>Нийт орлого</span>
+                  <strong>{formatMnt(revenue.revenue)}</strong>
+                </div>
+                <div>
+                  <span>Дууссан захиалга</span>
+                  <strong>{revenue.completed}</strong>
+                </div>
+                <div>
+                  <span>Дундаж дүн</span>
+                  <strong>{formatMnt(revenue.average)}</strong>
+                </div>
+              </div>
+              <RevenueChart
+                compact
+                series={revenue.series}
+                granularity={revenue.granularity}
+              />
             </div>
-            <div>
-              <h3>Таны өсөлт эндээс эхэлнэ</h3>
-              <p>
-                Орлого, захиалга, үйлчлүүлэгчдийн өөрчлөлт энд харагдана.
-                <br />
-                Бодит мэдээлэлд тулгуурлан шийдвэр гаргаарай.
-              </p>
+          ) : (
+            <div className="insight-content">
+              <div className="insight-icon">
+                <ChartNoAxesCombined size={24} strokeWidth={1.3} />
+              </div>
+              <div>
+                <h3>
+                  {data.preview
+                    ? "Бүртгүүлсний дараа бодит орлого энд харагдана"
+                    : "Орлогын тайлан эзэмшигч, менежерт харагдана"}
+                </h3>
+                <p>Танилцах горимд жишээ орлого харуулахгүй.</p>
+              </div>
             </div>
-            <div className="empty-chart" aria-hidden="true">
-              {[26, 44, 35, 57, 47, 70, 61, 82, 72, 96, 87, 112].map(
-                (height, i) => (
-                  <i key={i} style={{ height }} />
-                ),
-              )}
-            </div>
-          </div>
-          <div className="insight-tags">
-            <span>
-              <i className="purple-dot" /> Сарын орлого
-            </span>
-            <span>
-              <i className="blue-dot" /> Захиалгын өөрчлөлт
-            </span>
-            <span>
-              <i className="green-dot" /> Үйлчлүүлэгчдийн өсөлт
-            </span>
-          </div>
+          )}
         </section>
         <section className="help-card">
           <div className="help-icon">

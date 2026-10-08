@@ -5,6 +5,11 @@ import { actorFromMember } from "@/lib/access";
 import { db } from "@/lib/db";
 import { listBookings } from "@/lib/services/bookings";
 import { localStamp } from "@/lib/business-time";
+import {
+  monthToDate,
+  reportRoleAllowed,
+  revenueReport,
+} from "@/lib/services/reports";
 export default async function Page() {
   const data = await adminData();
   const bookings =
@@ -14,5 +19,13 @@ export default async function Page() {
           days: 1,
         })
       : [];
-  return <Dashboard data={data} bookings={bookings} />;
+  const revenue =
+    !data.preview && reportRoleAllowed(data.role)
+      ? await revenueReport(
+          db,
+          actorFromMember(await membership()),
+          monthToDate(),
+        )
+      : null;
+  return <Dashboard data={data} bookings={bookings} revenue={revenue} />;
 }

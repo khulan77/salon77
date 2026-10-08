@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   normalizePhone,
   bookingSchema,
+  availabilitySchema,
   transitions,
 } from "../lib/booking-validation";
 import {
@@ -93,4 +94,19 @@ test("lifecycle has no terminal-state restoration", () => {
   ]);
   for (const status of ["CANCELLED", "COMPLETED", "NO_SHOW"])
     assert.deepEqual(transitions[status], []);
+});
+test("staff duration override is bounded and coerced from query strings", () => {
+  const base = {
+    branchId: "b",
+    serviceId: "s",
+    date: "2026-10-08",
+  };
+  assert.equal(
+    availabilitySchema.parse({ ...base, durationMinutes: "90" })
+      .durationMinutes,
+    90,
+  );
+  assert.equal(availabilitySchema.parse(base).durationMinutes, undefined);
+  for (const durationMinutes of ["0", "4", "721", "1.5", "abc"])
+    assert.throws(() => availabilitySchema.parse({ ...base, durationMinutes }));
 });

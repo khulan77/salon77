@@ -122,6 +122,74 @@ test(
           branchId: "other",
         });
       await t.test(
+        "staff form saves a weekly shift from branch hours without a title",
+        async () => {
+          const branch = await db.branch.findUniqueOrThrow({
+            where: { id: "z" },
+          });
+          assert.equal(branch.openMinute, 600);
+          assert.equal(branch.closeMinute, 1140);
+          const input = {
+            name: "Сараа",
+            phone: "",
+            bio: "",
+            active: true,
+            memberId: null,
+            branchIds: ["z"],
+            serviceIds: [],
+          };
+          const shift = (days: number[]) => [
+            { branchId: "z", days, startMinute: 600, endMinute: 1140 },
+          ];
+          const created = await saveStaff(db, owner, {
+            ...input,
+            schedule: shift([1, 2, 3, 3]),
+          });
+          const days = async () =>
+            (
+              await db.workingHours.findMany({
+                where: { staffId: created.id },
+                orderBy: { dayOfWeek: "asc" },
+              })
+            ).map((h) => h.dayOfWeek);
+          assert.deepEqual(await days(), [1, 2, 3]);
+          await saveStaff(
+            db,
+            owner,
+            { ...input, schedule: shift([2, 6]) },
+            created.id,
+          );
+          assert.deepEqual(await days(), [2, 6]);
+          await saveStaff(db, owner, input, created.id);
+          assert.deepEqual(await days(), [2, 6]);
+          await assert.rejects(
+            saveStaff(db, owner, {
+              ...input,
+              schedule: [{ ...shift([1])[0], branchId: "y" }],
+            }),
+          );
+          await assert.rejects(
+            saveStaff(
+              db,
+              owner,
+              {
+                ...input,
+                branchIds: ["z", "y"],
+                schedule: [
+                  ...shift([2]),
+                  { ...shift([2, 3])[0], branchId: "y", startMinute: 900 },
+                ],
+              },
+              created.id,
+            ),
+            denied(409),
+          );
+          assert.deepEqual(await days(), [2, 6]);
+          await db.workingHours.deleteMany({ where: { staffId: created.id } });
+          await db.staff.delete({ where: { id: created.id } });
+        },
+      );
+      await t.test(
         "categories and service edits cannot cross tenants",
         async () => {
           await assert.rejects(

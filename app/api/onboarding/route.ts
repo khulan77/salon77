@@ -15,6 +15,7 @@ export async function POST(request: Request) {
           create: {
             id: user.id,
             email: user.email!,
+            lastLoginAt: new Date(),
             name:
               typeof user.user_metadata.name === "string"
                 ? user.user_metadata.name

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 import { safeAuthNext } from "@/lib/auth-navigation";
 import { configured } from "@/lib/env";
+import { recordLogin } from "@/lib/login-activity";
 const credentials = z.object({
   email: z.email(),
   password: z.string().min(8).max(128),
@@ -55,9 +56,10 @@ export async function authenticate(
       };
     redirect(next === "/" ? "/onboarding" : next);
   }
-  const { error } = await client.auth.signInWithPassword(parsed.data);
+  const { data, error } = await client.auth.signInWithPassword(parsed.data);
   if (error)
     return { error: "Нэвтэрч чадсангүй. Имэйл хаяг, нууц үгээ шалгана уу." };
+  await recordLogin(data.user.id);
   redirect(next);
 }
 export async function signOut() {

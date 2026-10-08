@@ -100,13 +100,16 @@ export function moduleAllowed(role: string, module: string) {
   const permitted: Record<string, string[]> = {
     MANAGER: [
       "/",
+      "/reports",
       "/branches",
       "/services",
       "/employees",
       "/schedules",
+      "/timesheet",
       "/calendar",
       "/bookings",
       "/customers",
+      "/inventory",
       "/support",
     ],
     RECEPTIONIST: [
@@ -115,9 +118,11 @@ export function moduleAllowed(role: string, module: string) {
       "/services",
       "/employees",
       "/schedules",
+      "/timesheet",
       "/calendar",
       "/bookings",
       "/customers",
+      "/inventory",
       "/support",
     ],
     STAFF: ["/", "/services", "/schedules", "/support"],

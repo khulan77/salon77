@@ -42,7 +42,8 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
     .getByRole("button", { name: "Үйлчилгээ нэмэх", exact: true })
     .first()
     .click();
-  let dialog = page.getByRole("dialog");
+  const editor = page.getByRole("region", { name: "Шинэ үйлчилгээ" });
+  let dialog = editor;
   await dialog.getByLabel("Үйлчилгээний нэр", { exact: true }).fill(service);
   await dialog
     .getByRole("combobox", { name: "Ангилал", exact: true })
@@ -55,10 +56,21 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
     .getByLabel("Онлайнаар захиалахыг зөвшөөрөх", { exact: true })
     .check();
   await responsive(page);
-  await save(page);
+  await editor.getByRole("button", { name: "Хадгалах", exact: true }).click();
+  await expect(editor).not.toBeVisible();
   await expect(
     page.getByRole("heading", { name: service, exact: true }),
   ).toBeVisible();
+  const row = page.locator(".service-row").filter({ hasText: service });
+  await expect(row).toContainText("65,000₮ · 1 цаг");
+  await expect(row).toContainText("Онлайн");
+  await row.getByRole("button", { name: `${service} засах` }).click();
+  const edit = page.getByRole("region", { name: "Үйлчилгээ засах" });
+  await expect(
+    edit.getByLabel("Үйлчилгээний нэр", { exact: true }),
+  ).toHaveValue(service);
+  await edit.getByRole("button", { name: "Цуцлах", exact: true }).click();
+  await expect(edit).not.toBeVisible();
   await responsive(page);
   await page.screenshot({
     path: `test-results/phase2-services-${info.project.name}.png`,
@@ -71,28 +83,36 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
     .click();
   dialog = page.getByRole("dialog");
   await dialog.getByLabel("Нэр", { exact: true }).fill(staff);
-  await dialog
-    .getByLabel("Албан тушаал", { exact: true })
-    .fill("Хумсны мастер");
   await dialog.getByLabel("Утас", { exact: true }).fill("99112233");
   await dialog.getByLabel("Зайсан", { exact: true }).check();
   await dialog.getByLabel("Яармаг", { exact: true }).check();
   await dialog.getByLabel(service, { exact: true }).check();
+  // Shifts default to branch hours; Monday and Tuesday are added by hand below.
+  await expect(
+    dialog.getByLabel("Зайсан · Эхлэх цаг", { exact: true }),
+  ).toHaveValue("10:00");
+  await dialog.getByLabel("Зайсан · Даваа", { exact: true }).uncheck();
+  await dialog.getByLabel("Зайсан · Мягмар", { exact: true }).uncheck();
+  // Overlapping days already taken by Зайсан stay free in Яармаг.
+  await expect(
+    dialog.getByLabel("Яармаг · Мягмар", { exact: true }),
+  ).not.toBeChecked();
   await responsive(page);
   await save(page);
+  const staffCard = page
+    .getByRole("article")
+    .filter({ has: page.getByRole("heading", { name: staff, exact: true }) })
+    .first();
+  await expect(staffCard).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: staff, exact: true }),
-  ).toBeVisible();
+    staffCard.getByRole("link", { name: `${staff} · Ажлын хуваарь` }),
+  ).toContainText("10:00");
   await responsive(page);
   await page.screenshot({
     path: `test-results/phase2-staff-${info.project.name}.png`,
     fullPage: true,
   });
-  await page
-    .getByRole("article")
-    .filter({ has: page.getByRole("heading", { name: staff, exact: true }) })
-    .getByRole("link", { name: "Ажлын хуваарь" })
-    .click();
+  await staffCard.getByRole("link", { name: "Ажлын хуваарь" }).click();
   await page
     .getByRole("button", { name: "Ажлын цаг нэмэх", exact: true })
     .click();

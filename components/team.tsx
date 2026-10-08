@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Users, Pencil, XCircle, Copy } from "lucide-react";
+import { Plus, Users, Pencil, XCircle, Copy, LogIn } from "lucide-react";
+import { localStamp } from "@/lib/business-time";
 import type { AdminData } from "@/lib/admin-data";
 import { Button } from "./ui/button";
 import { FeatureDialog, Feedback } from "./ui/feature-dialog";
-import { roleLabel, userFacingError } from "@/lib/ui-language";
+import { formatTimeAgo, roleLabel, userFacingError } from "@/lib/ui-language";
 import {
   localizeInvalidField,
   clearFieldValidity,
@@ -27,6 +28,11 @@ export function Team({ data }: { data: AdminData }) {
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
+  // Most recent sign-in first; members who never signed in go last.
+  const members = [...data.members].sort((a, b) =>
+    (b.lastLoginAt ?? "").localeCompare(a.lastLoginAt ?? ""),
+  );
+  const latest = members[0];
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
@@ -118,6 +124,23 @@ export function Team({ data }: { data: AdminData }) {
         харна. Урилгыг зөвхөн уригдсан, баталгаажсан имэйлээр хүлээн авна.
       </div>
       {!editing && <Feedback error={error} message={message} />}
+      {latest?.lastLoginAt && (
+        <section className="panel last-login" aria-label="Сүүлд нэвтэрсэн">
+          <span className="last-login-icon">
+            <LogIn size={16} />
+          </span>
+          <div>
+            <span>Хамгийн сүүлд нэвтэрсэн</span>
+            <strong>
+              {latest.name} · {roleLabel(latest.role)}
+            </strong>
+          </div>
+          <time dateTime={latest.lastLoginAt} suppressHydrationWarning>
+            {formatTimeAgo(latest.lastLoginAt)}
+            <small>{localStamp(latest.lastLoginAt).replace("T", " ")}</small>
+          </time>
+        </section>
+      )}
       {inviteLink && (
         <div className="notice">
           <strong>Туршилтын урилгын холбоос · Имэйл илгээгээгүй</strong>
@@ -155,11 +178,12 @@ export function Team({ data }: { data: AdminData }) {
                 <th>Эрх</th>
                 <th>Салбар</th>
                 <th>Төлөв</th>
+                <th>Сүүлд нэвтэрсэн</th>
                 <th>Үйлдэл</th>
               </tr>
             </thead>
             <tbody>
-              {data.members.map((m) => (
+              {members.map((m) => (
                 <tr key={m.id}>
                   <td>
                     <strong>{m.name}</strong>
@@ -172,6 +196,19 @@ export function Team({ data }: { data: AdminData }) {
                       : m.branches.join(", ") || "Байхгүй"}
                   </td>
                   <td>{m.active ? "Идэвхтэй" : "Идэвхгүй"}</td>
+                  <td>
+                    {m.lastLoginAt ? (
+                      <time
+                        dateTime={m.lastLoginAt}
+                        title={localStamp(m.lastLoginAt).replace("T", " ")}
+                        suppressHydrationWarning
+                      >
+                        {formatTimeAgo(m.lastLoginAt)}
+                      </time>
+                    ) : (
+                      <span className="muted-text">Бүртгэл алга</span>
+                    )}
+                  </td>
                   <td>
                     {m.role !== "SALON_OWNER" ? (
                       <Button

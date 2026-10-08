@@ -1,4 +1,8 @@
 "use client";
+import {
+  DepositInstructions,
+  type DepositDetails,
+} from "./deposit-instructions";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Feedback } from "./ui/feature-dialog";
@@ -15,8 +19,10 @@ import {
 } from "@/lib/booking-settings";
 export type BookingOptions = {
   branches: { id: string; name: string }[];
+  categories?: { id: string; name: string }[];
   services: {
     id: string;
+    categoryId?: string;
     name: string;
     priceMnt: number;
     durationMinutes: number;
@@ -29,22 +35,37 @@ export type BookingOptions = {
     serviceIds: string[];
   }[];
 };
+// Prefill from the calendar grid: a clicked staff column and time slot.
+export type BookingDraft = {
+  branchId?: string;
+  staffId?: string;
+  date?: string;
+  time?: string;
+};
 export function BookingWizard({
   options,
   slug,
   onSaved,
+  initial,
   policy = defaultBookingSettings,
 }: {
   options: BookingOptions;
   policy?: BookingPolicy;
   slug?: string;
-  onSaved?: (booking: { startAt: string }) => void;
+  initial?: BookingDraft;
+  onSaved?: (booking: { startAt: string; branchId?: string }) => void;
 }) {
+  const today = localStamp(new Date()).slice(0, 10);
   const [step, setStep] = useState(1),
-    [branchId, setBranch] = useState(options.branches[0]?.id ?? ""),
+    [branchId, setBranch] = useState(
+      initial?.branchId || options.branches[0]?.id || "",
+    ),
     [serviceId, setService] = useState(""),
-    [staffId, setStaff] = useState(""),
-    [date, setDate] = useState(localStamp(new Date()).slice(0, 10)),
+    [staffId, setStaff] = useState(initial?.staffId ?? ""),
+    [date, setDate] = useState(
+      initial?.date && initial.date >= today ? initial.date : today,
+    ),
+    [preferredTime, setPreferredTime] = useState(initial?.time ?? ""),
     [startAt, setStart] = useState("");
   const [slots, setSlots] = useState<{ startAt: string }[]>([]),
     [loading, setLoading] = useState(false),
@@ -67,6 +88,7 @@ export function BookingWizard({
     branchName?: string;
     startAt: string;
     priceMnt: number;
+    deposit?: DepositDetails | null;
   } | null>(null);
   const submission = useRef<{ payload: string; key: string } | null>(null);
   const service = options.services.find((s) => s.id === serviceId),
@@ -99,6 +121,11 @@ export function BookingWizard({
         const body = await r.json();
         if (!r.ok) throw new Error(body.error);
         setSlots(body.slots);
+        const preferred = body.slots.find(
+          (s: { startAt: string }) =>
+            localStamp(s.startAt).slice(11) === preferredTime,
+        );
+        if (preferred) setStart(preferred.startAt);
       })
       .catch((e) => {
         if (!controller.signal.aborted) {
@@ -110,7 +137,7 @@ export function BookingWizard({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [branchId, serviceId, staffId, date, slug, step, refresh]);
+  }, [branchId, serviceId, staffId, date, slug, step, refresh, preferredTime]);
   useEffect(() => {
     if (slug || search.length < 2) {
       return;
@@ -159,11 +186,13 @@ export function BookingWizard({
       submission.current = { payload, key: crypto.randomUUID() };
     try {
       const result = await requestJson<{
+        branchId?: string;
         serviceName: string;
         staffName?: string;
         branchName?: string;
         startAt: string;
         priceMnt: number;
+        deposit?: DepositDetails | null;
       }>(
         slug
           ? `/api/public/${encodeURIComponent(slug)}/bookings`
@@ -202,6 +231,7 @@ export function BookingWizard({
               : "Захиалгыг салон хүлээн авлаа. Баталгаажуулахыг хүлээнэ үү."}
           </p>
         )}
+        {receipt.deposit && <DepositInstructions deposit={receipt.deposit} />}
       </section>
     );
   return (
@@ -248,8 +278,14 @@ export function BookingWizard({
               value={serviceId}
               required
               onChange={(e) => {
-                setService(e.target.value);
-                setStaff("");
+                const next = e.target.value;
+                setService(next);
+                if (
+                  !options.staff.some(
+                    (s) => s.id === staffId && s.serviceIds.includes(next),
+                  )
+                )
+                  setStaff("");
                 setStart("");
               }}
             >
@@ -273,7 +309,13 @@ export function BookingWizard({
         <>
           <label className="field">
             Ажилтан
-            <select value={staffId} onChange={(e) => setStaff(e.target.value)}>
+            <select
+              value={staffId}
+              onChange={(e) => {
+                setStaff(e.target.value);
+                setPreferredTime("");
+              }}
+            >
               <option value="">Аль ч ажилтан</option>
               {staff.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -293,7 +335,10 @@ export function BookingWizard({
                 slug ? policy.advanceBookingDays : 365,
               )}
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => {
+                setDate(e.target.value);
+                setPreferredTime("");
+              }}
             />
           </label>
           <p className="field-hint">
@@ -443,9 +488,11 @@ export function BookingWizard({
           </p>
           {slug && (
             <p>
-              {policy.bookingConfirmationMode === "AUTO_CONFIRM"
-                ? "Захиалга шууд баталгаажна."
-                : "Салон захиалгыг гараар баталгаажуулна."}
+              {policy.depositRequired
+                ? "Захиалсны дараа урьдчилгаа шилжүүлэх дансны мэдээлэл гарна."
+                : policy.bookingConfirmationMode === "AUTO_CONFIRM"
+                  ? "Захиалга шууд баталгаажна."
+                  : "Салон захиалгыг гараар баталгаажуулна."}
             </p>
           )}
         </div>

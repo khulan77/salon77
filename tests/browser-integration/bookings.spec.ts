@@ -30,22 +30,15 @@ test("manual booking, reschedule, completion and customer history", async ({
     name: "Шинэ захиалга",
     exact: true,
   });
+  await dialog.getByRole("radio", { name: /Гел маникюр/ }).check();
   await dialog
-    .getByRole("combobox", { name: "Салбар", exact: true })
-    .selectOption("z");
-  await dialog
-    .getByRole("combobox", { name: "Үйлчилгээ", exact: true })
-    .selectOption("book-service-a-90");
-  await dialog.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
-  await dialog
-    .getByRole("combobox", { name: "Ажилтан", exact: true })
+    .getByRole("combobox", { name: "Үндсэн ажилтан", exact: true })
     .selectOption("book-staff-a-1");
-  await dialog.getByLabel("Өдөр", { exact: true }).fill(date);
+  await dialog.getByLabel("Огноо", { exact: true }).fill(date);
   await dialog.getByRole("button", { name: "15:00", exact: true }).click();
   await expect(
     dialog.getByRole("button", { name: "13:00", exact: true }),
   ).toHaveCount(0);
-  await dialog.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await dialog.getByLabel("Нэр", { exact: true }).fill(name);
   await dialog
     .getByLabel("Утас", { exact: true })
@@ -53,16 +46,13 @@ test("manual booking, reschedule, completion and customer history", async ({
   await dialog
     .getByLabel("Тэмдэглэл", { exact: true })
     .fill("Хувийн захиалгын тэмдэглэл");
-  await dialog.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
+  await expect(dialog.locator(".quick-footer")).toContainText(
+    "Гел маникюр · 15:00",
+  );
   await responsive(page);
-  await dialog
-    .getByRole("button", { name: "Баталгаажуулах", exact: true })
-    .click();
-  await expect(
-    dialog.getByRole("heading", { name: "Захиалга амжилттай" }),
-  ).toBeVisible();
-  await expect(dialog.getByText("Зайсан · Ану")).toBeVisible();
-  await dialog.getByRole("button", { name: "Цонх хаах" }).click();
+  await dialog.getByRole("button", { name: "Захиалах", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByText("Захиалга амжилттай нэмэгдлээ.")).toBeVisible();
   const card = page.locator(".booking-card").filter({ hasText: name });
   await expect(card).toContainText("15:00 — 16:30");
   await card.click();
@@ -75,8 +65,9 @@ test("manual booking, reschedule, completion and customer history", async ({
   await expect(detail).not.toBeVisible();
   await expect(card).toContainText("10:00 — 11:30");
   await page
-    .getByRole("combobox", { name: "Харагдац", exact: true })
-    .selectOption("7");
+    .getByRole("group", { name: "Харагдац", exact: true })
+    .getByRole("button", { name: "7 хоног", exact: true })
+    .click();
   await expect(page.locator(".calendar-day")).toHaveCount(7);
   await responsive(page);
   await page.screenshot({

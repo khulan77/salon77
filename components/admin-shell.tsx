@@ -16,7 +16,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { moduleAllowed } from "@/lib/access";
-import { navigation } from "@/lib/navigation";
+import { navigation, modules } from "@/lib/navigation";
 import { signOut } from "@/app/auth/actions";
 import type { AdminData } from "@/lib/admin-data";
 export function AdminShell({
@@ -27,13 +27,14 @@ export function AdminShell({
   children: React.ReactNode;
 }) {
   const path = usePathname();
+  // The calendar uses the full viewport height, so it drops the page footer.
+  const fullHeight = path === "/calendar" || path === "/bookings";
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
   const [profile, setProfile] = useState(false);
   const current =
-    navigation.flatMap((g) => g.items).find((i) => i.href === path)?.title ??
-    "Хяналтын самбар";
+    modules.find((i) => i.href === path)?.title ?? "Хяналтын самбар";
   return (
     <div className="app-shell">
       {open && (
@@ -78,11 +79,13 @@ export function AdminShell({
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className={`nav-item ${path === item.href ? "active" : ""}`}
+                    className={`nav-item ${isActive(path, item.href) ? "active" : ""}`}
                   >
                     <item.icon size={17} strokeWidth={1.65} />
                     <span>{item.title}</span>
-                    {path === item.href && <span className="active-dot" />}
+                    {isActive(path, item.href) && (
+                      <span className="active-dot" />
+                    )}
                   </Link>
                 ))}
               </div>
@@ -168,16 +171,22 @@ export function AdminShell({
             </div>
           </div>
         </header>
-        <main className="page-content">{children}</main>
-        <footer className="main-footer">
-          <span>© {new Date().getFullYear()} Salon77</span>
-          <span>
-            Таны өсөлтөд зориуллаа.<span className="footer-dot">✦</span>
-          </span>
-          <Link href="/support">
-            Тусламж авах <ArrowUpRight size={12} />
-          </Link>
-        </footer>
+        <main
+          className={fullHeight ? "page-content full-height" : "page-content"}
+        >
+          {children}
+        </main>
+        {!fullHeight && (
+          <footer className="main-footer">
+            <span>© {new Date().getFullYear()} Salon77</span>
+            <span>
+              Таны өсөлтөд зориуллаа.<span className="footer-dot">✦</span>
+            </span>
+            <Link href="/support">
+              Тусламж авах <ArrowUpRight size={12} />
+            </Link>
+          </footer>
+        )}
       </div>
       {search && (
         <div className="modal-backdrop" onClick={() => setSearch(false)}>
@@ -250,4 +259,8 @@ function ScissorMark() {
       <path d="m8 15 10-12M15 15 5 3" />
     </svg>
   );
+}
+// Settings tabs (team) keep the «Тохиргоо» item highlighted.
+function isActive(path: string, href: string) {
+  return path === href || (href === "/settings" && path === "/team");
 }

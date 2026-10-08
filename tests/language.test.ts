@@ -94,3 +94,15 @@ test("Mongolian dates use Ulaanbaatar day boundaries without browser locale fall
     "2026 оны 10-р сарын 5, Даваа",
   );
 });
+test("relative login times read naturally in Mongolian", async () => {
+  const { formatTimeAgo } = await import("../lib/ui-language");
+  const now = new Date("2026-10-09T12:00:00Z");
+  const ago = (minutes: number) =>
+    formatTimeAgo(new Date(+now - minutes * 60000).toISOString(), now);
+  assert.equal(ago(0), "дөнгөж сая");
+  assert.equal(ago(15), "15 минутын өмнө");
+  assert.equal(ago(180), "3 цагийн өмнө");
+  assert.equal(ago(60 * 30), "өчигдөр");
+  assert.equal(ago(60 * 24 * 5), "5 өдрийн өмнө");
+  assert.match(ago(60 * 24 * 40), /^2026 оны 8-р сарын 30/);
+});

@@ -63,6 +63,7 @@ export async function readCatalog(
       categoryId: s.categoryId,
       priceMnt: s.priceMnt,
       durationMinutes: s.durationMinutes,
+      discountPercent: s.discountPercent,
       active: s.active,
       onlineBookable: s.onlineBookable,
       branchIds: s.branches.map((b) => b.branchId),

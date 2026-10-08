@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { navigation } from "../../lib/navigation";
+import { modules } from "../../lib/navigation";
 
 async function expectMongolian(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("lang", "mn");
@@ -37,7 +37,7 @@ test("all implemented pages and future navigation remain Mongolian on desktop an
   page,
 }, info) => {
   const routes = [
-    ...navigation.flatMap((group) => group.items.map((item) => item.href)),
+    ...modules.map((item) => item.href),
     "/sign-in",
     "/sign-up",
     "/onboarding",
@@ -151,7 +151,9 @@ test("Phase 2 service and staff dialogs remain Mongolian and fit the viewport", 
     .getByRole("button", { name: "Үйлчилгээ нэмэх", exact: true })
     .first()
     .click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Шинэ үйлчилгээ" }),
+  ).toBeVisible();
   await expectMongolian(page);
   await page.goto("/employees");
   await page

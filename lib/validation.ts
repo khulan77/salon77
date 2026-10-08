@@ -9,9 +9,18 @@ export const branchSchema = z
     phone: text(30),
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
+    openMinute: z.number().int().min(0).max(1440).optional(),
+    closeMinute: z.number().int().min(0).max(1440).optional(),
     active: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (v) =>
+      v.openMinute === undefined ||
+      v.closeMinute === undefined ||
+      v.closeMinute > v.openMinute,
+    "Хаах цаг нээх цагаас хойш байх ёстой.",
+  );
 const reserved = [
   "api",
   "invite",
@@ -103,16 +112,37 @@ export const serviceSchema = z
       .min(0)
       .max(1000000000),
     durationMinutes: z.number().int().min(1).max(1440),
+    discountPercent: z
+      .number()
+      .int("Хямдралын хувийг бүхэл тоогоор оруулна уу.")
+      .min(0)
+      .max(90, "Хямдрал 90%-иас ихгүй байна.")
+      .default(0),
     onlineBookable: z.boolean(),
     active: z.boolean(),
     branchIds: ids,
   })
   .strict();
 
+const weeklyShift = z
+  .object({
+    branchId: z.string().min(1).max(100),
+    days: z
+      .array(z.number().int().min(1).max(7))
+      .max(7)
+      .transform((v) => [...new Set(v)]),
+    startMinute: z.number().int().min(0).max(1440),
+    endMinute: z.number().int().min(0).max(1440),
+  })
+  .strict()
+  .refine(
+    (v) => v.endMinute > v.startMinute,
+    "Ажлын цагийн эхлэх болон дуусах цагийг шалгана уу.",
+  );
 export const staffSchema = z
   .object({
     name: text(100),
-    title: text(100),
+    title: z.string().trim().max(100).default(""),
     phone: z.string().trim().max(30),
     bio: z.string().trim().max(2000),
     active: z.boolean(),
@@ -122,8 +152,18 @@ export const staffSchema = z
       .array(z.string().min(1).max(100))
       .max(200)
       .transform((v) => [...new Set(v)]),
+    // Weekly shift per branch; replaces that branch's hours when sent.
+    schedule: z.array(weeklyShift).max(100).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((v, ctx) => {
+    for (const s of v.schedule ?? [])
+      if (!v.branchIds.includes(s.branchId))
+        ctx.addIssue({
+          code: "custom",
+          message: "Хуваарийн салбарыг ажилтны салбаруудаас сонгоно уу.",
+        });
+  });
 const minute = z.number().int().min(0).max(1440);
 export const breakSchema = z
   .object({ startMinute: minute, endMinute: minute })

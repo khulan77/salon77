@@ -117,3 +117,55 @@ export function formatMongolianDate(date: Date) {
     weekdays[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
   return `${year} оны ${month}-р сарын ${day}, ${weekday}`;
 }
+
+const weekdayNames = [
+  "Ням",
+  "Даваа",
+  "Мягмар",
+  "Лхагва",
+  "Пүрэв",
+  "Баасан",
+  "Бямба",
+];
+// Calendar-date labels for report ranges: "9 сарын 1, Мягмар".
+export function formatDayLabel(date: string, weekday = true) {
+  const [, month, day] = date.split("-").map(Number);
+  const name = weekdayNames[new Date(`${date}T12:00:00Z`).getUTCDay()];
+  return `${month} сарын ${day}${weekday ? `, ${name}` : ""}`;
+}
+export function weekdayName(date: string) {
+  return weekdayNames[new Date(`${date}T12:00:00Z`).getUTCDay()];
+}
+export function formatMonthLabel(month: string) {
+  const [year, value] = month.split("-").map(Number);
+  return `${year} оны ${value}-р сар`;
+}
+export function formatMnt(value: number) {
+  return `${value.toLocaleString("en-US")}₮`;
+}
+// Axis ticks: "500 мянга", "1.5 сая".
+export function formatCompactMnt(value: number) {
+  if (value >= 1_000_000)
+    return `${Number((value / 1_000_000).toFixed(1))} сая`;
+  if (value >= 1000) return `${Number((value / 1000).toFixed(1))} мянга`;
+  return String(value);
+}
+// Service durations: "45 мин", "1 цаг", "1 цаг 15 мин".
+export function formatDuration(minutes: number) {
+  const hours = Math.floor(minutes / 60),
+    rest = minutes % 60;
+  if (!hours) return `${rest} мин`;
+  return rest ? `${hours} цаг ${rest} мин` : `${hours} цаг`;
+}
+// "дөнгөж сая", "15 минутын өмнө", "3 цагийн өмнө", "өчигдөр", "5 өдрийн өмнө".
+export function formatTimeAgo(iso: string, now = new Date()) {
+  const minutes = Math.max(0, Math.floor((+now - Date.parse(iso)) / 60000));
+  if (minutes < 1) return "дөнгөж сая";
+  if (minutes < 60) return `${minutes} минутын өмнө`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} цагийн өмнө`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "өчигдөр";
+  if (days < 30) return `${days} өдрийн өмнө`;
+  return formatMongolianDate(new Date(iso));
+}

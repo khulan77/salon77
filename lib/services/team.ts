@@ -202,6 +202,8 @@ export async function acceptInvitation(
           id: user.id,
           email: user.email.toLowerCase(),
           name: invite.name,
+          // They signed in moments ago to accept the invitation.
+          lastLoginAt: new Date(),
         },
         update: { email: user.email.toLowerCase() },
       });

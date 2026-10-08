@@ -14,6 +14,8 @@ export type BranchView = {
   active: boolean;
   latitude: number | null;
   longitude: number | null;
+  openMinute: number;
+  closeMinute: number;
 };
 export type AdminData = {
   preview: boolean;
@@ -33,6 +35,7 @@ export type AdminData = {
     active: boolean;
     branchIds: string[];
     branches: string[];
+    lastLoginAt: string | null;
   }[];
   invitations: {
     id: string;
@@ -143,6 +146,7 @@ export const adminData = cache(async (): Promise<AdminData> => {
       active: m.active,
       branchIds: m.branches.map((b) => b.branchId),
       branches: m.branches.map((b) => b.branch.name),
+      lastLoginAt: m.user.lastLoginAt?.toISOString() ?? null,
     })),
     invitations: invitations.map((i) => ({
       ...i,

@@ -1,4 +1,6 @@
-# Salon77 — Phase 2
+# Salon77
+
+Project documentation: [Overview](docs/PROJECT_OVERVIEW.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap & status](docs/DEVELOPMENT_ROADMAP.md) · [Engineering rules](docs/ENGINEERING_RULES.md). The sections below record per-phase setup and verification history.
 
 A multi-tenant salon workspace built with Next.js 16 App Router, strict TypeScript, Tailwind 4, a shadcn-style Radix/CVA button foundation, Lucide, Prisma 6, PostgreSQL, Supabase Auth, and Zod. Uses self-hosted Inter with Cyrillic glyphs. The existing Next.js version was retained. Prisma 6 is deliberately pinned to its stable datasource/client API.
 
@@ -94,7 +96,7 @@ Email delivery is not integrated. Development mode shows a one-time owner-only l
 
 ### Migrations
 
-Apply the migrations in order using `bun run db:migrate`: `202610050001_foundation`, `202610050002_team`, `202610050003_services`, `202610050004_staff_schedules`. The last migration enables `btree_gist`; the migration role must be able to create this extension. All new business tables enable RLS and revoke Supabase browser-role privileges. Use the trusted server database connection, never browser Data API calls, for private operational data.
+Apply the migrations in order using `bun run db:migrate`: `202610050001_foundation`, `202610050002_team`, `202610050003_services`, `202610050004_staff_schedules`, `202610060005_bookings`, `202610070006_booking_settings`. Check with `bunx prisma migrate status` before deploying code. The staff-schedules migration enables `btree_gist`; the migration role must be able to create this extension. All new business tables enable RLS and revoke Supabase browser-role privileges. Use the trusted server database connection, never browser Data API calls, for private operational data.
 
 ## Routes
 
@@ -242,3 +244,9 @@ A subsequent phase can add notification delivery and booking reminders, with an 
 The live acceptance tests exercise the actual server domain through Prisma against Supabase, not hosted browser login. Complete the real-account browser checklist above before launch. Local tooling used Node 20 and emitted Supabase's deprecation warning; deployment should use the already-declared Node 22+ requirement.
 
 Final follow-up on 2026-10-07: lint, strict TypeScript and the configured production build passed again after the active-category filter change. All **4 targeted Phase 3 desktop/mobile browser tests passed** with stricter customer-detail URL, dialog and completed-history assertions. The desktop customer-detail screenshot was rechecked after navigation completed. These four tests are a rerun of the booking cases in the ten-test integration suite, not four additional distinct cases.
+
+## Phase 4.1 — Booking settings
+
+`202610070006_booking_settings` adds one `BookingSettings` row per salon (backfilled for existing salons and created by a `Salon` insert trigger). Owners edit it at `/settings` via `GET/PATCH /api/booking-settings`. `lib/services/bookings.ts` enforces: public booking on/off (admin booking unaffected), manual/auto confirmation for online bookings, advance window and minimum notice for online bookings, and a 15/30-minute slot interval for all bookings. `cancellationNoticeMinutes` is stored only; enforcement belongs to Phase 4.5.
+
+Audit on 2026-10-08: lint, typecheck, build, 39 unit, 37 integration, 20 preview browser (unconfigured build) and 10 integration browser tests passed. `prisma migrate status` showed this migration **not yet applied** to the configured Supabase database — run `bun run db:migrate` before using this code against it. See [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md).

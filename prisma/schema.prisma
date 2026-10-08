@@ -33,6 +33,7 @@ model User {
   email        String        @unique
   name         String?
   isSuperAdmin Boolean       @default(false)
+  lastLoginAt  DateTime?
   createdAt    DateTime      @default(now())
   memberships  SalonMember[]
 }
@@ -59,20 +60,22 @@ model Salon {
   bookings        Booking[]
   bookingSettings BookingSettings?
   customers       Customer[]
+  products        Product[]
 }
 
 model SalonMember {
-  id        String         @id @default(cuid())
-  salonId   String
-  userId    String         @db.Uuid
-  role      Role
-  active    Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  salon     Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branches  MemberBranch[]
-  staff     Staff?
-  bookings  Booking[]
+  id              String            @id @default(cuid())
+  salonId         String
+  userId          String            @db.Uuid
+  role            Role
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  salon           Salon             @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branches        MemberBranch[]
+  staff           Staff?
+  bookings        Booking[]
+  attendanceMarks StaffAttendance[]
 
   @@unique([salonId, userId])
   @@unique([id, salonId])
@@ -80,23 +83,27 @@ model SalonMember {
 }
 
 model Branch {
-  id          String             @id @default(cuid())
-  salonId     String
-  name        String
-  district    String
-  address     String
-  phone       String
-  latitude    Float?
-  longitude   Float?
-  active      Boolean            @default(true)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  salon       Salon              @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  members     MemberBranch[]
-  invitations InvitationBranch[]
-  services    ServiceBranch[]
-  staff       StaffBranch[]
-  bookings    Booking[]
+  id           String             @id @default(cuid())
+  salonId      String
+  name         String
+  district     String
+  address      String
+  phone        String
+  latitude     Float?
+  longitude    Float?
+  // Opening hours in minutes after local midnight; staff shifts default to these.
+  openMinute   Int                @default(600)
+  closeMinute  Int                @default(1140)
+  active       Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  salon        Salon              @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  members      MemberBranch[]
+  invitations  InvitationBranch[]
+  services     ServiceBranch[]
+  staff        StaffBranch[]
+  bookings     Booking[]
+  productStock ProductStock[]
 
   @@unique([id, salonId])
   @@index([salonId, active])
@@ -164,6 +171,7 @@ model Service {
   description     String?
   priceMnt        Int
   durationMinutes Int
+  discountPercent Int             @default(0)
   onlineBookable  Boolean         @default(false)
   active          Boolean         @default(true)
   imageUrl        String?
@@ -191,22 +199,23 @@ model ServiceBranch {
 }
 
 model Staff {
-  id        String         @id @default(cuid())
-  salonId   String
-  memberId  String?
-  name      String
-  title     String
-  phone     String?
-  bio       String?
-  imageUrl  String?
-  active    Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  salon     Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  member    SalonMember?   @relation(fields: [memberId, salonId], references: [id, salonId])
-  branches  StaffBranch[]
-  services  StaffService[]
-  bookings  Booking[]
+  id         String            @id @default(cuid())
+  salonId    String
+  memberId   String?
+  name       String
+  title      String
+  phone      String?
+  bio        String?
+  imageUrl   String?
+  active     Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  salon      Salon             @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  member     SalonMember?      @relation(fields: [memberId, salonId], references: [id, salonId])
+  branches   StaffBranch[]
+  services   StaffService[]
+  bookings   Booking[]
+  attendance StaffAttendance[]
 
   @@unique([id, salonId])
   @@unique([memberId, salonId])
@@ -322,6 +331,8 @@ model Booking {
   serviceNameSnapshot     String
   durationMinutesSnapshot Int
   priceSnapshot           Int
+  discountPercentSnapshot Int           @default(0)
+  depositAmountSnapshot   Int           @default(0)
   customerNameSnapshot    String
   customerPhoneSnapshot   String
   notes                   String?
@@ -346,6 +357,35 @@ model Booking {
   @@index([salonId, status, startAt])
 }
 
+enum StaffHoursMode {
+  CUSTOM
+  SALON_HOURS
+}
+
+enum AttendanceStatus {
+  WORKED
+  OFF
+}
+
+model StaffAttendance {
+  salonId           String
+  staffId           String
+  date              DateTime         @db.Date
+  status            AttendanceStatus
+  updatedByMemberId String?
+  updatedAt         DateTime         @default(now()) @updatedAt
+  staff             Staff            @relation(fields: [staffId, salonId], references: [id, salonId], onDelete: Cascade)
+  updatedBy         SalonMember?     @relation(fields: [updatedByMemberId, salonId], references: [id, salonId], onDelete: Restrict)
+
+  @@id([staffId, date])
+  @@index([salonId, date])
+}
+
+enum DepositType {
+  PERCENT
+  FIXED
+}
+
 enum BookingConfirmationMode {
   AUTO_CONFIRM
   MANUAL_CONFIRM
@@ -359,6 +399,47 @@ model BookingSettings {
   minimumBookingNoticeMinutes Int                     @default(0)
   cancellationNoticeMinutes   Int                     @default(0)
   slotIntervalMinutes         Int                     @default(15)
+  depositRequired             Boolean                 @default(false)
+  depositType                 DepositType             @default(PERCENT)
+  depositValue                Int                     @default(30)
+  depositBankName             String                  @default("")
+  depositAccountNumber        String                  @default("")
+  depositAccountHolder        String                  @default("")
+  staffHoursMode              StaffHoursMode          @default(CUSTOM)
   updatedAt                   DateTime                @default(now()) @updatedAt
   salon                       Salon                   @relation(fields: [salonId], references: [id], onDelete: Cascade)
+}
+
+// Retail and supply items; quantities are tracked per branch.
+model Product {
+  id        String         @id @default(cuid())
+  salonId   String
+  name      String
+  sku       String?
+  category  String         @default("")
+  unit      String         @default("ш")
+  costMnt   Int            @default(0)
+  priceMnt  Int            @default(0)
+  lowStock  Int            @default(0)
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  salon     Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  stock     ProductStock[]
+
+  @@unique([id, salonId])
+  @@unique([salonId, sku])
+  @@index([salonId, active])
+}
+
+model ProductStock {
+  productId String
+  branchId  String
+  salonId   String
+  quantity  Int     @default(0)
+  product   Product @relation(fields: [productId, salonId], references: [id, salonId], onDelete: Cascade)
+  branch    Branch  @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@id([productId, branchId])
+  @@index([salonId, branchId])
 }

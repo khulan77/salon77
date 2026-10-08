@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { configured } from "@/lib/env";
@@ -26,6 +27,18 @@ export default async function Page({
   }
   return (
     <main className="public-booking">
+      {catalog.salon.coverUrl && (
+        <div className="public-cover">
+          <Image
+            src={catalog.salon.coverUrl}
+            alt={`${catalog.salon.name} салоны зураг`}
+            fill
+            unoptimized
+            priority
+            sizes="(max-width: 700px) 100vw, 720px"
+          />
+        </div>
+      )}
       <header>
         <span className="eyebrow">SALON77</span>
         <h1>{catalog.salon.name}</h1>

@@ -409,6 +409,54 @@ test(
         },
       );
       await t.test(
+        "staff can shorten an appointment; online guests cannot override duration",
+        async () => {
+          const short = await createBooking(
+            db,
+            { actor: actors.reception },
+            { ...input("16:00"), durationMinutes: 30 },
+          );
+          assert.equal(short.durationMinutesSnapshot, 30);
+          assert.equal(+short.endAt - +short.startAt, 30 * 60000);
+          assert.equal(short.priceSnapshot, 65000);
+          const slots = (
+            await availability(
+              db,
+              { actor: actors.owner },
+              { ...query, durationMinutes: "30" },
+            )
+          ).slots.map((s) => localStamp(s.startAt).slice(11));
+          assert.ok(!slots.includes("16:00"));
+          assert.ok(slots.includes("16:30"));
+          await assert.rejects(
+            availability(
+              db,
+              { slug: "salon-a" },
+              { ...query, durationMinutes: "30" },
+            ),
+            rejected(403),
+          );
+          await assert.rejects(
+            createBooking(
+              db,
+              { slug: "salon-a" },
+              {
+                ...input("17:00"),
+                staffId: undefined,
+                customer: { name: "Зочин", phone: "88112244" },
+                durationMinutes: 30,
+              },
+            ),
+            rejected(403),
+          );
+          await changeBooking(db, actors.owner, short.id, {
+            action: "status",
+            status: "CANCELLED",
+            version: 1,
+          });
+        },
+      );
+      await t.test(
         "invalid eligibility, service visibility and past/off-grid requests fail closed",
         async () => {
           await assert.rejects(

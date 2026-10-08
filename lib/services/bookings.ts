@@ -16,7 +16,8 @@ import {
   addDays,
 } from "../business-time";
 import { salonBookingPolicy } from "./booking-settings";
-import { publicBookingClosed } from "../booking-settings";
+import { depositAmount, publicBookingClosed } from "../booking-settings";
+import { discountedPrice } from "../pricing";
 type Clock = { now?: () => Date };
 type Database = Prisma.TransactionClient;
 export type BookingContext = { actor: Actor } | { slug: string };
@@ -159,7 +160,8 @@ async function slots(
   const window = dayWindow(input.date, zone),
     staffIds = staff.map((s) => s.id),
     weekday = ((new Date(`${input.date}T12:00:00Z`).getUTCDay() + 6) % 7) + 1;
-  const [hours, off, bookings] = await Promise.all([
+  const salonHours = scope.policy.staffHoursMode === "SALON_HOURS";
+  const [hours, off, bookings, absent, branch] = await Promise.all([
     db.workingHours.findMany({
       where: {
         salonId: scope.salonId,
@@ -191,13 +193,43 @@ async function slots(
       },
       select: { staffId: true, startAt: true, endAt: true },
     }),
+    // Staff marked «А» on the timesheet take no bookings that day.
+    db.staffAttendance.findMany({
+      where: {
+        salonId: scope.salonId,
+        staffId: { in: staffIds },
+        date: new Date(`${input.date}T00:00:00Z`),
+        status: "OFF",
+      },
+      select: { staffId: true },
+    }),
+    salonHours
+      ? db.branch.findFirst({
+          where: { id: input.branchId, salonId: scope.salonId },
+          select: { openMinute: true, closeMinute: true },
+        })
+      : null,
   ]);
+  const away = new Set(absent.map((a) => a.staffId));
   const result = new Map<string, string[]>();
   const grid = Array.from({ length: Math.ceil(1440 / interval) }, (_, i) =>
     minuteInstant(input.date, i * interval, zone),
   );
   for (const person of staff) {
-    const shifts = hours.filter((h) => h.staffId === person.id);
+    if (away.has(person.id)) continue;
+    // In salon-hours mode everyone works the branch's opening hours, no breaks.
+    const shifts = salonHours
+      ? branch
+        ? [
+            {
+              ...branch,
+              startMinute: branch.openMinute,
+              endMinute: branch.closeMinute,
+              breaks: [],
+            },
+          ]
+        : []
+      : hours.filter((h) => h.staffId === person.id);
     const windows = shifts.map((h) => ({
       start: +minuteInstant(input.date, h.startMinute, zone),
       end: +minuteInstant(input.date, h.endMinute, zone),
@@ -245,6 +277,8 @@ export async function availability(
   const input = availabilitySchema.parse(raw),
     scope = await resolveContext(db, context);
   let current: Booking | null = null;
+  if (input.durationMinutes && !scope.actor)
+    throw new HttpError(403, "Энэ хүсэлтийг зөвшөөрөхгүй.");
   if (input.excludeBookingId) {
     if (!scope.actor) throw new HttpError(403, "Энэ хүсэлтийг зөвшөөрөхгүй.");
     current = await db.booking.findFirst({
@@ -261,13 +295,15 @@ export async function availability(
   }
   const result = await slots(db, scope, input, {
     excludeId: current?.id,
-    duration: current?.durationMinutesSnapshot,
+    duration: current?.durationMinutesSnapshot ?? input.durationMinutes,
     now: clock.now?.(),
   });
   return {
     slots: result.slots.map((s) => ({ startAt: s.startAt })),
     durationMinutes:
-      current?.durationMinutesSnapshot ?? result.service.durationMinutes,
+      current?.durationMinutesSnapshot ??
+      input.durationMinutes ??
+      result.service.durationMinutes,
   };
 }
 function retryable(error: unknown) {
@@ -294,7 +330,7 @@ async function transaction<T>(
     }
   }
 }
-async function lockStaff(db: Database, ids: string[]) {
+export async function lockStaff(db: Database, ids: string[]) {
   for (const id of [...ids].sort())
     await db.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${`booking-staff:${id}`},0))`;
 }
@@ -310,6 +346,8 @@ export async function createBooking(
     if (scope.online && !scope.policy.publicBookingEnabled)
       throw new HttpError(403, publicBookingClosed);
     if (scope.actor) requireBranch(scope.actor, input.branchId);
+    if (scope.online && input.durationMinutes)
+      throw new HttpError(403, "Энэ хүсэлтийг зөвшөөрөхгүй.");
     if (scope.online && (input.customerId || input.notes))
       throw new HttpError(400, "Үйлчлүүлэгчийн нэр, утсаа оруулна уу.");
     const hash = createHash("sha256")
@@ -348,8 +386,9 @@ export async function createBooking(
       tx,
       scope,
       { ...input, date },
-      { now: clock.now?.() },
+      { now: clock.now?.(), duration: input.durationMinutes },
     );
+    const duration = input.durationMinutes ?? available.service.durationMinutes;
     const slot = available.slots.find(
       (s) => s.startAt === startAt.toISOString(),
     );
@@ -379,6 +418,11 @@ export async function createBooking(
         update: {},
       });
     }
+    const price = discountedPrice(
+      available.service.priceMnt,
+      available.service.discountPercent,
+    );
+    const deposit = scope.online ? depositAmount(price, scope.policy) : 0;
     return tx.booking.create({
       data: {
         salonId: scope.salonId,
@@ -387,10 +431,12 @@ export async function createBooking(
         staffId: slot.staffIds[0],
         customerId: customer.id,
         startAt,
-        endAt: new Date(+startAt + available.service.durationMinutes * 60000),
+        endAt: new Date(+startAt + duration * 60000),
+        // A required deposit keeps online bookings pending until staff verify it.
         status:
           scope.online &&
-          scope.policy.bookingConfirmationMode === "MANUAL_CONFIRM"
+          (deposit > 0 ||
+            scope.policy.bookingConfirmationMode === "MANUAL_CONFIRM")
             ? "PENDING"
             : "CONFIRMED",
         source: scope.online
@@ -400,8 +446,10 @@ export async function createBooking(
             : "RECEPTION",
         createdByMemberId: scope.actor?.id,
         serviceNameSnapshot: available.service.name,
-        durationMinutesSnapshot: available.service.durationMinutes,
-        priceSnapshot: available.service.priceMnt,
+        durationMinutesSnapshot: duration,
+        priceSnapshot: price,
+        discountPercentSnapshot: available.service.discountPercent,
+        depositAmountSnapshot: deposit,
         customerNameSnapshot: input.customer?.name ?? customer.name,
         customerPhoneSnapshot: input.customer?.phone ?? customer.phone,
         notes: input.notes,
@@ -482,6 +530,7 @@ export function bookingView(
     customerName: b.customerNameSnapshot,
     customerPhone: b.customerPhoneSnapshot,
     priceMnt: b.priceSnapshot,
+    depositMnt: b.depositAmountSnapshot,
     durationMinutes: b.durationMinutesSnapshot,
     notes: b.notes ?? "",
     version: b.version,
@@ -535,7 +584,7 @@ export async function publicCatalog(db: Database, slug: string) {
   const scope = await resolveContext(db, { slug });
   const salon = await db.salon.findUniqueOrThrow({
     where: { id: scope.salonId },
-    select: { name: true, slug: true },
+    select: { name: true, slug: true, coverUrl: true },
   });
   if (!scope.policy.publicBookingEnabled)
     return {
@@ -563,6 +612,7 @@ export async function publicCatalog(db: Database, slug: string) {
         name: true,
         durationMinutes: true,
         priceMnt: true,
+        discountPercent: true,
         branches: {
           where: { branch: { active: true } },
           select: { branchId: true },
@@ -600,6 +650,9 @@ export async function publicCatalog(db: Database, slug: string) {
     branches,
     services: services.map((s) => ({
       ...s,
+      // priceMnt is what the guest pays; listPriceMnt shows the struck-out price.
+      priceMnt: discountedPrice(s.priceMnt, s.discountPercent),
+      listPriceMnt: s.priceMnt,
       branchIds: s.branches.map((b) => b.branchId),
     })),
     staff: staff.map((s) => ({
@@ -634,5 +687,17 @@ export async function publicReceipt(db: Database, b: Booking) {
     endAt: b.endAt.toISOString(),
     priceMnt: b.priceSnapshot,
     status: b.status,
+    deposit: b.depositAmountSnapshot ? await depositInstructions(db, b) : null,
+  };
+}
+// Transfer details are shown only to the guest who just made the booking.
+async function depositInstructions(db: Database, b: Booking) {
+  const policy = await salonBookingPolicy(db, b.salonId);
+  return {
+    amountMnt: b.depositAmountSnapshot,
+    bankName: policy.depositBankName,
+    accountNumber: policy.depositAccountNumber,
+    accountHolder: policy.depositAccountHolder,
+    reference: b.customerPhoneSnapshot.replace(/^\+976/, ""),
   };
 }

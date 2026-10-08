@@ -1,4 +1,5 @@
 "use client";
+import { clockTime, parseClock } from "@/lib/schedule-time";
 import { userFacingError } from "@/lib/ui-language";
 import {
   localizeInvalidField,
@@ -33,6 +34,8 @@ export function Branches({ data }: { data: AdminData }) {
       phone: form.get("phone"),
       latitude: form.get("latitude") ? Number(form.get("latitude")) : null,
       longitude: form.get("longitude") ? Number(form.get("longitude")) : null,
+      openMinute: parseClock(String(form.get("open"))),
+      closeMinute: parseClock(String(form.get("close"))),
       active: editing !== "new" && editing ? editing.active : true,
     };
     try {
@@ -151,6 +154,9 @@ export function Branches({ data }: { data: AdminData }) {
                 {branch.address}
                 <br />
                 {branch.phone}
+                <br />
+                Ажлын цаг: {clockTime(branch.openMinute)} —{" "}
+                {clockTime(branch.closeMinute)}
               </p>
               {branch.latitude !== null && (
                 <p>
@@ -261,6 +267,31 @@ export function Branches({ data }: { data: AdminData }) {
                 />
               </label>
             </div>
+            <div className="form-grid">
+              <label className="field">
+                Нээх цаг
+                <input
+                  name="open"
+                  type="time"
+                  required
+                  step={900}
+                  defaultValue={clockTime(values?.openMinute ?? 600)}
+                />
+              </label>
+              <label className="field">
+                Хаах цаг
+                <input
+                  name="close"
+                  type="time"
+                  required
+                  step={900}
+                  defaultValue={clockTime(values?.closeMinute ?? 1140)}
+                />
+              </label>
+            </div>
+            <p className="field-hint">
+              Шинэ ажилтны ажлын цаг энэ цагаар автоматаар тохирно.
+            </p>
             <label className="field">
               Хаяг
               <textarea

@@ -6,9 +6,11 @@ export function FeatureDialog({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   open: boolean;
   title: string;
+  wide?: boolean;
   onClose: () => void;
   children: React.ReactNode;
 }) {
@@ -24,7 +26,7 @@ export function FeatureDialog({
       aria-label={title}
       onCancel={onClose}
     >
-      <div className="form-dialog">
+      <div className={wide ? "form-dialog wide" : "form-dialog"}>
         <div className="form-dialog-header">
           <h2>{title}</h2>
           <button

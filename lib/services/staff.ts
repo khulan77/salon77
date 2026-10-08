@@ -7,6 +7,7 @@ import {
   assertActiveBranches,
 } from "../access";
 import { HttpError } from "../errors";
+import { weekdays } from "../schedule-time";
 import { staffSchema, hoursSchema, timeOffSchema } from "../validation";
 
 function scopedAssignment(
@@ -54,6 +55,16 @@ export async function readStaff(
         },
         select: { serviceId: true },
       },
+      _count: {
+        select: {
+          bookings: {
+            where: {
+              status: { not: "CANCELLED" },
+              ...(owner ? {} : { branchId: { in: actor.branchIds } }),
+            },
+          },
+        },
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -70,6 +81,7 @@ export async function readStaff(
     memberId: owner ? s.memberId : null,
     branchIds: s.branches.map((b) => b.branchId),
     serviceIds: s.services.map((x) => x.serviceId),
+    bookingCount: s._count.bookings,
   }));
 }
 export type StaffData = Awaited<ReturnType<typeof readStaff>>;
@@ -79,7 +91,7 @@ export async function saveStaff(
   raw: unknown,
   id?: string,
 ) {
-  const { branchIds, serviceIds, ...data } = staffSchema.parse(raw);
+  const { branchIds, serviceIds, schedule, ...data } = staffSchema.parse(raw);
   return db.$transaction(
     async (tx) => {
       const current = await refreshActor(tx, actor);
@@ -175,6 +187,44 @@ export async function saveStaff(
         })),
         skipDuplicates: true,
       });
+      for (const shift of schedule ?? []) {
+        // Breaks cascade with their shift; the schedules page can re-add them.
+        await tx.workingHours.deleteMany({
+          where: {
+            staffId: id,
+            branchId: shift.branchId,
+            salonId: current.salonId,
+          },
+        });
+        // One person cannot work overlapping hours in two branches.
+        const clash = await tx.workingHours.findFirst({
+          where: {
+            staffId: id,
+            salonId: current.salonId,
+            active: true,
+            dayOfWeek: { in: shift.days },
+            startMinute: { lt: shift.endMinute },
+            endMinute: { gt: shift.startMinute },
+          },
+          include: { assignment: { include: { branch: true } } },
+        });
+        if (clash)
+          throw new HttpError(
+            409,
+            `${weekdays[clash.dayOfWeek - 1]} гарагт «${clash.assignment.branch.name}» салбарын ажлын цагтай давхцаж байна. Нэг өдөр хоёр салбарт давхцсан цагаар ажиллах боломжгүй.`,
+          );
+        await tx.workingHours.createMany({
+          data: shift.days.map((dayOfWeek) => ({
+            salonId: current.salonId,
+            staffId: id!,
+            branchId: shift.branchId,
+            dayOfWeek,
+            startMinute: shift.startMinute,
+            endMinute: shift.endMinute,
+            active: true,
+          })),
+        });
+      }
       return { id };
     },
     { isolationLevel: "Serializable" },
