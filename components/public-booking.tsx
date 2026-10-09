@@ -61,7 +61,9 @@ export function PublicBooking({
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
-  const [receipt, setReceipt] = useState<VisitReceipt | null>(null);
+  const [receipt, setReceipt] = useState<
+    (VisitReceipt & { manageUrl?: string | null }) | null
+  >(null);
   // Keep one idempotency key per payload so retries never double-book.
   const submission = useRef<{ payload: string; key: string } | null>(null);
   const trap = useRef<HTMLInputElement>(null);
@@ -289,6 +291,14 @@ export function PublicBooking({
             </div>
           </div>
           {receipt.deposit && <DepositInstructions deposit={receipt.deposit} />}
+          {receipt.manageUrl && (
+            <a className="pb-manage-link" href={receipt.manageUrl}>
+              Захиалгаа удирдах
+              <small>
+                Энэ холбоосоор цуцлах, цагаа өөрчлөх боломжтой. Хадгалж аваарай.
+              </small>
+            </a>
+          )}
           <button
             type="button"
             className="pb-secondary"

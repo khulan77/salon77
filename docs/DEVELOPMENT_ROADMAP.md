@@ -34,10 +34,10 @@ Local Node is v20. Production requires Node ≥ 22.
 | 3 Booking core                     | Customers, bookings, availability, concurrency, idempotency, calendar, lifecycle, public booking | IMPLEMENTED + TESTED (embedded DB + browser); live concurrency REPORTED (2026-10-06); migration applied to live DB |
 | 4.1 Booking settings               | Policy table, owner settings UI, enforcement in availability/creation                            | IMPLEMENTED + TESTED locally. **Migration not applied to live DB**. Not documented in README                       |
 | 4.2 Notification foundation        | Outbox, templates, provider interface, delivery and retry, owner log                             | IMPLEMENTED + TESTED (2026-10-09). Migration `202610090015_notifications`. No real SMS gateway yet                 |
-| 4.3 Reminder engine                | Scheduled reminders, dedupe, cancellation-aware                                                  | PLANNED (depends on 4.2 and a scheduler)                                                                           |
+| 4.3 Reminder engine                | Configurable lead times, cancellation-aware, send-time status check                              | IMPLEMENTED + TESTED (2026-10-09). Migration `202610090018_reminders`                                              |
 | 4.4 Public booking protection      | Rate limits, per-phone quota, honeypot, pending auto-expiry                                      | IMPLEMENTED + TESTED (2026-10-09). Migration `202610090014_booking_protection`                                     |
-| 4.5 Cancellation/reschedule policy | Customer self-service, `cancellationNoticeMinutes` enforcement, admin override                   | PLANNED (setting already stored)                                                                                   |
-| 4.6 Admin notifications/ops        | New/pending/cancel alerts, inbox                                                                 | PLANNED                                                                                                            |
+| 4.5 Cancellation/reschedule policy | Guest manage link, notice deadline, salon override via calendar                                  | IMPLEMENTED + TESTED (2026-10-09). Migration `202610090019_manage_links`                                           |
+| 4.6 Admin notifications/ops        | Activity bell: new online, customer cancel/move, expired, pending count                          | IMPLEMENTED + TESTED (2026-10-09). Migration `202610090020_booking_activity`                                       |
 | 4.7 Operational UX polish          | Reception flow, mobile, states                                                                   | PLANNED                                                                                                            |
 | 5–10                               | Packages/promotions, inventory/POS, payments, subscriptions, marketplace, super admin            | PLANNED                                                                                                            |
 
@@ -121,6 +121,20 @@ Local Node is v20. Production requires Node ≥ 22.
   - Explicit public fields only.
   - `GET /api/public/salons` is rate-limited.
   - Migration `202610090017_directory`.
+
+- **Phase 4.3 reminders:**
+  - `BookingSettings.reminderMinutes` (2 days, 1 day, 3 h, 2 h or 1 h before; default 1 day).
+  - Reminder rows are outbox notices scheduled via `availableAt`, keyed by start instant: confirming keeps them, rescheduling replaces them, cancelling withdraws them.
+  - At send time the dispatcher skips anything not `CONFIRMED` and upcoming, and anything from a salon that turned notifications off.
+  - Delivery runs on booking activity and on calendar polling. **Reliable overnight delivery needs an external scheduler** calling `GET /api/cron/notifications` every 5–10 min with `Authorization: Bearer $CRON_SECRET`.
+- **Phase 4.5 guest self-service:**
+  - Every online visit gets a 32-byte manage token (SHA-256 stored in `Booking.manageTokenHash`, shared by the visit).
+  - `/{slug}/manage?token=` lets the guest cancel or move the whole visit (same staff, own durations) until `cancellationNoticeMinutes` before the start. After that it shows the salon phone.
+  - Replays cannot reveal the token again. Messages include an absolute link only when `APP_URL` is set.
+  - Salon staff can still change anything from the calendar.
+- **Phase 4.6 admin activity:**
+  - `BookingActivity` is written in the same transaction for online creation, customer cancel/reschedule and auto-expiry.
+  - The top-bar bell (owner, manager, reception, branch-scoped) shows unread counts per member (`SalonMember.activitySeenAt`), the pending-confirmation count and the latest 30 events, polling every 60 s.
 
 ## Recommended sequencing and dependencies
 

@@ -4,6 +4,7 @@ import {
   createVisit,
   visitAvailability,
   visitReceipt,
+  managePath,
 } from "@/lib/services/visits";
 import { guardPublic } from "@/lib/rate-limit";
 import { deliverSoon } from "@/lib/notifications/schedule";
@@ -38,10 +39,18 @@ export async function POST(request: Request, { params }: Params) {
     await guardPublic(db, request, slug, "booking");
     const bookings = await createVisit(db, slug, await request.json());
     deliverSoon();
-    return Response.json(await visitReceipt(db, bookings), {
-      status: 201,
-      headers: { "Cache-Control": "no-store" },
-    });
+    return Response.json(
+      {
+        ...(await visitReceipt(db, bookings)),
+        manageUrl: bookings.manageToken
+          ? managePath(slug, bookings.manageToken)
+          : null,
+      },
+      {
+        status: 201,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
   } catch (e) {
     return failure(e);
   }

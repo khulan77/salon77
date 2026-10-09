@@ -19,6 +19,7 @@ import { moduleAllowed } from "@/lib/access";
 import { navigation, modules } from "@/lib/navigation";
 import { signOut } from "@/app/auth/actions";
 import type { AdminData } from "@/lib/admin-data";
+import { ActivityBell } from "./activity-bell";
 export function AdminShell({
   data,
   children,
@@ -124,6 +125,7 @@ export function AdminShell({
             <span className="workspace-status">
               <i /> {data.preview ? "Танилцах горим" : "Идэвхтэй"}
             </span>
+            {!data.preview && data.role !== "STAFF" && <ActivityBell />}
             <button
               className="icon-button"
               onClick={() => setSearch(true)}

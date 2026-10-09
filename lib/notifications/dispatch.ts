@@ -2,6 +2,9 @@ import { Prisma, type Notification, type PrismaClient } from "@prisma/client";
 import type { SmsProvider } from "./provider";
 export const MAX_ATTEMPTS = 5;
 const STUCK_AFTER_MS = 10 * 60000;
+export const notificationsOff = "Салон мэдэгдлээ унтраасан.";
+export const reminderNotNeeded =
+  "Захиалга баталгаажаагүй эсвэл өнгөрсөн тул сануулга илгээгээгүй.";
 export const providerMissing = "Мессеж илгээх үйлчилгээ тохируулаагүй.";
 // Claims due notices with SKIP LOCKED so concurrent workers never send twice.
 async function claim(db: PrismaClient, limit: number, now: Date) {
@@ -41,6 +44,34 @@ export async function processNotifications(
         data: { status: "SKIPPED", lastError: providerMissing },
       });
       continue;
+    }
+    // Turning notifications off also stops anything already queued.
+    const settings = await db.bookingSettings.findUnique({
+      where: { salonId: n.salonId },
+      select: { notificationsEnabled: true },
+    });
+    if (!settings?.notificationsEnabled) {
+      await db.notification.update({
+        where: { id: n.id },
+        data: { status: "SKIPPED", lastError: notificationsOff },
+      });
+      continue;
+    }
+    // Reminders go out only while the appointment is confirmed and upcoming.
+    if (n.event === "BOOKING_REMINDER") {
+      const booking = n.bookingId
+        ? await db.booking.findUnique({
+            where: { id: n.bookingId },
+            select: { status: true, startAt: true },
+          })
+        : null;
+      if (booking?.status !== "CONFIRMED" || booking.startAt <= now) {
+        await db.notification.update({
+          where: { id: n.id },
+          data: { status: "SKIPPED", lastError: reminderNotNeeded },
+        });
+        continue;
+      }
     }
     try {
       const { messageId } = await provider.send(n.recipient, n.body);

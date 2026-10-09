@@ -20,6 +20,7 @@ import { clockTime } from "@/lib/schedule-time";
 import type { BranchView } from "@/lib/admin-data";
 import { formatDuration, formatMnt, userFacingError } from "@/lib/ui-language";
 import {
+  REMINDER_OPTIONS,
   defaultBookingSettings,
   depositAmount,
   type BookingPolicy,
@@ -323,8 +324,9 @@ export function BookingSettings({
                         {...number("cancellationNoticeMinutes")}
                       />
                       <small>
-                        Одоогоор зөвхөн хадгална. Үйлчлүүлэгч өөрөө цуцлах
-                        боломж удахгүй нээгдэнэ.
+                        Үйлчлүүлэгч захиалгын холбоосоороо энэ хугацаанаас өмнө
+                        цуцалж, цагаа өөрчилнө. Салон календараас хүссэн үедээ
+                        өөрчилнө.
                       </small>
                     </label>
                   </div>
@@ -362,6 +364,36 @@ export function BookingSettings({
                       бүртгэлд хадгалагдах боловч илгээгдэхгүй.
                     </p>
                   )}
+                  <div className="settings-subtitle">Сануулга</div>
+                  <div
+                    className="choice-chips"
+                    role="group"
+                    aria-label="Сануулга илгээх хугацаа"
+                  >
+                    {REMINDER_OPTIONS.map((m) => (
+                      <label className="check-field" key={m}>
+                        <input
+                          type="checkbox"
+                          checked={policy.reminderMinutes.includes(m)}
+                          onChange={(e) =>
+                            update({
+                              reminderMinutes: e.target.checked
+                                ? [...policy.reminderMinutes, m]
+                                : policy.reminderMinutes.filter((x) => x !== m),
+                            })
+                          }
+                        />
+                        {m >= 1440
+                          ? `${m / 1440} өдрийн өмнө`
+                          : `${m / 60} цагийн өмнө`}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="field-hint">
+                    Зөвхөн баталгаажсан захиалгад, сонгосон хугацаанд сануулга
+                    илгээнэ. Цуцлагдсан эсвэл цаг нь өөрчлөгдсөн захиалгын
+                    хуучин сануулга автоматаар цуцлагдана.
+                  </p>
                   <div className="settings-subtitle">Сүүлийн мэдэгдлүүд</div>
                   <NotificationLog preview={preview} />
                 </section>

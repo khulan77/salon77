@@ -28,6 +28,8 @@ export async function GET(request: Request) {
       })
       .strict()
       .parse(Object.fromEntries(q));
+    // Calendar polling doubles as a delivery tick for due reminders.
+    deliverSoon();
     return Response.json(await listBookings(db, actor, input));
   } catch (e) {
     return failure(e);

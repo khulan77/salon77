@@ -32,6 +32,8 @@ export async function testDatabase(port = 0) {
     // session aborted; call this after deliberately failing writes.
     async settle() {
       await pg.exec("ROLLBACK");
+      // Let Prisma notice a dropped socket and reconnect before the next step.
+      await db.$queryRaw`SELECT 1`.catch(() => undefined);
     },
     async close() {
       await db.$disconnect();

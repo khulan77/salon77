@@ -40,10 +40,24 @@ export async function hit(
   if (Number(row.count) > limit) throw new HttpError(429, tooManyRequests);
 }
 // Limits for unauthenticated booking endpoints.
+// Defaults suit production; deployments (and the test server) may raise them.
+const fromEnv = (name: string, fallback: number) => {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+};
 export const publicLimits = {
-  availability: { limit: 120, windowSeconds: 600 },
-  bookingPerSalon: { limit: 8, windowSeconds: 600 },
-  bookingPerDay: { limit: 30, windowSeconds: 86400 },
+  availability: {
+    limit: fromEnv("RATE_LIMIT_AVAILABILITY", 120),
+    windowSeconds: 600,
+  },
+  bookingPerSalon: {
+    limit: fromEnv("RATE_LIMIT_BOOKINGS", 8),
+    windowSeconds: 600,
+  },
+  bookingPerDay: {
+    limit: fromEnv("RATE_LIMIT_BOOKINGS_DAILY", 30),
+    windowSeconds: 86400,
+  },
 } as const;
 export async function guardPublic(
   db: Database,

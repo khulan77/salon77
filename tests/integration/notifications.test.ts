@@ -43,7 +43,8 @@ test("booking notifications outbox", { timeout: 120000 }, async (t) => {
       );
     const notices = () =>
       db.notification.findMany({
-        where: { salonId: "a" },
+        // Reminders are covered by reminders.test.ts.
+        where: { salonId: "a", event: { not: "BOOKING_REMINDER" } },
         orderBy: { createdAt: "asc" },
       });
     await t.test(
@@ -69,7 +70,9 @@ test("booking notifications outbox", { timeout: 120000 }, async (t) => {
         assert.equal(rows[0].recipient, "+97688112233");
         assert.match(
           rows[0].body,
-          new RegExp(`^Туршилтын салон: ${md} 11:00 Хумс арчилгаа захиалгыг хүлээн авлаа`),
+          new RegExp(
+            `^Туршилтын салон: ${md} 11:00 Хумс арчилгаа захиалгыг хүлээн авлаа`,
+          ),
         );
         const confirmed = await changeBooking(db, actors.owner, booking.id, {
           action: "status",

@@ -168,6 +168,11 @@ async function main() {
       env: {
         ...process.env,
         SALON77_INTEGRATION_TEST: "1",
+        // Every browser test books as a guest from 127.0.0.1; production
+        // limits are covered by tests/integration/protection.test.ts.
+        RATE_LIMIT_BOOKINGS: "1000",
+        RATE_LIMIT_BOOKINGS_DAILY: "5000",
+        RATE_LIMIT_AVAILABILITY: "10000",
         DATABASE_URL: fixture.url,
         DIRECT_URL: fixture.url,
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:55480",

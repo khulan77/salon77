@@ -20,6 +20,7 @@ import { depositAmount, publicBookingClosed } from "../booking-settings";
 import { discountedPrice } from "../pricing";
 import { assertGuestQuota, expireStalePending } from "./guest-guard";
 import { enqueueNotice } from "../notifications/outbox";
+import { recordActivity } from "./activity";
 type Clock = { now?: () => Date };
 type Database = Prisma.TransactionClient;
 export type BookingContext = { actor: Actor } | { slug: string };
@@ -125,6 +126,8 @@ export async function slots(
   },
   options: {
     excludeId?: string;
+    // Bookings being moved together (a whole visit) do not block themselves.
+    excludeIds?: string[];
     duration?: number;
     now?: Date;
     timeZone?: string;
@@ -185,7 +188,16 @@ export async function slots(
         status: { not: "CANCELLED" },
         startAt: { lt: window.end },
         endAt: { gt: window.start },
-        ...(options.excludeId ? { id: { not: options.excludeId } } : {}),
+        ...(options.excludeId || options.excludeIds?.length
+          ? {
+              id: {
+                notIn: [
+                  ...(options.excludeId ? [options.excludeId] : []),
+                  ...(options.excludeIds ?? []),
+                ],
+              },
+            }
+          : {}),
       },
       select: { staffId: true, startAt: true, endAt: true },
     }),
@@ -455,6 +467,7 @@ export async function createBooking(
         requestHash: hash,
       },
     });
+    if (scope.online) await recordActivity(tx, booking, "ONLINE_CREATED");
     await enqueueNotice(
       tx,
       [booking],

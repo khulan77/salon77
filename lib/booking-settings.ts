@@ -1,5 +1,7 @@
 import { z } from "zod";
 const bankText = z.string().trim().max(100);
+// Allowed reminder lead times in minutes (mirrored by a SQL check).
+export const REMINDER_OPTIONS = [2880, 1440, 180, 120, 60] as const;
 export const bookingSettingsSchema = z
   .object({
     publicBookingEnabled: z.boolean(),
@@ -18,6 +20,10 @@ export const bookingSettingsSchema = z
     pendingExpiryMinutes: z.number().int().min(0).max(10080),
     notificationsEnabled: z.boolean(),
     listedInDirectory: z.boolean(),
+    reminderMinutes: z
+      .array(z.union(REMINDER_OPTIONS.map((m) => z.literal(m)) as [z.ZodLiteral<number>, ...z.ZodLiteral<number>[]]))
+      .max(REMINDER_OPTIONS.length)
+      .transform((v) => [...new Set(v)].sort((a, b) => b - a)),
   })
   .strict()
   .superRefine((v, ctx) => {
@@ -56,6 +62,7 @@ export const defaultBookingSettings: BookingPolicy = {
   pendingExpiryMinutes: 0,
   notificationsEnabled: false,
   listedInDirectory: true,
+  reminderMinutes: [1440],
 };
 export const publicBookingClosed = "Онлайн захиалга одоогоор хаалттай байна.";
 export function policyView(value: BookingPolicy): BookingPolicy {
@@ -76,6 +83,7 @@ export function policyView(value: BookingPolicy): BookingPolicy {
     pendingExpiryMinutes: value.pendingExpiryMinutes,
     notificationsEnabled: value.notificationsEnabled,
     listedInDirectory: value.listedInDirectory,
+    reminderMinutes: value.reminderMinutes,
   };
 }
 // Deposits apply to online bookings only; reception collects payment in person.

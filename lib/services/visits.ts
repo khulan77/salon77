@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Booking, PrismaClient } from "@prisma/client";
 import { HttpError } from "../errors";
@@ -8,6 +8,7 @@ import { depositAmount, publicBookingClosed } from "../booking-settings";
 import { discountedPrice } from "../pricing";
 import { assertGuestQuota, assertHuman } from "./guest-guard";
 import { enqueueNotice } from "../notifications/outbox";
+import { recordActivity } from "./activity";
 import {
   bookingConflict,
   lockStaff,
@@ -71,11 +72,12 @@ function combine(lists: Slot[][]) {
       return staff ? [{ startAt, staff }] : [];
     });
 }
-async function visitSlots(
+export async function visitSlots(
   db: Database,
   scope: Awaited<ReturnType<typeof resolveContext>>,
   input: z.infer<typeof visitAvailabilitySchema>,
   now?: Date,
+  excludeIds: string[] = [],
 ) {
   const results = [];
   for (const item of input.items)
@@ -84,7 +86,7 @@ async function visitSlots(
         db,
         scope,
         { branchId: input.branchId, date: input.date, ...item },
-        { now },
+        { now, excludeIds },
       ),
     );
   return { results, slots: combine(results.map((r) => r.slots)) };
@@ -108,7 +110,7 @@ export async function createVisit(
   slug: string,
   raw: unknown,
   clock: Clock = {},
-): Promise<Booking[]> {
+): Promise<Booking[] & { manageToken: string | null }> {
   const { website, ...input } = visitSchema.parse(raw);
   assertHuman(website);
   return transaction(db, async (tx) => {
@@ -132,12 +134,14 @@ export async function createVisit(
           409,
           "Давтан хүсэлтийн мэдээлэл зөрж байна. Шинэ захиалга эхлүүлнэ үү.",
         );
-      return existing.groupId
-        ? tx.booking.findMany({
+      // A replay cannot reveal the token again: only its hash is stored.
+      const again = existing.groupId
+        ? await tx.booking.findMany({
             where: { salonId: scope.salonId, groupId: existing.groupId },
             orderBy: { idempotencyKey: "asc" },
           })
         : [existing];
+      return Object.assign(again, { manageToken: null });
     }
     const candidates = new Set<string>();
     for (const item of input.items)
@@ -180,6 +184,9 @@ export async function createVisit(
       update: {},
     });
     const groupId = input.items.length > 1 ? randomUUID() : null;
+    // Private link letting the guest cancel or move this visit later.
+    const manageToken = randomBytes(32).toString("base64url");
+    const manageTokenHash = hashManageToken(manageToken);
     const created: Booking[] = [];
     for (const [i, { service }] of results.entries()) {
       const price = discountedPrice(service.priceMnt, service.discountPercent);
@@ -214,18 +221,21 @@ export async function createVisit(
               : input.idempotencyKey,
             requestHash: hash,
             groupId,
+            manageTokenHash,
           },
         }),
       );
     }
+    await recordActivity(tx, created[0], "ONLINE_CREATED");
     await enqueueNotice(
       tx,
       created,
       created.every((b) => b.status === "CONFIRMED")
         ? "BOOKING_CONFIRMED"
         : "BOOKING_RECEIVED",
+      { manageUrl: absoluteManageUrl(slug, manageToken) },
     );
-    return created;
+    return Object.assign(created, { manageToken });
   });
 }
 export async function visitReceipt(db: Database, bookings: Booking[]) {
@@ -254,3 +264,16 @@ export async function visitReceipt(db: Database, bookings: Booking[]) {
   };
 }
 export type VisitReceipt = Awaited<ReturnType<typeof visitReceipt>>;
+export function hashManageToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+export function managePath(slug: string, token: string) {
+  return `/${slug}/manage?token=${token}`;
+}
+// Messages need an absolute link; omitted until APP_URL is configured.
+function absoluteManageUrl(slug: string, token: string) {
+  const base = process.env.APP_URL?.replace(/\/$/, "");
+  return base && /^https?:\/\//.test(base)
+    ? base + managePath(slug, token)
+    : undefined;
+}

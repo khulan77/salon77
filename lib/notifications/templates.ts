@@ -7,6 +7,8 @@ export type NoticeData = {
   salonPhone: string;
   services: string[];
   startAt: Date;
+  // Guest's private link to cancel or move the visit (creation messages only).
+  manageUrl?: string;
   deposit?: { amountMnt: number; bankName: string; accountNumber: string };
 };
 // "10/31 11:00" — short enough for a single SMS segment where possible.
@@ -19,6 +21,7 @@ export const eventLabels: Record<NotificationEvent, string> = {
   BOOKING_CONFIRMED: "Баталгаажлаа",
   BOOKING_CANCELLED: "Цуцлагдлаа",
   BOOKING_RESCHEDULED: "Цаг өөрчлөгдлөө",
+  BOOKING_REMINDER: "Сануулга",
 };
 export function renderNotice(event: NotificationEvent, d: NoticeData) {
   const head = `${d.salonName}: ${when(d.startAt)} ${d.services.join(", ")}`;
@@ -28,13 +31,21 @@ export function renderNotice(event: NotificationEvent, d: NoticeData) {
         `${head} захиалгыг хүлээн авлаа. Баталгаажмагц мэдэгдэнэ.`,
         d.deposit &&
           `Урьдчилгаа ${formatMnt(d.deposit.amountMnt)}: ${d.deposit.bankName} ${d.deposit.accountNumber}.`,
+        d.manageUrl && `Цуцлах, өөрчлөх: ${d.manageUrl}`,
       ]
         .filter(Boolean)
         .join(" ");
     case "BOOKING_CONFIRMED":
-      return `${head} захиалга баталгаажлаа. ${d.branchName}.`;
+      return [
+        `${head} захиалга баталгаажлаа. ${d.branchName}.`,
+        d.manageUrl && `Цуцлах, өөрчлөх: ${d.manageUrl}`,
+      ]
+        .filter(Boolean)
+        .join(" ");
     case "BOOKING_CANCELLED":
       return `${head} захиалга цуцлагдлаа. Лавлах: ${d.salonPhone}.`;
+    case "BOOKING_REMINDER":
+      return `${d.salonName}: Сануулга. Таны цаг ${when(d.startAt)}, ${d.services.join(", ")}. ${d.branchName}.`;
     case "BOOKING_RESCHEDULED":
       return `${d.salonName}: Таны захиалга ${when(d.startAt)} болж өөрчлөгдлөө (${d.services.join(", ")}).`;
   }

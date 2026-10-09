@@ -33,14 +33,37 @@ export async function expireStalePending(
   now = new Date(),
 ) {
   if (!policy.pendingExpiryMinutes) return 0;
-  const { count } = await db.booking.updateMany({
+  const stale = await db.booking.findMany({
     where: {
       salonId,
       source: "ONLINE",
       status: "PENDING",
       createdAt: { lt: new Date(+now - policy.pendingExpiryMinutes * 60000) },
     },
+    select: { id: true, salonId: true, branchId: true, groupId: true },
+  });
+  if (!stale.length) return 0;
+  const { count } = await db.booking.updateMany({
+    // Re-check the status so a booking confirmed meanwhile is left alone.
+    where: { id: { in: stale.map((b) => b.id) }, status: "PENDING" },
     data: { status: "CANCELLED", version: { increment: 1 } },
+  });
+  // One feed entry per visit.
+  const seen = new Set<string>();
+  await db.bookingActivity.createMany({
+    data: stale
+      .filter((b) => {
+        const key = b.groupId ?? b.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((b) => ({
+        salonId: b.salonId,
+        branchId: b.branchId,
+        bookingId: b.id,
+        type: "EXPIRED" as const,
+      })),
   });
   return count;
 }
