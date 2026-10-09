@@ -5,7 +5,10 @@ async function expectMongolian(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("lang", "mn");
   const text = await page.locator("body").innerText();
   // Brands and timezone notation are deliberately not translated.
-  const remaining = text.replace(/salon77|salon|UTC|s\./gi, "");
+  // Booking links are machine addresses and stay in Latin script.
+  const remaining = text
+    .replace(/salon77\.mn\/\S*/gi, "")
+    .replace(/salon77|salon|UTC|s\./gi, "");
   expect(remaining.match(/[a-zA-Z]{2,}/g) ?? []).toEqual([]);
   const untranslatedAttributes = await page
     .locator("[aria-label], [placeholder], [title], img[alt]")
@@ -38,6 +41,7 @@ test("all implemented pages and future navigation remain Mongolian on desktop an
 }, info) => {
   const routes = [
     ...modules.map((item) => item.href),
+    "/business",
     "/sign-in",
     "/sign-up",
     "/onboarding",

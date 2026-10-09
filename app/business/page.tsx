@@ -2,81 +2,89 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import {
   ArrowRight,
-  BarChart3,
-  CalendarCheck,
-  ClipboardCheck,
   AtSign,
+  CalendarCheck,
+  Check,
   Link2,
   MessageSquare,
   Phone,
   ShieldCheck,
   Sparkles,
   Users,
-  Wallet,
 } from "lucide-react";
+import { db } from "@/lib/db";
+import { configured } from "@/lib/env";
+import { identity } from "@/lib/auth";
 import { site, formatSitePhone } from "@/lib/site";
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Salon77 · Салоны цаг захиалга, удирдлагын систем",
   description:
     "Салоноо онлайн захиалгатай болгоод календарь, ажилтан, урьдчилгаа, тайлангаа нэг дороос удирдаарай.",
 };
-const features = [
+const groups = [
   {
     icon: Link2,
-    title: "Өөрийн захиалгын линк",
-    text: "Инстаграм, Фэйсбүүк хуудсандаа линкээ тавиад 24 цагийн турш онлайнаар цаг аваарай. Үйлчлүүлэгч бүртгүүлэх шаардлагагүй.",
+    title: "Онлайн захиалгын систем",
+    text: "Салон бүр өөрийн захиалгын линктэй. Үйлчлүүлэгч утаснаасаа 24 цагийн турш цаг авна.",
+    items: [
+      "Үйлчлүүлэгч бүртгүүлэх, апп суулгах шаардлагагүй",
+      "Ажилтан, өдөр, сул цагаа өөрөө сонгоно",
+      "2 үйлчилгээг 2 ажилтан зэрэг хийх захиалга",
+      "Урьдчилгааг хувиар эсвэл тогтмол дүнгээр авах",
+      "Хямдралтай үнэ шууд харагдана",
+    ],
   },
   {
     icon: CalendarCheck,
-    title: "Ойлгомжтой календарь",
-    text: "Өдөр, долоо хоногоор, салбар, ажилтнаар нь харна. Захиалга нэмэх, цаг өөрчлөх, дуусгах ганц товшилтоор.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Давхар захиалга гарахгүй",
-    text: "Нэг ажилтанд нэг цагт хоёр захиалга орох боломжгүй. Олон хүн зэрэг захиалсан ч систем өөрөө хамгаална.",
-  },
-  {
-    icon: Wallet,
-    title: "Урьдчилгаа, хямдрал",
-    text: "Урьдчилгааг хувиар эсвэл тогтмол дүнгээр авна. Үйлчилгээндээ хямдрал тавихад шинэ үнэ шууд үйлчилнэ.",
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Цагийн бүртгэл",
-    text: "Ажилласан, амарсан өдрийг тэмдэглээд хүснэгтээр татна. Амралттай ажилтан тэр өдөр захиалга авахгүй.",
-  },
-  {
-    icon: BarChart3,
-    title: "Орлогын тайлан",
-    text: "Өдөр, сараар, үйлчилгээ болон ажилтнаар орлогоо харж, бизнесийнхээ өсөлтийг хянаарай.",
-  },
-  {
-    icon: MessageSquare,
-    title: "Мессеж мэдэгдэл",
-    text: "Захиалга баталгаажих, цуцлагдах, цаг өөрчлөгдөхөд үйлчлүүлэгчид автоматаар мэдэгдэнэ.",
+    title: "Салоны бүрэн удирдлага",
+    text: "Өдөр тутмын ажил бүгд нэг дор, компьютер болон утсан дээр.",
+    items: [
+      "Календарь: өдөр, долоо хоногоор, салбар, ажилтнаар",
+      "Үйлчлүүлэгчийн бүртгэл, үйлчилгээний түүх",
+      "Үйлчилгээ, үнэ, хугацаа, ангилал",
+      "Ажилтан, ажлын цаг, цагийн бүртгэл",
+      "Орлогын тайлан: өдөр, сар, үйлчилгээ, ажилтнаар",
+    ],
   },
   {
     icon: Users,
-    title: "Баг, салбар, эрх",
-    text: "Менежер, ресепшн, ажилтан бүрт тохирох эрх өгнө. Олон салбартай салонд тохиромжтой.",
+    title: "Баг ба эрх",
+    text: "Хүн бүр зөвхөн өөрт хэрэгтэй хэсгээ харна.",
+    items: [
+      "Эзэмшигч, менежер, ресепшн, ажилтан гэсэн эрх",
+      "Хариуцсан салбараар хязгаарлах",
+      "Олон салбартай салонд тохиромжтой",
+      "Хэн хэзээ нэвтэрснийг харах",
+    ],
+  },
+  {
+    icon: ShieldCheck,
+    title: "Найдвартай, аюулгүй",
+    text: "Захиалгын алдаа, хуурамч захиалгаас хамгаална.",
+    items: [
+      "Нэг ажилтанд нэг цагт давхар захиалга орохгүй",
+      "Хуурамч, олон дахин захиалгаас хамгаалалт",
+      "Баталгаажаагүй захиалгыг автоматаар цуцлах",
+      "Салон бүрийн мэдээлэл тусдаа хамгаалагдсан",
+    ],
   },
 ];
 const steps = [
   [
     "Бүртгүүлэх",
-    "Имэйлээрээ бүртгүүлээд салоныхоо нэр, хаяг, салбарыг оруулна.",
+    "Имэйлээрээ бүртгүүлээд салоныхоо нэр, хаяг, эхний салбараа оруулна.",
   ],
   ["Тохируулах", "Үйлчилгээ, үнэ, ажилтан, ажлын цагаа нэмнэ. Хэдхэн минут."],
   [
     "Линкээ хуваалцах",
-    "Захиалгын линкээ Инстаграм хуудсандаа тавиад захиалга аваад эхэлнэ.",
+    "Захиалгын линкээ Инстаграм, Фэйсбүүк хуудсандаа тавиад захиалга аваад эхэлнэ.",
   ],
 ];
 const faq = [
   [
     "Бүртгүүлэхэд төлбөртэй юу?",
-    "Бүртгүүлэх, туршиж үзэх нь үнэгүй. Төлбөрийн багцын мэдээллийг удахгүй зарлах бөгөөд өмнө нь заавал мэдэгдэнэ.",
+    "Бүртгүүлэх, ашиглаж эхлэх нь үнэгүй. Төлбөрийн багцын мэдээллийг удахгүй зарлах бөгөөд өмнө нь заавал мэдэгдэнэ.",
   ],
   [
     "Үйлчлүүлэгч маань апп суулгах уу?",
@@ -123,9 +131,23 @@ const calendar = [
     tone: "sand",
   },
 ];
-export default function BusinessPage() {
+// Signed-in visitors skip sign-up: straight to their salon, or to onboarding.
+async function startHref() {
+  if (!configured) return "/sign-up";
+  const user = await identity().catch(() => null);
+  if (!user) return "/sign-up";
+  const member = await db.salonMember.findFirst({
+    where: { userId: user.id, active: true },
+    select: { id: true },
+  });
+  return member ? "/" : "/onboarding";
+}
+export default async function BusinessPage() {
+  const start = await startHref();
+  const signedIn = start !== "/sign-up";
   const phone = site.phone && formatSitePhone(site.phone);
   const handle = site.instagram.replace(/^@/, "");
+  const cta = signedIn ? "Удирдлага руу орох" : "Үнэгүй эхлэх";
   return (
     <div className="lp">
       <header className="lp-nav">
@@ -140,11 +162,13 @@ export default function BusinessPage() {
           <a href="#about">Бидний тухай</a>
         </nav>
         <div className="lp-nav-actions">
-          <Link href="/sign-in" className="lp-link">
-            Нэвтрэх
-          </Link>
-          <Link href="/sign-up" className="lp-btn small">
-            Үнэгүй эхлэх
+          {!signedIn && (
+            <Link href="/sign-in" className="lp-link">
+              Нэвтрэх
+            </Link>
+          )}
+          <Link href={start} className="lp-btn small">
+            {cta}
           </Link>
         </div>
       </header>
@@ -165,11 +189,11 @@ export default function BusinessPage() {
               утаснаасаа удирдана.
             </p>
             <div className="lp-cta">
-              <Link href="/sign-up" className="lp-btn">
-                Үнэгүй эхлэх <ArrowRight size={16} />
+              <Link href={start} className="lp-btn">
+                {cta} <ArrowRight size={16} />
               </Link>
               <a href="#features" className="lp-link underline">
-                Боломжуудтай танилцах
+                Юу багтдаг вэ?
               </a>
             </div>
           </div>
@@ -237,26 +261,58 @@ export default function BusinessPage() {
         </section>
         <section id="features" className="lp-section">
           <div className="lp-heading">
-            <span className="lp-eyebrow">БОЛОМЖУУД</span>
+            <span className="lp-eyebrow">ЮУ БАГТДАГ ВЭ</span>
             <h2>Салонд хэрэгтэй бүх зүйл нэг дор</h2>
             <p>
-              Эзэн, менежер, ресепшн, ажилтан бүрийн өдөр тутмын ажилд
-              зориулсан.
+              Бүртгүүлмэгц бүх боломж нээгдэнэ. Нэмэлт програм, тохиргоо
+              шаардлагагүй.
             </p>
           </div>
-          <div className="lp-features">
-            {features.map((f) => (
-              <article key={f.title}>
+          <div className="lp-groups">
+            {groups.map((g) => (
+              <article key={g.title}>
                 <span className="lp-icon">
-                  <f.icon size={19} />
+                  <g.icon size={19} />
                 </span>
-                <h3>{f.title}</h3>
-                <p>{f.text}</p>
+                <h3>{g.title}</h3>
+                <p>{g.text}</p>
+                <ul>
+                  {g.items.map((item) => (
+                    <li key={item}>
+                      <Check size={14} /> {item}
+                    </li>
+                  ))}
+                </ul>
               </article>
             ))}
           </div>
         </section>
-        <section id="how" className="lp-section lp-how">
+        <section className="lp-section">
+          <div className="lp-linkband">
+            <div>
+              <span className="lp-eyebrow">САЛОН БҮРД ӨӨРИЙН ЛИНК</span>
+              <h2>Нэг линкээр захиалга авна</h2>
+              <p>
+                Бүртгүүлэхдээ сонгосон хаягаар таны захиалгын хуудас шууд
+                нээгдэнэ. Түүнийг Инстаграм хуудас, мессеж, нэрийн хуудсандаа
+                тавиад л болно.
+              </p>
+            </div>
+            <div className="lp-url">
+              <span className="lp-url-bar">salon77.mn/таны-салон/book</span>
+              <ul>
+                <li>
+                  <MessageSquare size={15} /> Захиалга бүрд үйлчлүүлэгчид мессеж
+                  мэдэгдэл
+                </li>
+                <li>
+                  <CalendarCheck size={15} /> Захиалга шууд таны календарьт орно
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+        <section id="how" className="lp-section">
           <div className="lp-heading">
             <span className="lp-eyebrow">ХЭРХЭН АЖИЛЛАДАГ ВЭ</span>
             <h2>Гуравхан алхмаар эхэлнэ</h2>
@@ -314,8 +370,8 @@ export default function BusinessPage() {
         <section className="lp-final">
           <h2>Салоноо өнөөдрөөс онлайн болгоорой</h2>
           <p>Бүртгүүлэх үнэгүй, хэдхэн минутад тохируулна.</p>
-          <Link href="/sign-up" className="lp-btn light">
-            Үнэгүй эхлэх <ArrowRight size={16} />
+          <Link href={start} className="lp-btn light">
+            {cta} <ArrowRight size={16} />
           </Link>
         </section>
       </main>

@@ -17,7 +17,15 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  await client.auth.getUser();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  // Signed-out visitors to the root see the product page, not a login wall.
+  if (!user && request.nextUrl.pathname === "/") {
+    const landing = NextResponse.rewrite(new URL("/business", request.url));
+    response.cookies.getAll().forEach((c) => landing.cookies.set(c));
+    return landing;
+  }
   return response;
 }
 export const config = {

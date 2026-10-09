@@ -10,11 +10,11 @@ Written 2026-10-09. Each part below is a self-contained prompt for one implement
 
 **Part 1 is done (2026-10-09).** See "Platform console" in `docs/DEVELOPMENT_ROADMAP.md`.
 
-**Part 2 draft (parked, not served):**
+**Part 2 is done (2026-10-09).**
 
-- `docs/prompts/drafts/business-page.tsx.txt`: landing content without its CSS. Move it back to `app/business/page.tsx`.
-- `lib/site.ts`: company contacts; empty values are hidden.
-- The `/` → `/business` rewrite for signed-out visitors is described in part 2 and was reverted from `proxy.ts` until the page is finished.
+- `/business` is live.
+- Signed-out `/` rewrites to it.
+- Contacts in `lib/site.ts` stay hidden until the owner provides real values.
 
 ---
 

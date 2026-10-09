@@ -108,6 +108,12 @@ Local Node is v20. Production requires Node ≥ 22.
   - Grant access with SQL in Supabase (`UPDATE "User" SET "isSuperAdmin" = true WHERE email = '<owner email>';`). There is no UI path.
   - Migration `202610090016_platform_audit`.
 
+- **Business page** (2026-10-09, part 2 of `docs/prompts/platform-launch.md`):
+  - `/business` explains the product to salon owners.
+  - Signed-out visitors to `/` are rewritten to it in `proxy.ts`. Signed-in users keep the dashboard, and preview mode is unchanged.
+  - The call to action sends visitors to `/sign-up`, owners to `/`, and users without a salon to `/onboarding`.
+  - Contacts live in `lib/site.ts` and are hidden while empty. No pricing is stated beyond "registration is free".
+
 ## Recommended sequencing and dependencies
 
 1. **Close out 4.1 on live:** apply migration 0006, then run the manual acceptance check. Code at `main` calls `bookingSettings` on every booking path. Against the current live DB this fails, and booking returns 500 errors.

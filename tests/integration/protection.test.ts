@@ -148,6 +148,7 @@ test("public booking protection", { timeout: 120000 }, async (t) => {
             data: { pendingExpiryMinutes: -1 },
           }),
         );
+        await fixture.settle();
       },
     );
   } finally {

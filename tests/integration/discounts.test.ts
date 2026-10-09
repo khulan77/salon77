@@ -103,6 +103,7 @@ test(
               data: { discountPercent: 95 },
             }),
           );
+          await fixture.settle();
         },
       );
     } finally {

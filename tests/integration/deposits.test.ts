@@ -78,12 +78,14 @@ test("deposits and salon cover images", { timeout: 120000 }, async (t) => {
             data: { depositRequired: true },
           }),
         );
+        await fixture.settle();
         await assert.rejects(
           db.bookingSettings.update({
             where: { salonId: "a" },
             data: { depositType: "PERCENT", depositValue: 150 },
           }),
         );
+        await fixture.settle();
         await assert.rejects(
           saveBookingSettings(db, actors.manager, {
             ...defaultBookingSettings,

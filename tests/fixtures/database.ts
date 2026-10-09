@@ -27,6 +27,12 @@ export async function testDatabase(port = 0) {
     db,
     pg,
     url,
+    // PGlite serves every socket connection from one session. A constraint
+    // error can drop Prisma's connection mid-transaction and leave that
+    // session aborted; call this after deliberately failing writes.
+    async settle() {
+      await pg.exec("ROLLBACK");
+    },
     async close() {
       await db.$disconnect();
       await server.stop();
