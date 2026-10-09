@@ -6,6 +6,8 @@ import { customerInput, dateSchema } from "../booking-validation";
 import { localStamp } from "../business-time";
 import { depositAmount, publicBookingClosed } from "../booking-settings";
 import { discountedPrice } from "../pricing";
+import { assertGuestQuota, assertHuman } from "./guest-guard";
+import { enqueueNotice } from "../notifications/outbox";
 import {
   bookingConflict,
   lockStaff,
@@ -41,6 +43,8 @@ export const visitSchema = z
     startAt: z.iso.datetime({ offset: true }),
     customer: customerInput,
     idempotencyKey: z.uuid(),
+    // Honeypot: hidden from people, so any value means an automated client.
+    website: z.string().max(200).optional(),
   })
   .strict();
 type Slot = { startAt: string; staffIds: string[] };
@@ -105,7 +109,8 @@ export async function createVisit(
   raw: unknown,
   clock: Clock = {},
 ): Promise<Booking[]> {
-  const input = visitSchema.parse(raw);
+  const { website, ...input } = visitSchema.parse(raw);
+  assertHuman(website);
   return transaction(db, async (tx) => {
     const scope = await resolveContext(tx, { slug });
     if (!scope.policy.publicBookingEnabled)
@@ -155,6 +160,13 @@ export async function createVisit(
     );
     const slot = open.find((s) => s.startAt === startAt.toISOString());
     if (!slot) throw new HttpError(409, bookingConflict);
+    await assertGuestQuota(
+      tx,
+      scope.salonId,
+      input.customer.phone,
+      input.items.length,
+      clock.now?.(),
+    );
     const customer = await tx.customer.upsert({
       where: {
         salonId_phone: { salonId: scope.salonId, phone: input.customer.phone },
@@ -206,6 +218,13 @@ export async function createVisit(
         }),
       );
     }
+    await enqueueNotice(
+      tx,
+      created,
+      created.every((b) => b.status === "CONFIRMED")
+        ? "BOOKING_CONFIRMED"
+        : "BOOKING_RECEIVED",
+    );
     return created;
   });
 }

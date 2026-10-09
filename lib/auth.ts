@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
 import { db } from "./db";
 import { supabase } from "./supabase";
 import { configured } from "./env";
@@ -43,4 +44,17 @@ export async function tenant() {
   if (!permits(member, member.salonId, "manage"))
     throw new HttpError(403, "Зөвхөн эзэмшигч хандах эрхтэй.");
   return member;
+}
+// Platform console: a verified session whose User row is a super admin.
+// Anything else looks like a missing page.
+export async function platformAdminId(): Promise<string> {
+  if (!configured) notFound();
+  const user = await identity().catch(() => null);
+  if (!user) notFound();
+  const row = await db.user.findUnique({
+    where: { id: user.id },
+    select: { isSuperAdmin: true },
+  });
+  if (!row?.isSuperAdmin) notFound();
+  return user.id;
 }

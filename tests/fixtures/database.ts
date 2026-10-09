@@ -30,6 +30,9 @@ export async function testDatabase(port = 0) {
     async close() {
       await db.$disconnect();
       await server.stop();
+      // Prisma's engine may still flush its last frames through the socket;
+      // closing PGlite before they land makes it throw after the test ends.
+      await new Promise((resolve) => setTimeout(resolve, 250));
       await pg.close();
     },
   };

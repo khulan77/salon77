@@ -286,6 +286,9 @@ test("Phase 4.1 salon booking policies", { timeout: 120000 }, async (t) => {
           await assert.rejects(
             db.bookingSettings.update({ where: { salonId: "a" }, data }),
           );
+        // PGlite shares one session with Prisma's socket connection, which a
+        // constraint error can leave inside an aborted transaction.
+        await pg.exec("ROLLBACK");
         for (const role of ["anon", "authenticated"]) {
           await pg.exec(`SET ROLE ${role}`);
           await assert.rejects(pg.query('SELECT * FROM "BookingSettings"'));

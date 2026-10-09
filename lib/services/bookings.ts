@@ -18,6 +18,8 @@ import {
 import { salonBookingPolicy } from "./booking-settings";
 import { depositAmount, publicBookingClosed } from "../booking-settings";
 import { discountedPrice } from "../pricing";
+import { assertGuestQuota, expireStalePending } from "./guest-guard";
+import { enqueueNotice } from "../notifications/outbox";
 type Clock = { now?: () => Date };
 type Database = Prisma.TransactionClient;
 export type BookingContext = { actor: Actor } | { slug: string };
@@ -40,12 +42,9 @@ export async function resolveContext(db: Database, context: BookingContext) {
   if ("actor" in context) {
     const actor = await refreshActor(db, context.actor);
     requireBookingRole(actor);
-    return {
-      salonId: actor.salonId,
-      actor,
-      online: false,
-      policy: await salonBookingPolicy(db, actor.salonId),
-    };
+    const policy = await salonBookingPolicy(db, actor.salonId);
+    await expireStalePending(db, actor.salonId, policy);
+    return { salonId: actor.salonId, actor, online: false, policy };
   }
   if (
     !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(context.slug) ||
@@ -57,12 +56,9 @@ export async function resolveContext(db: Database, context: BookingContext) {
     select: { id: true },
   });
   if (!salon) throw new HttpError(404, "Салон олдсонгүй.");
-  return {
-    salonId: salon.id,
-    actor: null,
-    online: true,
-    policy: await salonBookingPolicy(db, salon.id),
-  };
+  const policy = await salonBookingPolicy(db, salon.id);
+  await expireStalePending(db, salon.id, policy);
+  return { salonId: salon.id, actor: null, online: true, policy };
 }
 type Scope = Awaited<ReturnType<typeof resolveContext>>;
 export async function resources(
@@ -407,6 +403,8 @@ export async function createBooking(
       if (!customer) throw new HttpError(404, "Үйлчлүүлэгч олдсонгүй.");
     } else {
       const data = input.customer!;
+      if (scope.online)
+        await assertGuestQuota(tx, scope.salonId, data.phone, 1);
       customer = await tx.customer.upsert({
         where: { salonId_phone: { salonId: scope.salonId, phone: data.phone } },
         create: {
@@ -423,7 +421,7 @@ export async function createBooking(
       available.service.discountPercent,
     );
     const deposit = scope.online ? depositAmount(price, scope.policy) : 0;
-    return tx.booking.create({
+    const booking = await tx.booking.create({
       data: {
         salonId: scope.salonId,
         branchId: input.branchId,
@@ -457,6 +455,12 @@ export async function createBooking(
         requestHash: hash,
       },
     });
+    await enqueueNotice(
+      tx,
+      [booking],
+      booking.status === "CONFIRMED" ? "BOOKING_CONFIRMED" : "BOOKING_RECEIVED",
+    );
+    return booking;
   });
 }
 export async function changeBooking(
@@ -481,10 +485,19 @@ export async function changeBooking(
     if (input.action === "status") {
       if (!transitions[booking.status].includes(input.status))
         throw new HttpError(409, "Захиалгын төлөвийг ингэж өөрчлөх боломжгүй.");
-      return tx.booking.update({
+      const updated = await tx.booking.update({
         where: { id },
         data: { status: input.status, version: { increment: 1 } },
       });
+      if (input.status === "CONFIRMED" || input.status === "CANCELLED")
+        await enqueueNotice(
+          tx,
+          [updated],
+          input.status === "CONFIRMED"
+            ? "BOOKING_CONFIRMED"
+            : "BOOKING_CANCELLED",
+        );
+      return updated;
     }
     if (!["PENDING", "CONFIRMED"].includes(booking.status))
       throw new HttpError(409, "Энэ захиалгын цагийг өөрчлөх боломжгүй.");
@@ -502,7 +515,7 @@ export async function changeBooking(
     const startAt = new Date(input.startAt),
       slot = available.slots.find((s) => s.startAt === startAt.toISOString());
     if (!slot) throw new HttpError(409, bookingConflict);
-    return tx.booking.update({
+    const moved = await tx.booking.update({
       where: { id },
       data: {
         staffId: slot.staffIds[0],
@@ -511,6 +524,8 @@ export async function changeBooking(
         version: { increment: 1 },
       },
     });
+    await enqueueNotice(tx, [moved], "BOOKING_RESCHEDULED");
+    return moved;
   });
 }
 export function bookingView(
@@ -558,6 +573,11 @@ export async function listBookings(
   const start = dayWindow(input.date).start,
     end = dayWindow(addDays(input.date, input.days)).start;
   if (input.branchId) requireBranch(actor, input.branchId);
+  await expireStalePending(
+    db,
+    actor.salonId,
+    await salonBookingPolicy(db, actor.salonId),
+  );
   const rows = await db.booking.findMany({
     where: {
       ...bookingScope(actor),

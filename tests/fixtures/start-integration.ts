@@ -11,6 +11,16 @@ async function main() {
   await fixture.db.user.create({
     data: { id: mobileId, email: "invite-mobile@example.test", name: "Сараа" },
   });
+  // Platform operator with no salon membership (test fixture only).
+  const platformId = "00000000-0000-0000-0000-000000000008";
+  await fixture.db.user.create({
+    data: {
+      id: platformId,
+      email: "platform@example.test",
+      name: "Платформ",
+      isSuperAdmin: true,
+    },
+  });
   for (const [salonId, branchId] of [
     ["a", "y"],
     ["b", "other"],
@@ -69,6 +79,7 @@ async function main() {
       email: `${name}@example.test`,
     })),
     { id: mobileId, email: "invite-mobile@example.test" },
+    { id: platformId, email: "platform@example.test" },
   ];
   const users = new Map(
     identities.map(({ id, email }) => [

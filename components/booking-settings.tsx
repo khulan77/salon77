@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   CalendarCheck,
   Clock3,
+  MessageSquare,
   ImagePlus,
   Landmark,
   Trash2,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Feedback } from "./ui/feature-dialog";
+import { NotificationLog } from "./notification-log";
 import { requestJson } from "@/lib/client-request";
 import { clockTime } from "@/lib/schedule-time";
 import type { BranchView } from "@/lib/admin-data";
@@ -40,6 +42,7 @@ export function BookingSettings({
   coverUrl: initialCover,
   services,
   branches = [],
+  smsReady = false,
 }: {
   preview: boolean;
   salonName: string;
@@ -47,6 +50,7 @@ export function BookingSettings({
   coverUrl: string | null;
   services: SampleService[];
   branches?: BranchView[];
+  smsReady?: boolean;
 }) {
   const [policy, setPolicy] = useState<BookingPolicy>(defaultBookingSettings);
   const [cover, setCover] = useState(initialCover);
@@ -229,6 +233,27 @@ export function BookingSettings({
                         хүртэл «Хүлээгдэж буй» байна.
                       </p>
                     )}
+                  <label className="field">
+                    Баталгаажаагүй онлайн захиалгыг автоматаар цуцлах
+                    <select
+                      value={policy.pendingExpiryMinutes}
+                      onChange={(e) =>
+                        update({ pendingExpiryMinutes: Number(e.target.value) })
+                      }
+                    >
+                      <option value={0}>Цуцлахгүй</option>
+                      <option value={30}>30 минутын дараа</option>
+                      <option value={60}>1 цагийн дараа</option>
+                      <option value={120}>2 цагийн дараа</option>
+                      <option value={360}>6 цагийн дараа</option>
+                      <option value={1440}>24 цагийн дараа</option>
+                    </select>
+                    <small>
+                      Хугацаандаа баталгаажаагүй (жишээ нь урьдчилгаа ороогүй)
+                      захиалга цуцлагдаж, цаг нь дахин сул болно. Хуурамч
+                      захиалгаар цаг дүүргэхээс хамгаална.
+                    </small>
+                  </label>
                   <div className="form-grid">
                     <label className="field">
                       Урьдчилж захиалах хугацаа · хоног
@@ -288,6 +313,42 @@ export function BookingSettings({
                       </small>
                     </label>
                   </div>
+                </section>
+                <section
+                  className="panel settings-card"
+                  aria-labelledby="notify-title"
+                >
+                  <div className="settings-card-heading">
+                    <span className="settings-icon">
+                      <MessageSquare size={17} />
+                    </span>
+                    <div>
+                      <h2 id="notify-title">Мэдэгдэл</h2>
+                      <p>
+                        Захиалга хүлээн авах, баталгаажих, цуцлагдах, цаг
+                        өөрчлөгдөхөд үйлчлүүлэгчид мессеж илгээнэ.
+                      </p>
+                    </div>
+                    <label className="switch">
+                      <input
+                        type="checkbox"
+                        checked={policy.notificationsEnabled}
+                        onChange={(e) =>
+                          update({ notificationsEnabled: e.target.checked })
+                        }
+                      />
+                      <span aria-hidden="true" />
+                      Мессеж мэдэгдэл
+                    </label>
+                  </div>
+                  {!smsReady && (
+                    <p className="notice">
+                      Мессеж илгээх үйлчилгээ хараахан холбогдоогүй. Мэдэгдлүүд
+                      бүртгэлд хадгалагдах боловч илгээгдэхгүй.
+                    </p>
+                  )}
+                  <div className="settings-subtitle">Сүүлийн мэдэгдлүүд</div>
+                  <NotificationLog preview={preview} />
                 </section>
                 <section
                   className="panel settings-card"

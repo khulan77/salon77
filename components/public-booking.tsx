@@ -64,6 +64,7 @@ export function PublicBooking({
   const [receipt, setReceipt] = useState<VisitReceipt | null>(null);
   // Keep one idempotency key per payload so retries never double-book.
   const submission = useRef<{ payload: string; key: string } | null>(null);
+  const trap = useRef<HTMLInputElement>(null);
   const branch = catalog.branches.find((b) => b.id === branchId);
   const offered = catalog.services.filter((s) =>
     s.branchIds.includes(branchId),
@@ -152,6 +153,7 @@ export function PublicBooking({
         ...(staff[s.id] ? { staffId: staff[s.id] } : {}),
       })),
       customer: { name: name.trim(), phone: phone.trim() },
+      website: trap.current?.value || undefined,
     };
     const payload = JSON.stringify(body);
     if (submission.current?.payload !== payload)
@@ -569,6 +571,15 @@ export function PublicBooking({
       )}
       {step === "details" && (
         <form id="pb-details" onSubmit={submit} className="pb-form">
+          {/* Honeypot: invisible to people and skipped by keyboard and screen readers. */}
+          <input
+            ref={trap}
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="pb-trap"
+          />
           <div className="pb-summary">
             <span>
               <CalendarDays size={14} />

@@ -1,6 +1,7 @@
 import { BookingSettings } from "@/components/booking-settings";
 import { SettingsTabs } from "@/components/settings-tabs";
 import { discountedPrice } from "@/lib/pricing";
+import { smsProvider } from "@/lib/notifications/provider";
 import { RevenueReport } from "@/components/revenue-report";
 import { Timesheet } from "@/components/timesheet";
 import { readTimesheet, timesheetQuery } from "@/lib/services/timesheet";
@@ -98,6 +99,7 @@ export default async function Page({
           slug={data.slug}
           coverUrl={salon?.coverUrl ?? null}
           branches={data.branches.filter((b) => b.active)}
+          smsReady={smsProvider() !== null}
           services={services.map((s) => ({
             name: s.name,
             durationMinutes: s.durationMinutes,

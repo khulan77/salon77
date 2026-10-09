@@ -23,6 +23,9 @@ export const branchSchema = z
   );
 const reserved = [
   "api",
+  "platform",
+  "business",
+  "home",
   "invite",
   "auth",
   "sign-in",

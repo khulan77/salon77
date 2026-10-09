@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { membership } from "@/lib/auth";
 import { actorFromMember } from "@/lib/access";
 import { failure, sameOrigin } from "@/lib/http";
+import { deliverSoon } from "@/lib/notifications/schedule";
 import { dateSchema } from "@/lib/booking-validation";
 import {
   createBooking,
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
     sameOrigin(request);
     const actor = actorFromMember(await membership());
     const booking = await createBooking(db, { actor }, await request.json());
+    deliverSoon();
     return Response.json(await readBooking(db, actor, booking.id), {
       status: 201,
     });
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     sameOrigin(request);
+    deliverSoon();
     return Response.json(
       bookingView(
         await changeBooking(

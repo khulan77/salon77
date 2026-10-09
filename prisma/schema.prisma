@@ -29,28 +29,29 @@ enum SalonStatus {
 }
 
 model User {
-  id           String        @id @db.Uuid
-  email        String        @unique
-  name         String?
-  isSuperAdmin Boolean       @default(false)
-  lastLoginAt  DateTime?
-  createdAt    DateTime      @default(now())
-  memberships  SalonMember[]
+  id              String             @id @db.Uuid
+  email           String             @unique
+  name            String?
+  isSuperAdmin    Boolean            @default(false)
+  lastLoginAt     DateTime?
+  platformActions PlatformAuditLog[]
+  createdAt       DateTime           @default(now())
+  memberships     SalonMember[]
 }
 
 model Salon {
-  id              String            @id @default(cuid())
+  id              String             @id @default(cuid())
   name            String
-  slug            String            @unique
+  slug            String             @unique
   description     String?
   phone           String
   email           String?
   instagram       String?
   logoUrl         String?
   coverUrl        String?
-  status          SalonStatus       @default(ACTIVE)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  status          SalonStatus        @default(ACTIVE)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   members         SalonMember[]
   branches        Branch[]
   invitations     Invitation[]
@@ -58,9 +59,13 @@ model Salon {
   categories      ServiceCategory[]
   services        Service[]
   bookings        Booking[]
+  notifications   Notification[]
+  platformAudit   PlatformAuditLog[]
   bookingSettings BookingSettings?
   customers       Customer[]
   products        Product[]
+
+  @@index([createdAt])
 }
 
 model SalonMember {
@@ -318,38 +323,39 @@ model Customer {
 }
 
 model Booking {
-  id                      String        @id @default(cuid())
+  id                      String         @id @default(cuid())
   salonId                 String
   branchId                String
   customerId              String
   serviceId               String
   staffId                 String
-  startAt                 DateTime      @db.Timestamptz(3)
-  endAt                   DateTime      @db.Timestamptz(3)
-  status                  BookingStatus @default(CONFIRMED)
+  startAt                 DateTime       @db.Timestamptz(3)
+  endAt                   DateTime       @db.Timestamptz(3)
+  status                  BookingStatus  @default(CONFIRMED)
   source                  BookingSource
   serviceNameSnapshot     String
   durationMinutesSnapshot Int
   priceSnapshot           Int
-  discountPercentSnapshot Int           @default(0)
-  depositAmountSnapshot   Int           @default(0)
+  discountPercentSnapshot Int            @default(0)
+  depositAmountSnapshot   Int            @default(0)
   // Shared by bookings made together in one visit (parallel services).
   groupId                 String?
+  notifications           Notification[]
   customerNameSnapshot    String
   customerPhoneSnapshot   String
   notes                   String?
   createdByMemberId       String?
   idempotencyKey          String
   requestHash             String
-  version                 Int           @default(1)
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-  salon                   Salon         @relation(fields: [salonId], references: [id], onDelete: Restrict)
-  branch                  Branch        @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Restrict)
-  customer                Customer      @relation(fields: [customerId, salonId], references: [id, salonId], onDelete: Restrict)
-  service                 Service       @relation(fields: [serviceId, salonId], references: [id, salonId], onDelete: Restrict)
-  staff                   Staff         @relation(fields: [staffId, salonId], references: [id, salonId], onDelete: Restrict)
-  createdBy               SalonMember?  @relation(fields: [createdByMemberId, salonId], references: [id, salonId], onDelete: Restrict)
+  version                 Int            @default(1)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  salon                   Salon          @relation(fields: [salonId], references: [id], onDelete: Restrict)
+  branch                  Branch         @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Restrict)
+  customer                Customer       @relation(fields: [customerId, salonId], references: [id, salonId], onDelete: Restrict)
+  service                 Service        @relation(fields: [serviceId, salonId], references: [id, salonId], onDelete: Restrict)
+  staff                   Staff          @relation(fields: [staffId, salonId], references: [id, salonId], onDelete: Restrict)
+  createdBy               SalonMember?   @relation(fields: [createdByMemberId, salonId], references: [id, salonId], onDelete: Restrict)
 
   @@unique([id, salonId])
   @@unique([salonId, idempotencyKey])
@@ -358,6 +364,7 @@ model Booking {
   @@index([salonId, customerId, startAt])
   @@index([salonId, status, startAt])
   @@index([salonId, groupId])
+  @@index([source, createdAt])
 }
 
 enum StaffHoursMode {
@@ -409,6 +416,8 @@ model BookingSettings {
   depositAccountNumber        String                  @default("")
   depositAccountHolder        String                  @default("")
   staffHoursMode              StaffHoursMode          @default(CUSTOM)
+  pendingExpiryMinutes        Int                     @default(0)
+  notificationsEnabled        Boolean                 @default(false)
   updatedAt                   DateTime                @default(now()) @updatedAt
   salon                       Salon                   @relation(fields: [salonId], references: [id], onDelete: Cascade)
 }
@@ -445,4 +454,73 @@ model ProductStock {
 
   @@id([productId, branchId])
   @@index([salonId, branchId])
+}
+
+// Fixed-window request counters for public endpoints (hashed keys only).
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}
+
+enum NotificationEvent {
+  BOOKING_RECEIVED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_RESCHEDULED
+}
+
+enum NotificationChannel {
+  SMS
+}
+
+enum NotificationStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+// Outbox: written with the booking change, delivered after the response.
+model Notification {
+  id                String              @id @default(cuid())
+  salonId           String
+  bookingId         String?
+  event             NotificationEvent
+  channel           NotificationChannel @default(SMS)
+  recipient         String
+  body              String
+  status            NotificationStatus  @default(PENDING)
+  attempts          Int                 @default(0)
+  lastError         String?
+  availableAt       DateTime            @default(now())
+  claimedAt         DateTime?
+  sentAt            DateTime?
+  providerMessageId String?
+  dedupeKey         String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @default(now()) @updatedAt
+  salon             Salon               @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  booking           Booking?            @relation(fields: [bookingId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@unique([salonId, dedupeKey])
+  @@index([status, availableAt])
+  @@index([salonId, createdAt])
+}
+
+// Append-only record of platform-console actions on salons.
+model PlatformAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String   @db.Uuid
+  action      String
+  salonId     String
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  salon       Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, createdAt])
 }

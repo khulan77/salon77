@@ -33,9 +33,9 @@ Local Node is v20. Production requires Node ≥ 22.
 | 2 Team/Services/Staff              | Invitations, roles, catalog, staff, schedules, time off                                          | IMPLEMENTED + TESTED; applied to live DB                                                                           |
 | 3 Booking core                     | Customers, bookings, availability, concurrency, idempotency, calendar, lifecycle, public booking | IMPLEMENTED + TESTED (embedded DB + browser); live concurrency REPORTED (2026-10-06); migration applied to live DB |
 | 4.1 Booking settings               | Policy table, owner settings UI, enforcement in availability/creation                            | IMPLEMENTED + TESTED locally. **Migration not applied to live DB**. Not documented in README                       |
-| 4.2 Notification foundation        | Events/outbox, notification log, templates, provider abstraction                                 | PLANNED                                                                                                            |
+| 4.2 Notification foundation        | Outbox, templates, provider interface, delivery and retry, owner log                             | IMPLEMENTED + TESTED (2026-10-09). Migration `202610090015_notifications`. No real SMS gateway yet                 |
 | 4.3 Reminder engine                | Scheduled reminders, dedupe, cancellation-aware                                                  | PLANNED (depends on 4.2 and a scheduler)                                                                           |
-| 4.4 Public booking protection      | Rate limiting, spam/abuse controls                                                               | PLANNED                                                                                                            |
+| 4.4 Public booking protection      | Rate limits, per-phone quota, honeypot, pending auto-expiry                                      | IMPLEMENTED + TESTED (2026-10-09). Migration `202610090014_booking_protection`                                     |
 | 4.5 Cancellation/reschedule policy | Customer self-service, `cancellationNoticeMinutes` enforcement, admin override                   | PLANNED (setting already stored)                                                                                   |
 | 4.6 Admin notifications/ops        | New/pending/cancel alerts, inbox                                                                 | PLANNED                                                                                                            |
 | 4.7 Operational UX polish          | Reception flow, mobile, states                                                                   | PLANNED                                                                                                            |
@@ -83,6 +83,30 @@ Local Node is v20. Production requires Node ≥ 22.
   - Cover images upload through `POST/DELETE /api/salon-cover` to the Supabase Storage bucket `salon-media`, using the server-only `SUPABASE_SECRET_KEY`. The type is checked from the file bytes and the size is capped at 4MB.
   - **Setup needed:** create a _public_ bucket named `salon-media` in Supabase Storage, put the secret key in `.env`, then run `bun run db:migrate`.
   - The calendar does not show the deposit amount yet (`BookingView.depositMnt` is available). QPay remains Phase 7.
+
+- **Phase 4.4 public booking protection** (2026-10-09):
+  - Postgres fixed-window rate limits keyed by a hashed client fingerprint (`lib/rate-limit.ts`): 120 availability requests per 10 min, 8 bookings per 10 min per salon, 30 per day.
+  - At most 4 upcoming active online bookings per phone per salon (`lib/services/guest-guard.ts`).
+  - A honeypot `website` field on the public form.
+  - Optional `pendingExpiryMinutes`. Expiry is applied lazily on availability, booking and calendar reads, so no scheduler is needed.
+  - No CAPTCHA provider yet. `RATE_LIMIT_SALT` may be set in production.
+- **Test fixture stabilised:** `close()` waits before closing PGlite, and the Phase 4.1 role test resets the shared session first. The integration suite now passes reliably.
+
+- **Phase 4.2 notification foundation** (2026-10-09):
+  - `Notification` is an outbox row written in the same transaction as the booking change (`lib/notifications/outbox.ts`). Events: received, confirmed, cancelled, rescheduled. The `dedupeKey` (event + booking or group + version) makes idempotent replays and retries safe.
+  - Delivery runs in `after()` once the response is sent (`lib/notifications/schedule.ts`). It claims rows with `FOR UPDATE SKIP LOCKED`, retries with exponential backoff up to 5 attempts, and reclaims rows stuck in `SENDING`.
+  - `GET /api/cron/notifications` (Bearer `CRON_SECRET`) lets an external scheduler drain retries. Vercel Hobby only runs cron daily, so no `vercel.json` is committed.
+  - Providers live in `lib/notifications/provider.ts`. Only `log` (development) exists; with no provider, notices are marked `SKIPPED`. A real gateway is a one-function addition once chosen.
+  - Owners turn delivery on per salon in Settings and see the last 30 notices with masked phone numbers.
+  - Expired-pending cancellations do not notify yet.
+- Raw SQL timestamp parameters are converted to UTC explicitly (rate limits, notification claims), so the database session time zone can never shift comparisons.
+
+- **Platform console** (2026-10-09, part 1 of `docs/prompts/platform-launch.md`):
+  - `/platform` and `/platform/salons/[id]` are reachable only by users with `User.isSuperAdmin = true`; everyone else gets a 404.
+  - It shows salon totals and growth, online and all bookings, per-salon branch, service, staff and booking counts, owner and member last login, and suspend/reactivate with `PlatformAuditLog`.
+  - Aggregates only; no customer names or phones.
+  - Grant access with SQL in Supabase (`UPDATE "User" SET "isSuperAdmin" = true WHERE email = '<owner email>';`). There is no UI path.
+  - Migration `202610090016_platform_audit`.
 
 ## Recommended sequencing and dependencies
 
