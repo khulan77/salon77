@@ -362,7 +362,11 @@ test(
           assert.equal("idempotencyKey" in receipt, false);
           const catalog = await publicCatalog(db, "salon-a");
           assert.ok(!JSON.stringify(catalog).includes("Хувийн мэдээлэл"));
-          assert.ok(!JSON.stringify(catalog).includes("99112233"));
+          // Salon and branch phones are public; staff phones and bios are not.
+          assert.ok(
+            catalog.staff.every((s) => !("phone" in s) && !("bio" in s)),
+          );
+          assert.ok(!JSON.stringify(catalog.staff).includes("99112233"));
           const confirmed = await changeBooking(db, actors.owner, online.id, {
             action: "status",
             status: "CONFIRMED",

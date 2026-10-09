@@ -107,14 +107,14 @@ test("guest any-staff booking and public-safe responses", async ({
   await expect(
     page.getByRole("heading", { name: "Туршилтын салон", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Зайсан" }).click();
   await page
-    .getByRole("combobox", { name: "Салбар", exact: true })
-    .selectOption("z");
-  await page
-    .getByRole("combobox", { name: "Үйлчилгээ", exact: true })
-    .selectOption("book-service-a-90");
+    .locator(".pb-service")
+    .filter({ hasText: "Гел маникюр" })
+    .first()
+    .click();
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
-  await page.getByLabel("Өдөр", { exact: true }).fill(date);
+  await page.getByRole("button", { name: date, exact: true }).click();
   await page.getByRole("button", { name: "14:00", exact: true }).click();
   await responsive(page);
   await page.screenshot({
@@ -123,20 +123,17 @@ test("guest any-staff booking and public-safe responses", async ({
   });
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByLabel("Нэр", { exact: true }).fill("Онлайн үйлчлүүлэгч");
-  await page.getByLabel("Утас", { exact: true }).fill("88112233");
-  await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
+  await page.getByLabel("Утасны дугаар", { exact: true }).fill("88112233");
   const response = page.waitForResponse(
     (r) =>
-      r.url().includes("/api/public/salon-a/bookings") &&
+      r.url().includes("/api/public/salon-a/visits") &&
       r.request().method() === "POST",
   );
-  await page
-    .getByRole("button", { name: "Баталгаажуулах", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Захиалах", exact: true }).click();
   const res = await response;
   expect(res.status()).toBe(201);
   const receipt = await res.json();
-  expect(receipt.staffName).toBe("Ану");
+  expect(receipt.items[0].staffName).toBe("Ану");
   expect(receipt.status).toBe("PENDING");
   for (const key of [
     "customerId",
@@ -147,7 +144,8 @@ test("guest any-staff booking and public-safe responses", async ({
     "idempotencyKey",
     "createdByMemberId",
   ])
-    expect(receipt).not.toHaveProperty(key);
+    for (const part of [receipt, ...receipt.items])
+      expect(part).not.toHaveProperty(key);
   await expect(
     page.getByRole("heading", { name: "Захиалга амжилттай" }),
   ).toBeVisible();

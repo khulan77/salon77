@@ -333,6 +333,8 @@ model Booking {
   priceSnapshot           Int
   discountPercentSnapshot Int           @default(0)
   depositAmountSnapshot   Int           @default(0)
+  // Shared by bookings made together in one visit (parallel services).
+  groupId                 String?
   customerNameSnapshot    String
   customerPhoneSnapshot   String
   notes                   String?
@@ -355,6 +357,7 @@ model Booking {
   @@index([salonId, staffId, startAt])
   @@index([salonId, customerId, startAt])
   @@index([salonId, status, startAt])
+  @@index([salonId, groupId])
 }
 
 enum StaffHoursMode {

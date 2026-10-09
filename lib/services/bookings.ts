@@ -36,7 +36,7 @@ export function bookingScope(actor: Actor): Prisma.BookingWhereInput {
       : { branchId: { in: actor.branchIds } }),
   };
 }
-async function resolveContext(db: Database, context: BookingContext) {
+export async function resolveContext(db: Database, context: BookingContext) {
   if ("actor" in context) {
     const actor = await refreshActor(db, context.actor);
     requireBookingRole(actor);
@@ -65,7 +65,7 @@ async function resolveContext(db: Database, context: BookingContext) {
   };
 }
 type Scope = Awaited<ReturnType<typeof resolveContext>>;
-async function resources(
+export async function resources(
   db: Database,
   scope: Scope,
   branchId: string,
@@ -118,7 +118,7 @@ export function fits(
     !blocked.some((b) => start < b.end && end > b.start)
   );
 }
-async function slots(
+export async function slots(
   db: Database,
   scope: Scope,
   input: {
@@ -313,7 +313,7 @@ function retryable(error: unknown) {
     (error instanceof Error && error.message.includes("Booking_no_overlap"))
   );
 }
-async function transaction<T>(
+export async function transaction<T>(
   db: PrismaClient,
   work: (tx: Database) => Promise<T>,
 ): Promise<T> {
@@ -584,21 +584,47 @@ export async function publicCatalog(db: Database, slug: string) {
   const scope = await resolveContext(db, { slug });
   const salon = await db.salon.findUniqueOrThrow({
     where: { id: scope.salonId },
-    select: { name: true, slug: true, coverUrl: true },
+    select: {
+      name: true,
+      slug: true,
+      coverUrl: true,
+      logoUrl: true,
+      description: true,
+      phone: true,
+      instagram: true,
+    },
   });
   if (!scope.policy.publicBookingEnabled)
     return {
       salon,
       policy: scope.policy,
       branches: [],
+      categories: [],
       services: [],
       staff: [],
     };
-  const [branches, services, staff] = await Promise.all([
+  const [branches, categories, services, staff] = await Promise.all([
     db.branch.findMany({
       where: { salonId: scope.salonId, active: true },
-      select: { id: true, name: true, address: true },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        district: true,
+        phone: true,
+        openMinute: true,
+        closeMinute: true,
+      },
       orderBy: { name: "asc" },
+    }),
+    db.serviceCategory.findMany({
+      where: {
+        salonId: scope.salonId,
+        active: true,
+        services: { some: { active: true, onlineBookable: true } },
+      },
+      select: { id: true, name: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     db.service.findMany({
       where: {
@@ -610,6 +636,8 @@ export async function publicCatalog(db: Database, slug: string) {
       select: {
         id: true,
         name: true,
+        description: true,
+        categoryId: true,
         durationMinutes: true,
         priceMnt: true,
         discountPercent: true,
@@ -648,6 +676,7 @@ export async function publicCatalog(db: Database, slug: string) {
     salon,
     policy: scope.policy,
     branches,
+    categories,
     services: services.map((s) => ({
       ...s,
       // priceMnt is what the guest pays; listPriceMnt shows the struck-out price.

@@ -1,11 +1,9 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { configured } from "@/lib/env";
 import { publicCatalog } from "@/lib/services/bookings";
 import { HttpError } from "@/lib/errors";
-import { publicBookingClosed } from "@/lib/booking-settings";
-import { BookingWizard } from "@/components/booking-wizard";
+import { PublicBooking } from "@/components/public-booking";
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Цаг захиалах · Salon77",
@@ -26,35 +24,8 @@ export default async function Page({
     throw e;
   }
   return (
-    <main className="public-booking">
-      {catalog.salon.coverUrl && (
-        <div className="public-cover">
-          <Image
-            src={catalog.salon.coverUrl}
-            alt={`${catalog.salon.name} салоны зураг`}
-            fill
-            unoptimized
-            priority
-            sizes="(max-width: 700px) 100vw, 720px"
-          />
-        </div>
-      )}
-      <header>
-        <span className="eyebrow">SALON77</span>
-        <h1>{catalog.salon.name}</h1>
-        <p>Өөрт тохирох цагаа сонгоорой.</p>
-      </header>
-      <section className="panel public-booking-card">
-        {catalog.policy.publicBookingEnabled ? (
-          <BookingWizard
-            slug={slug}
-            options={catalog}
-            policy={catalog.policy}
-          />
-        ) : (
-          <p role="status">{publicBookingClosed}</p>
-        )}
-      </section>
+    <main className="pb-page">
+      <PublicBooking slug={slug} catalog={catalog} />
     </main>
   );
 }
