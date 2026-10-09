@@ -112,6 +112,7 @@ model Branch {
 
   @@unique([id, salonId])
   @@index([salonId, active])
+  @@index([district])
 }
 
 model MemberBranch {
@@ -418,6 +419,7 @@ model BookingSettings {
   staffHoursMode              StaffHoursMode          @default(CUSTOM)
   pendingExpiryMinutes        Int                     @default(0)
   notificationsEnabled        Boolean                 @default(false)
+  listedInDirectory           Boolean                 @default(true)
   updatedAt                   DateTime                @default(now()) @updatedAt
   salon                       Salon                   @relation(fields: [salonId], references: [id], onDelete: Cascade)
 }

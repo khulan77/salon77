@@ -194,6 +194,21 @@ export function BookingSettings({
                     Хаасан үед ресепшн болон эзэмшигч захиалга бүртгэх боломжтой
                     хэвээр байна.
                   </p>
+                  <label className="check-field">
+                    <input
+                      type="checkbox"
+                      checked={policy.listedInDirectory}
+                      onChange={(e) =>
+                        update({ listedInDirectory: e.target.checked })
+                      }
+                    />
+                    Salon77 нүүр хуудсанд салоноо харуулах
+                  </label>
+                  <p className="field-hint">
+                    Онлайн захиалга нээлттэй, үйлчилгээтэй үед үйлчлүүлэгчид
+                    таныг нүүр хуудаснаас хайж олно. Унтраасан ч захиалгын линк
+                    тань ажилласаар байна.
+                  </p>
                   <div className="settings-subtitle">
                     Захиалга баталгаажуулах
                   </div>

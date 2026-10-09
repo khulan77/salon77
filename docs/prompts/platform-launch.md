@@ -10,7 +10,7 @@ Written 2026-10-09. Each part below is a self-contained prompt for one implement
 
 **Part 1 is done (2026-10-09).** See "Platform console" in `docs/DEVELOPMENT_ROADMAP.md`.
 
-**Part 2 is done (2026-10-09).**
+**Parts 2 and 3 are done (2026-10-09).**
 
 - `/business` is live.
 - Signed-out `/` rewrites to it.
@@ -111,11 +111,11 @@ Non-negotiable:
 
 ## Part 2: Business page and registration path
 
-**Goal.** A salon owner who clicks **"Салоноо бүртгүүлэх"** lands on a page explaining what Salon77 includes. They register with **"Үнэгүй эхлэх"** and go straight into their salon admin.
+**Goal.** A salon owner who clicks **"Салоноо бүртгүүлэх"** lands on a page explaining what Salon77 includes. They register with **"Бизнесээ бүртгүүлэх"** and go straight into their salon admin.
 
 **Page `/business`** (finish the parked draft `docs/prompts/drafts/business-page.tsx.txt`; its CSS was never written):
 
-- Header: logo, section links, "Нэвтрэх", "Үнэгүй эхлэх".
+- Header: logo, section links, and one "Нэвтрэх / Бүртгүүлэх" button (signed-in users see "Миний салон").
 - Hero: what Salon77 is, primary call to action, and a coded (not image) mock of the calendar and of the phone booking page.
 - **What's included**, grouped:
   - Online booking system: own link per salon (`salon77.mn/{slug}/book`), no customer sign-up, parallel two-service visits, deposits, discounts.
@@ -129,7 +129,7 @@ Non-negotiable:
 
 **Flow:**
 
-- "Үнэгүй эхлэх" goes to `/sign-up?next=/onboarding`.
+- "Бизнесээ бүртгүүлэх" goes to `/sign-up`; onboarding follows automatically.
 - After email confirmation the user goes to `/onboarding` and then to the salon dashboard.
 - Already-signed-in users who click it go straight to the dashboard (or to onboarding if they have no salon).
 - Verify the existing `safeAuthNext` allow-list accepts this; extend it narrowly if needed.

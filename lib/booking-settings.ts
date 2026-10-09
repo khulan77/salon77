@@ -17,6 +17,7 @@ export const bookingSettingsSchema = z
     staffHoursMode: z.enum(["CUSTOM", "SALON_HOURS"]),
     pendingExpiryMinutes: z.number().int().min(0).max(10080),
     notificationsEnabled: z.boolean(),
+    listedInDirectory: z.boolean(),
   })
   .strict()
   .superRefine((v, ctx) => {
@@ -54,6 +55,7 @@ export const defaultBookingSettings: BookingPolicy = {
   staffHoursMode: "CUSTOM",
   pendingExpiryMinutes: 0,
   notificationsEnabled: false,
+  listedInDirectory: true,
 };
 export const publicBookingClosed = "Онлайн захиалга одоогоор хаалттай байна.";
 export function policyView(value: BookingPolicy): BookingPolicy {
@@ -73,6 +75,7 @@ export function policyView(value: BookingPolicy): BookingPolicy {
     staffHoursMode: value.staffHoursMode,
     pendingExpiryMinutes: value.pendingExpiryMinutes,
     notificationsEnabled: value.notificationsEnabled,
+    listedInDirectory: value.listedInDirectory,
   };
 }
 // Deposits apply to online bookings only; reception collects payment in person.

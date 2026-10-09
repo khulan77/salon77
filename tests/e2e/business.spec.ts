@@ -12,12 +12,12 @@ test("business page explains the product and leads to sign-up", async ({
   ])
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
   await expect(page.getByText("salon77.mn/таны-салон/book")).toBeVisible();
-  const start = page.getByRole("link", { name: /Үнэгүй эхлэх/ });
+  const start = page.getByRole("link", { name: /Бизнесээ бүртгүүлэх/ });
+  await expect(start).toHaveCount(2);
   await expect(start.first()).toHaveAttribute("href", "/sign-up");
-  await expect(page.getByRole("link", { name: "Нэвтрэх" })).toHaveAttribute(
-    "href",
-    "/sign-in",
-  );
+  await expect(
+    page.getByRole("link", { name: "Нэвтрэх / Бүртгүүлэх" }),
+  ).toHaveAttribute("href", "/sign-in");
   // FAQ opens without JavaScript-only widgets.
   await page.getByText("Бүртгүүлэхэд төлбөртэй юу?").click();
   await expect(

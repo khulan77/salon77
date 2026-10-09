@@ -147,7 +147,7 @@ export default async function BusinessPage() {
   const signedIn = start !== "/sign-up";
   const phone = site.phone && formatSitePhone(site.phone);
   const handle = site.instagram.replace(/^@/, "");
-  const cta = signedIn ? "Удирдлага руу орох" : "Үнэгүй эхлэх";
+  const cta = "Бизнесээ бүртгүүлэх";
   return (
     <div className="lp">
       <header className="lp-nav">
@@ -162,13 +162,12 @@ export default async function BusinessPage() {
           <a href="#about">Бидний тухай</a>
         </nav>
         <div className="lp-nav-actions">
-          {!signedIn && (
-            <Link href="/sign-in" className="lp-link">
-              Нэвтрэх
-            </Link>
-          )}
-          <Link href={start} className="lp-btn small">
-            {cta}
+          {/* Signed-in owners keep a way back to their salon admin. */}
+          <Link
+            href={signedIn ? start : "/sign-in"}
+            className="lp-btn small outline"
+          >
+            {signedIn ? "Миний салон" : "Нэвтрэх / Бүртгүүлэх"}
           </Link>
         </div>
       </header>

@@ -42,6 +42,7 @@ test("all implemented pages and future navigation remain Mongolian on desktop an
   const routes = [
     ...modules.map((item) => item.href),
     "/business",
+    "/home",
     "/sign-in",
     "/sign-up",
     "/onboarding",

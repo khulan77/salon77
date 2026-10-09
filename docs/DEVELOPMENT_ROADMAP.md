@@ -114,6 +114,14 @@ Local Node is v20. Production requires Node ≥ 22.
   - The call to action sends visitors to `/sign-up`, owners to `/`, and users without a salon to `/onboarding`.
   - Contacts live in `lib/site.ts` and are hidden while empty. No pricing is stated beyond "registration is free".
 
+- **Public home with the salon directory** (2026-10-09, part 3 of `docs/prompts/platform-launch.md`):
+  - Signed-out `/` is rewritten (with its query string) to `/home`, which lists salons with search by salon or service name and a district filter.
+  - Cards link to `/{slug}/book`. The header links to `/business`.
+  - Listing rules live in `lib/services/directory.ts`: an active salon, public booking on, `BookingSettings.listedInDirectory` (Settings toggle, default on), and at least one bookable online service.
+  - Explicit public fields only.
+  - `GET /api/public/salons` is rate-limited.
+  - Migration `202610090017_directory`.
+
 ## Recommended sequencing and dependencies
 
 1. **Close out 4.1 on live:** apply migration 0006, then run the manual acceptance check. Code at `main` calls `bookingSettings` on every booking path. Against the current live DB this fails, and booking returns 500 errors.
