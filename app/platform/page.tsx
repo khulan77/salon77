@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { platformAdminId } from "@/lib/auth";
 import {
+  listApplications,
   listPlatformSalons,
   platformOverview,
   salonListQuery,
@@ -9,6 +10,7 @@ import {
 import { CountChart } from "@/components/platform/count-chart";
 import { formatTimeAgo } from "@/lib/ui-language";
 import { localStamp } from "@/lib/business-time";
+import { serviceTypeLabel, socialUrl } from "@/lib/salon-application";
 const date = (iso: string) => localStamp(iso).slice(0, 10).replace(/-/g, ".");
 const sorts = [
   ["newest", "Шинэ нь эхэндээ"],
@@ -30,8 +32,9 @@ export default async function PlatformHome({
     page: q.page ?? "0",
   });
   const query = parsed.success ? parsed.data : salonListQuery.parse({});
-  const [overview, list] = await Promise.all([
+  const [overview, applications, list] = await Promise.all([
     platformOverview(db, adminId),
+    listApplications(db, adminId),
     listPlatformSalons(db, adminId, query),
   ]);
   const pages = Math.max(1, Math.ceil(list.total / list.pageSize));
@@ -41,7 +44,7 @@ export default async function PlatformHome({
     [
       "Нийт салон",
       overview.salons.total,
-      `${overview.salons.active} идэвхтэй · ${overview.salons.suspended} зогсоосон`,
+      `${overview.salons.active} идэвхтэй · ${overview.salons.suspended} зогсоосон · ${overview.salons.pending} хүлээгдэж буй`,
     ],
     [
       "Шинэ салон",
@@ -72,6 +75,66 @@ export default async function PlatformHome({
             <small>{note}</small>
           </article>
         ))}
+      </section>
+      <section className="pf-panel" aria-labelledby="pf-applications">
+        <div className="pf-panel-head">
+          <h2 id="pf-applications">
+            Шинэ хүсэлтүүд <span>{applications.length}</span>
+          </h2>
+        </div>
+        {applications.length ? (
+          <ul className="pf-queue">
+            {applications.map((a) => {
+              const instagram = socialUrl("instagram", a.instagram);
+              const facebook = socialUrl("facebook", a.facebook);
+              return (
+                <li key={a.id}>
+                  <div>
+                    <Link href={`/platform/salons/${a.id}`} className="pf-name">
+                      {a.name}
+                    </Link>
+                    {a.resubmitted && (
+                      <em className="pf-badge wait">Дахин илгээсэн</em>
+                    )}
+                    <small>
+                      {[a.district, a.address].filter(Boolean).join(" · ")}
+                    </small>
+                    <small>
+                      {a.serviceTypes.map(serviceTypeLabel).join(", ")}
+                      {a.staffCount ? ` · ${a.staffCount} ажилтан` : ""}
+                    </small>
+                  </div>
+                  <div>
+                    {a.ownerName || "—"}
+                    <small>{a.ownerEmail}</small>
+                    <small>Утас {a.phone}</small>
+                  </div>
+                  <div className="pf-socials">
+                    {instagram && (
+                      <a href={instagram} target="_blank" rel="noreferrer">
+                        Инстаграм ↗
+                      </a>
+                    )}
+                    {facebook && (
+                      <a href={facebook} target="_blank" rel="noreferrer">
+                        Фэйсбүүк ↗
+                      </a>
+                    )}
+                    <small>Илгээсэн {formatTimeAgo(a.submittedAt)}</small>
+                  </div>
+                  <Link
+                    href={`/platform/salons/${a.id}`}
+                    className="pf-primary"
+                  >
+                    Шалгах
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="pf-note">Хянах хүсэлт алга.</p>
+        )}
       </section>
       <section className="pf-panel pf-charts">
         <CountChart
@@ -137,6 +200,12 @@ export default async function PlatformHome({
                         /{s.slug}
                         {s.status === "SUSPENDED" && (
                           <em className="pf-badge off">Зогсоосон</em>
+                        )}
+                        {s.reviewStatus === "PENDING" && (
+                          <em className="pf-badge wait">Хүлээгдэж буй</em>
+                        )}
+                        {s.reviewStatus === "REJECTED" && (
+                          <em className="pf-badge off">Буцаасан</em>
                         )}
                       </small>
                     </td>

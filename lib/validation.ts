@@ -1,5 +1,10 @@
 import { localStamp } from "./business-time";
 import { z } from "zod";
+import {
+  applicationFields,
+  hasSocial,
+  socialRequired,
+} from "./salon-application";
 const text = (max: number) => z.string().trim().min(1).max(max);
 export const branchSchema = z
   .object({
@@ -53,22 +58,34 @@ const reserved = [
   "partnership",
   "support",
 ];
-export const onboardingSchema = z.object({
-  name: text(100),
-  phone: text(30),
-  instagram: z.string().trim().max(100).optional(),
-  description: z.string().trim().max(1000).optional(),
-  slug: z
-    .string()
-    .min(3)
-    .max(63)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-    .refine(
-      (s) => !reserved.includes(s),
-      "Энэ хаягийг системд ашигладаг тул өөр хаяг сонгоно уу.",
-    ),
-  branch: branchSchema,
-});
+export const onboardingSchema = z
+  .object({
+    name: text(100),
+    phone: text(30),
+    description: z.string().trim().max(1000).optional(),
+    slug: z
+      .string()
+      .min(3)
+      .max(63)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+      .refine(
+        (s) => !reserved.includes(s),
+        "Энэ хаягийг системд ашигладаг тул өөр хаяг сонгоно уу.",
+      ),
+    branch: branchSchema,
+    ...applicationFields,
+  })
+  .refine(hasSocial, { message: socialRequired, path: ["instagram"] });
+// The owner corrects these and sends the application again.
+export const applicationSchema = z
+  .object({
+    name: text(100),
+    phone: text(30),
+    description: z.string().trim().max(1000).default(""),
+    ...applicationFields,
+  })
+  .strict()
+  .refine(hasSocial, { message: socialRequired, path: ["instagram"] });
 export const inviteSchema = z
   .object({
     name: text(100),

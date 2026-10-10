@@ -53,7 +53,8 @@ export async function resolveContext(db: Database, context: BookingContext) {
   )
     throw new HttpError(404, "Салон олдсонгүй.");
   const salon = await db.salon.findFirst({
-    where: { slug: context.slug, status: "ACTIVE" },
+    // A salon still under review is not reachable by the public.
+    where: { slug: context.slug, status: "ACTIVE", reviewStatus: "APPROVED" },
     select: { id: true },
   });
   if (!salon) throw new HttpError(404, "Салон олдсонгүй.");
@@ -625,6 +626,11 @@ export async function publicCatalog(db: Database, slug: string) {
       description: true,
       phone: true,
       instagram: true,
+      images: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: { url: true },
+        take: 10,
+      },
     },
   });
   if (!scope.policy.publicBookingEnabled)

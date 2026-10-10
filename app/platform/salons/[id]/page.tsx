@@ -7,6 +7,12 @@ import { HttpError } from "@/lib/errors";
 import { platformSalonDetail } from "@/lib/services/platform";
 import { CountChart } from "@/components/platform/count-chart";
 import { SalonStatusAction } from "@/components/platform/status-action";
+import { ReviewAction } from "@/components/platform/review-action";
+import {
+  REVIEW_LABELS,
+  serviceTypeLabel,
+  socialUrl,
+} from "@/lib/salon-application";
 import { formatTimeAgo, roleLabel } from "@/lib/ui-language";
 import { sourceLabels, statusLabels } from "@/lib/booking-validation";
 import { localStamp } from "@/lib/business-time";
@@ -15,6 +21,8 @@ const date = (iso: string) => localStamp(iso).slice(0, 10).replace(/-/g, ".");
 const actions: Record<string, string> = {
   SUSPEND_SALON: "Түр зогсоосон",
   ACTIVATE_SALON: "Дахин идэвхжүүлсэн",
+  APPROVE_SALON: "Хүсэлтийг зөвшөөрсөн",
+  REJECT_SALON: "Хүсэлтийг буцаасан",
 };
 export default async function PlatformSalon({
   params,
@@ -31,6 +39,10 @@ export default async function PlatformSalon({
     throw e;
   }
   const online30 = salon.bySource.ONLINE ?? 0;
+  const application = salon.application;
+  const instagram = socialUrl("instagram", application.instagram);
+  const facebook = socialUrl("facebook", application.facebook);
+  const firstBranch = salon.branches[0];
   return (
     <>
       <Link href="/platform" className="pf-back">
@@ -42,6 +54,13 @@ export default async function PlatformSalon({
             {salon.name}
             {salon.status === "SUSPENDED" && (
               <em className="pf-badge off">Зогсоосон</em>
+            )}
+            {application.status !== "APPROVED" && (
+              <em
+                className={`pf-badge ${application.status === "PENDING" ? "wait" : "off"}`}
+              >
+                {REVIEW_LABELS[application.status]}
+              </em>
             )}
           </h1>
           <p>
@@ -57,6 +76,84 @@ export default async function PlatformSalon({
           status={salon.status}
         />
       </div>
+      <section className="pf-panel" aria-labelledby="pf-application">
+        <div className="pf-panel-head">
+          <h2 id="pf-application">
+            Бүртгэлийн хүсэлт <span>{REVIEW_LABELS[application.status]}</span>
+          </h2>
+        </div>
+        <dl className="pf-facts">
+          <div>
+            <dt>Инстаграм</dt>
+            <dd>
+              {instagram ? (
+                <a href={instagram} target="_blank" rel="noreferrer">
+                  {application.instagram} ↗
+                </a>
+              ) : (
+                application.instagram || "—"
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Фэйсбүүк</dt>
+            <dd>
+              {facebook ? (
+                <a href={facebook} target="_blank" rel="noreferrer">
+                  {application.facebook} ↗
+                </a>
+              ) : (
+                application.facebook || "—"
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Үйлчилгээний төрөл</dt>
+            <dd>
+              {application.serviceTypes.map(serviceTypeLabel).join(", ") || "—"}
+            </dd>
+          </div>
+          <div>
+            <dt>Ажилтны тоо</dt>
+            <dd>{application.staffCount ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Утас</dt>
+            <dd>{salon.phone}</dd>
+          </div>
+          <div>
+            <dt>Хаяг</dt>
+            <dd>
+              {firstBranch
+                ? [firstBranch.district, firstBranch.address]
+                    .filter(Boolean)
+                    .join(" · ")
+                : "—"}
+            </dd>
+          </div>
+          <div className="wide">
+            <dt>Танилцуулга</dt>
+            <dd>{application.description || "—"}</dd>
+          </div>
+          {application.submittedAt && (
+            <div>
+              <dt>Илгээсэн</dt>
+              <dd>{formatTimeAgo(application.submittedAt)}</dd>
+            </div>
+          )}
+          {application.status === "REJECTED" && application.note && (
+            <div className="wide">
+              <dt>Буцаасан шалтгаан</dt>
+              <dd>{application.note}</dd>
+            </div>
+          )}
+        </dl>
+        <ReviewAction
+          id={salon.id}
+          name={salon.name}
+          status={application.status}
+        />
+      </section>
       <section className="pf-stats" aria-label="Салоны үзүүлэлтүүд">
         {(
           [

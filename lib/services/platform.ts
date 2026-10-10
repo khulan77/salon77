@@ -81,6 +81,7 @@ export async function platformOverview(
     bookings30,
     daily,
     weekly,
+    pending,
   ] = await Promise.all([
     db.salon.groupBy({ by: ["status"], _count: { _all: true } }),
     db.salon.count({ where: { createdAt: { gte: ago(7) } } }),
@@ -94,6 +95,7 @@ export async function platformOverview(
     db.booking.count({ where: { createdAt: { gte: ago(30) } } }),
     onlinePerDay(db, now, 30),
     salonsPerWeek(db, now, 12),
+    db.salon.count({ where: { reviewStatus: "PENDING" } }),
   ]);
   const status = (s: string) =>
     byStatus.find((r) => r.status === s)?._count._all ?? 0;
@@ -102,6 +104,7 @@ export async function platformOverview(
       total: status("ACTIVE") + status("SUSPENDED"),
       active: status("ACTIVE"),
       suspended: status("SUSPENDED"),
+      pending,
       new7,
       new30,
     },
@@ -165,6 +168,7 @@ export async function listPlatformSalons(
         name: true,
         slug: true,
         status: true,
+        reviewStatus: true,
         createdAt: true,
         members: {
           where: { role: "SALON_OWNER" },
@@ -216,6 +220,7 @@ export async function listPlatformSalons(
         name: s.name,
         slug: s.slug,
         status: s.status,
+        reviewStatus: s.reviewStatus,
         createdAt: s.createdAt.toISOString(),
         ownerName: owner?.name ?? "",
         ownerEmail: owner?.email ?? "",
@@ -266,12 +271,23 @@ export async function platformSalonDetail(
       slug: true,
       status: true,
       phone: true,
+      description: true,
+      instagram: true,
+      facebook: true,
+      serviceTypes: true,
+      staffCount: true,
+      reviewStatus: true,
+      reviewNote: true,
+      submittedAt: true,
+      reviewedAt: true,
       createdAt: true,
       branches: {
         select: {
           id: true,
           name: true,
           district: true,
+          address: true,
+          phone: true,
           openMinute: true,
           closeMinute: true,
           active: true,
@@ -338,6 +354,17 @@ export async function platformSalonDetail(
     slug: salon.slug,
     status: salon.status,
     phone: salon.phone,
+    application: {
+      status: salon.reviewStatus,
+      note: salon.reviewNote ?? "",
+      description: salon.description ?? "",
+      instagram: salon.instagram ?? "",
+      facebook: salon.facebook ?? "",
+      serviceTypes: salon.serviceTypes,
+      staffCount: salon.staffCount,
+      submittedAt: salon.submittedAt?.toISOString() ?? null,
+      reviewedAt: salon.reviewedAt?.toISOString() ?? null,
+    },
     createdAt: salon.createdAt.toISOString(),
     branches: salon.branches,
     members: salon.members.map((m) => ({
@@ -402,5 +429,107 @@ export async function setSalonStatus(
       },
     });
     return { id: salonId, status };
+  });
+}
+// Salons waiting for a decision, longest wait first.
+export async function listApplications(db: Database, adminUserId: string) {
+  await assertPlatformAdmin(db, adminUserId);
+  const salons = await db.salon.findMany({
+    where: { reviewStatus: "PENDING" },
+    orderBy: [{ submittedAt: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+    take: 100,
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      instagram: true,
+      facebook: true,
+      serviceTypes: true,
+      staffCount: true,
+      submittedAt: true,
+      createdAt: true,
+      reviewedAt: true,
+      branches: {
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { district: true, address: true },
+      },
+      members: {
+        where: { role: "SALON_OWNER" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { user: { select: { name: true, email: true } } },
+      },
+    },
+  });
+  return salons.map((s) => ({
+    id: s.id,
+    name: s.name,
+    phone: s.phone,
+    instagram: s.instagram ?? "",
+    facebook: s.facebook ?? "",
+    serviceTypes: s.serviceTypes,
+    staffCount: s.staffCount,
+    submittedAt: (s.submittedAt ?? s.createdAt).toISOString(),
+    // Reviewed before: the owner corrected the details and sent them again.
+    resubmitted: s.reviewedAt !== null,
+    district: s.branches[0]?.district ?? "",
+    address: s.branches[0]?.address ?? "",
+    ownerName: s.members[0]?.user.name ?? "",
+    ownerEmail: s.members[0]?.user.email ?? "",
+  }));
+}
+export type PlatformApplication = Awaited<
+  ReturnType<typeof listApplications>
+>[number];
+export const reviewInput = z.discriminatedUnion("decision", [
+  z.object({ decision: z.literal("APPROVE") }).strict(),
+  z
+    .object({
+      decision: z.literal("REJECT"),
+      note: z
+        .string()
+        .trim()
+        .min(3, "Буцаах шалтгаанаа бичнэ үү.")
+        .max(500, "Шалтгаан 500 тэмдэгтээс ихгүй байна."),
+    })
+    .strict(),
+]);
+// Approve a salon so the public can see it, or send it back with a reason the
+// owner reads and corrects.
+export async function reviewSalon(
+  db: PrismaClient,
+  adminUserId: string,
+  salonId: string,
+  raw: unknown,
+  now = new Date(),
+) {
+  const input = reviewInput.parse(raw);
+  return db.$transaction(async (tx) => {
+    await assertPlatformAdmin(tx, adminUserId);
+    const salon = await tx.salon.findUnique({
+      where: { id: salonId },
+      select: { reviewStatus: true },
+    });
+    if (!salon) throw new HttpError(404, platformNotFound);
+    const reviewStatus = input.decision === "APPROVE" ? "APPROVED" : "REJECTED";
+    if (salon.reviewStatus === reviewStatus && reviewStatus === "APPROVED")
+      return { id: salonId, reviewStatus };
+    await tx.salon.update({
+      where: { id: salonId },
+      data: {
+        reviewStatus,
+        reviewNote: input.decision === "REJECT" ? input.note : null,
+        reviewedAt: now,
+      },
+    });
+    await tx.platformAuditLog.create({
+      data: {
+        actorUserId: adminUserId,
+        salonId,
+        action: input.decision === "APPROVE" ? "APPROVE_SALON" : "REJECT_SALON",
+      },
+    });
+    return { id: salonId, reviewStatus };
   });
 }

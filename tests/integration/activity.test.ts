@@ -98,7 +98,7 @@ test("admin activity feed", { timeout: 120000 }, async (t) => {
         await guest("11:00", "88110004");
         let inbox = await readInbox(db, actors.owner);
         // Visit created, moved, cancelled; second guest created then expired; this one.
-      assert.equal(inbox.unread, 6);
+        assert.equal(inbox.unread, 6);
         assert.equal(inbox.pending, 1);
         assert.equal(inbox.items[0].type, "ONLINE_CREATED");
         assert.equal(inbox.items[0].customerName, "Зочин");

@@ -11,7 +11,7 @@ test("signed-out visitors see the salon directory at the root", async ({
 }, info) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator("h1")).toContainText("цагаа онлайнаар захиал");
+  await expect(page.locator("h1")).toContainText("хэдхэн товшилтоор");
   const card = page.locator(".hp-card").filter({ hasText: "Туршилтын салон" });
   await expect(card).toContainText("үйлчилгээ");
   await expect(card).toHaveAttribute("href", "/salon-a/book");
@@ -32,7 +32,7 @@ test("signed-out visitors see the salon directory at the root", async ({
   await page.locator(".hp-card").filter({ hasText: "Туршилтын салон" }).click();
   await expect(page).toHaveURL(/\/salon-a\/book$/);
   await page.goto("/");
-  await page.getByRole("link", { name: "Салоноо бүртгүүлэх" }).first().click();
+  await page.getByRole("link", { name: "Бизнесээ бүртгүүлэх" }).first().click();
   await expect(page).toHaveURL(/\/business$/);
   await page
     .getByRole("link", { name: /Бизнесээ бүртгүүлэх/ })

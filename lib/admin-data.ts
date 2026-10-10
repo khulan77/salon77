@@ -24,6 +24,9 @@ export type AdminData = {
   setup: { services: boolean; staff: boolean; hours: boolean };
   salonName: string;
   slug: string;
+  // Platform review of the salon's application; `note` is the reason it was
+  // sent back.
+  review: { status: "PENDING" | "APPROVED" | "REJECTED"; note: string };
   name: string;
   email: string;
   branches: BranchView[];
@@ -56,6 +59,7 @@ export const adminData = cache(async (): Promise<AdminData> => {
       memberId: "",
       salonName: "Таны салон",
       slug: "",
+      review: { status: "APPROVED", note: "" },
       name: "Салоны эзэн",
       email: "Танилцах горим",
       branches: [],
@@ -135,6 +139,10 @@ export const adminData = cache(async (): Promise<AdminData> => {
     memberId: member.id,
     salonName: member.salon.name,
     slug: member.salon.slug,
+    review: {
+      status: member.salon.reviewStatus,
+      note: member.salon.reviewNote ?? "",
+    },
     name: member.user.name ?? "Салоны эзэн",
     email: member.user.email,
     branches,

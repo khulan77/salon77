@@ -3,19 +3,30 @@ import type { Metadata } from "next";
 import {
   ArrowRight,
   AtSign,
+  BellRing,
+  Boxes,
   CalendarCheck,
+  CalendarDays,
+  ChartNoAxesCombined,
   Check,
+  ClipboardCheck,
+  History,
   Link2,
   MessageSquare,
   Phone,
   ShieldCheck,
+  Scissors,
   Sparkles,
+  Star,
+  TrendingUp,
+  UserRound,
   Users,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { configured } from "@/lib/env";
 import { identity } from "@/lib/auth";
 import { site, formatSitePhone } from "@/lib/site";
+import { formatMnt } from "@/lib/ui-language";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Salon77 · Салоны цаг захиалга, удирдлагын систем",
@@ -73,7 +84,7 @@ const groups = [
 const steps = [
   [
     "Бүртгүүлэх",
-    "Имэйлээрээ бүртгүүлээд салоныхоо нэр, хаяг, эхний салбараа оруулна.",
+    "Имэйлээрээ бүртгүүлээд салоныхоо мэдээллийг илгээнэ. Бид шалгаад баталгаажуулна.",
   ],
   ["Тохируулах", "Үйлчилгээ, үнэ, ажилтан, ажлын цагаа нэмнэ. Хэдхэн минут."],
   [
@@ -110,7 +121,10 @@ const calendar = [
     h: 2,
     name: "Сараа Б.",
     what: "Гел будалт",
+    price: 65_000,
     tone: "violet",
+    done: true,
+    regular: true,
   },
   {
     col: 1,
@@ -118,17 +132,124 @@ const calendar = [
     h: 3,
     name: "Номин Д.",
     what: "Маникюр, педикюр",
+    price: 100_000,
     tone: "rose",
   },
-  { col: 2, top: 0, h: 1, name: "Ану Т.", what: "Сормуус", tone: "sage" },
-  { col: 0, top: 3, h: 2, name: "Оюун Г.", what: "Үс засалт", tone: "sky" },
+  {
+    col: 2,
+    top: 0,
+    h: 2,
+    name: "Ану Т.",
+    what: "Сормуус",
+    price: 80_000,
+    tone: "sage",
+    done: true,
+  },
+  {
+    col: 0,
+    top: 3,
+    h: 2,
+    name: "Оюун Г.",
+    what: "Үс засалт",
+    price: 45_000,
+    tone: "sky",
+    regular: true,
+  },
   {
     col: 2,
     top: 2,
     h: 2,
     name: "Болор Э.",
     what: "Нүүр арчилгаа",
+    price: 90_000,
     tone: "sand",
+  },
+];
+// Illustrative figures for the product showcase; the rows add up to the total.
+const revenueBars = [38, 52, 44, 61, 70, 48, 83, 66, 58, 74, 92, 64, 79, 100];
+const byService = [
+  { name: "Гел будалт", count: 68, revenue: 3_920_000, tone: "violet" },
+  { name: "Үс засалт, будалт", count: 41, revenue: 3_280_000, tone: "rose" },
+  { name: "Маникюр, педикюр", count: 52, revenue: 2_470_000, tone: "sky" },
+  { name: "Сормуус", count: 29, revenue: 1_740_000, tone: "sage" },
+  { name: "Нүүр арчилгаа", count: 24, revenue: 1_070_000, tone: "sand" },
+];
+const byStaff = [
+  { name: "Ану", count: 81, revenue: 4_860_000 },
+  { name: "Болор", count: 72, revenue: 4_120_000 },
+  { name: "Сувд", count: 61, revenue: 3_500_000 },
+];
+const showcaseRevenue = byService.reduce((sum, s) => sum + s.revenue, 0);
+const showcaseCount = byService.reduce((sum, s) => sum + s.count, 0);
+const week = [
+  {
+    day: "Да",
+    date: 5,
+    events: [
+      ["10:00", "violet"],
+      ["13:30", "sky"],
+    ],
+  },
+  { day: "Мя", date: 6, events: [["11:00", "rose"]] },
+  {
+    day: "Лх",
+    date: 7,
+    events: [
+      ["09:30", "sage"],
+      ["12:00", "violet"],
+      ["15:00", "sand"],
+    ],
+  },
+  {
+    day: "Пү",
+    date: 8,
+    events: [
+      ["10:30", "sky"],
+      ["14:00", "rose"],
+    ],
+  },
+  {
+    day: "Ба",
+    date: 9,
+    events: [
+      ["10:00", "violet"],
+      ["11:30", "sage"],
+      ["16:00", "rose"],
+    ],
+  },
+  {
+    day: "Бя",
+    date: 10,
+    events: [
+      ["10:00", "sand"],
+      ["12:30", "sky"],
+      ["14:00", "violet"],
+    ],
+  },
+  { day: "Ня", date: 11, events: [["12:00", "sage"]] },
+];
+// W = worked, O = day off, "." = not marked yet.
+const attendance = [
+  { name: "Ану", days: "WWWWWOWWWWWWOW" },
+  { name: "Болор", days: "WWOWWWWOWWWWW." },
+  { name: "Сувд", days: "OWWWWWOWWWWOW." },
+];
+const stock = [
+  { name: "Гель лак №12", sku: "ГЛ-012", qty: 24, price: 18_000 },
+  { name: "Үсний будаг 6.0", sku: "ҮБ-060", qty: 9, price: 32_000 },
+  { name: "Сормуусны цавуу", sku: "СЦ-003", qty: 2, price: 45_000, low: true },
+  { name: "Хумсны тос", sku: "ХТ-021", qty: 15, price: 12_000 },
+];
+const extras = [
+  {
+    icon: History,
+    title: "Үйлчлүүлэгчийн түүх",
+    text: "Хэн, хэзээ, ямар үйлчилгээ авсныг нэг товшилтоор.",
+  },
+  {
+    icon: BellRing,
+    title: "Мэдэгдэл, сануулга",
+    text: "Захиалга бүрд үйлчлүүлэгчид мессеж очно.",
   },
 ];
 // Signed-in visitors skip sign-up: straight to their salon, or to onboarding.
@@ -156,6 +277,7 @@ export default async function BusinessPage() {
           salon77<span className="lp-dot">.</span>
         </Link>
         <nav aria-label="Хуудасны хэсгүүд">
+          <a href="#product">Тайлан, календар</a>
           <a href="#features">Боломжууд</a>
           <a href="#how">Хэрхэн ажилладаг</a>
           <a href="#faq">Асуулт</a>
@@ -225,8 +347,21 @@ export default async function BusinessPage() {
                               height: `calc(${c.h * 20}% - 4px)`,
                             }}
                           >
-                            <strong>{c.name}</strong>
+                            <small>
+                              {10 + c.top}:00–{10 + c.top + c.h}:00
+                            </small>
+                            <strong>
+                              <Star
+                                size={11}
+                                className={c.regular ? "on" : ""}
+                              />
+                              {c.name}
+                            </strong>
                             <span>{c.what}</span>
+                            <b>{formatMnt(c.price)}</b>
+                            <em className={c.done ? "on" : ""}>
+                              {c.done && <Check size={10} strokeWidth={3} />}
+                            </em>
                           </div>
                         ))}
                     </div>
@@ -257,6 +392,235 @@ export default async function BusinessPage() {
             дэвтэрт бичсэн хуваарь…
           </p>
           <strong>Salon77 эдгээрийг нэг дор шийднэ.</strong>
+        </section>
+        <section id="product" className="lp-section">
+          <div className="lp-heading">
+            <span className="lp-eyebrow">НЭГ ДЭЛГЭЦЭЭС</span>
+            <h2>Орлого, захиалга, ажилтнаа тоогоор хараарай</h2>
+            <p>
+              Тайлан, календар, үйлчилгээ болон ажилтнаар орсон орлого бүгд
+              автоматаар бодогдоно. Дэвтэр, тооны машин хэрэггүй.
+            </p>
+          </div>
+          <div className="lp-bento">
+            <article className="lp-tile">
+              <header>
+                <span className="lp-icon">
+                  <CalendarDays size={19} />
+                </span>
+                <div>
+                  <h3>Календар</h3>
+                  <p>Өдөр, долоо хоногоор. Салбар, ажилтнаар шүүнэ.</p>
+                </div>
+              </header>
+              <div className="lp-week" aria-hidden="true">
+                {week.map((d) => (
+                  <div key={d.day} className={d.date === 9 ? "today" : ""}>
+                    <span>{d.day}</span>
+                    <b>{d.date}</b>
+                    {d.events.map(([time, tone]) => (
+                      <i key={time} className={`tone-${tone}`}>
+                        {time}
+                      </i>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </article>
+            <article className="lp-tile">
+              <header>
+                <span className="lp-icon">
+                  <ChartNoAxesCombined size={19} />
+                </span>
+                <div>
+                  <h3>Орлогын тайлан</h3>
+                  <p>Өдөр, 7 хоног, сар, салбараар шүүж харна.</p>
+                </div>
+              </header>
+              <div className="lp-report" aria-hidden="true">
+                <div className="lp-report-top">
+                  <div>
+                    <span>Энэ сарын орлого</span>
+                    <strong>{formatMnt(showcaseRevenue)}</strong>
+                  </div>
+                  <em>
+                    <TrendingUp size={13} /> +18%
+                  </em>
+                </div>
+                <div className="lp-bars">
+                  {revenueBars.map((h, i) => (
+                    <i
+                      key={i}
+                      className={h === 100 ? "peak" : ""}
+                      style={{ height: `${h}%` }}
+                    />
+                  ))}
+                </div>
+                <div className="lp-report-stats">
+                  <div>
+                    <span>Дууссан захиалга</span>
+                    <b>{showcaseCount}</b>
+                  </div>
+                  <div>
+                    <span>Дундаж дүн</span>
+                    <b>
+                      {formatMnt(Math.round(showcaseRevenue / showcaseCount))}
+                    </b>
+                  </div>
+                  <div>
+                    <span>Ирээгүй</span>
+                    <b>6</b>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article className="lp-tile">
+              <header>
+                <span className="lp-icon">
+                  <Scissors size={19} />
+                </span>
+                <div>
+                  <h3>Үйлчилгээгээр орсон орлого</h3>
+                  <p>Аль үйлчилгээ хамгийн их орлого авчирдгийг харна.</p>
+                </div>
+              </header>
+              <ul className="lp-breakdown" aria-hidden="true">
+                {byService.map((s) => (
+                  <li key={s.name} className={`tone-${s.tone}`}>
+                    <div>
+                      <strong>{s.name}</strong>
+                      <span>{s.count} удаа</span>
+                      <b>{formatMnt(s.revenue)}</b>
+                    </div>
+                    <span className="lp-breakdown-track">
+                      <span
+                        style={{
+                          width: `${(s.revenue / byService[0].revenue) * 100}%`,
+                        }}
+                      />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <article className="lp-tile">
+              <header>
+                <span className="lp-icon">
+                  <UserRound size={19} />
+                </span>
+                <div>
+                  <h3>Ажилтнаар орсон орлого</h3>
+                  <p>Хэн хэдэн үйлчилгээ хийж, хэдийг оруулсныг харна.</p>
+                </div>
+              </header>
+              <ul className="lp-staff" aria-hidden="true">
+                {byStaff.map((s, i) => (
+                  <li key={s.name}>
+                    <span className="lp-avatar">{s.name[0]}</span>
+                    <div>
+                      <strong>{s.name}</strong>
+                      <span>{s.count} үйлчилгээ</span>
+                    </div>
+                    <b>{formatMnt(s.revenue)}</b>
+                    {i === 0 && <em>Тэргүүлэгч</em>}
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <article className="lp-tile">
+              <header>
+                <span className="lp-icon">
+                  <ClipboardCheck size={19} />
+                </span>
+                <div>
+                  <h3>Цагийн бүртгэл</h3>
+                  <p>
+                    Ажилтны ажилласан өдрийг нэг товшилтоор чагтална. Сарын
+                    эцэст нийт өдөр бэлэн.
+                  </p>
+                </div>
+              </header>
+              <div className="lp-sheet" aria-hidden="true">
+                {attendance.map((a) => (
+                  <div key={a.name}>
+                    <span className="lp-avatar">{a.name[0]}</span>
+                    <strong>{a.name}</strong>
+                    <b>{a.days.split("W").length - 1} өдөр</b>
+                    <div className="lp-sheet-days">
+                      {[...a.days].map((d, i) => (
+                        <i
+                          key={i}
+                          className={
+                            d === "W" ? "worked" : d === "O" ? "off" : ""
+                          }
+                        >
+                          {d === "W" ? (
+                            <Check size={11} strokeWidth={3} />
+                          ) : d === "O" ? (
+                            "А"
+                          ) : (
+                            i + 1
+                          )}
+                        </i>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <p>
+                  <i className="worked">
+                    <Check size={10} strokeWidth={3} />
+                  </i>
+                  Ажилласан
+                  <i className="off">А</i>
+                  Амарсан
+                </p>
+              </div>
+            </article>
+            <article className="lp-tile">
+              <header>
+                <span className="lp-icon">
+                  <Boxes size={19} />
+                </span>
+                <div>
+                  <h3>Бараа бүртгэл</h3>
+                  <p>Салбар бүрийн үлдэгдэл, дуусах дөхсөн барааг харна.</p>
+                </div>
+              </header>
+              <ul className="lp-stock" aria-hidden="true">
+                {stock.map((p) => (
+                  <li key={p.sku}>
+                    <div>
+                      <strong>{p.name}</strong>
+                      <span>
+                        {p.sku} · {formatMnt(p.price)}
+                      </span>
+                      {p.low && <em>Дуусах дөхсөн</em>}
+                    </div>
+                    <span className="lp-stepper">
+                      <i>−</i>
+                      <b className={p.low ? "low" : ""}>{p.qty} ш</b>
+                      <i>+</i>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+          <div className="lp-extras">
+            {extras.map((e) => (
+              <article key={e.title}>
+                <e.icon size={18} />
+                <div>
+                  <h3>{e.title}</h3>
+                  <p>{e.text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="lp-sample-note">
+            Дээрх тоонууд нь жишээ. Бүртгүүлсний дараа таны салоны бодит өгөгдөл
+            харагдана.
+          </p>
         </section>
         <section id="features" className="lp-section">
           <div className="lp-heading">
@@ -292,9 +656,9 @@ export default async function BusinessPage() {
               <span className="lp-eyebrow">САЛОН БҮРД ӨӨРИЙН ЛИНК</span>
               <h2>Нэг линкээр захиалга авна</h2>
               <p>
-                Бүртгүүлэхдээ сонгосон хаягаар таны захиалгын хуудас шууд
-                нээгдэнэ. Түүнийг Инстаграм хуудас, мессеж, нэрийн хуудсандаа
-                тавиад л болно.
+                Салон тань баталгаажмагц бүртгүүлэхдээ сонгосон хаягаар
+                захиалгын хуудас тань нээгдэнэ. Түүнийг Инстаграм хуудас,
+                мессеж, нэрийн хуудсандаа тавиад л болно.
               </p>
             </div>
             <div className="lp-url">

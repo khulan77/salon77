@@ -80,6 +80,15 @@ async function main() {
     })),
     { id: mobileId, email: "invite-mobile@example.test" },
     { id: platformId, email: "platform@example.test" },
+    // Sign up a new salon in the application flow, one per browser project.
+    {
+      id: "00000000-0000-0000-0000-00000000000a",
+      email: "applicant-desktop@example.test",
+    },
+    {
+      id: "00000000-0000-0000-0000-00000000000b",
+      email: "applicant-mobile@example.test",
+    },
   ];
   const users = new Map(
     identities.map(({ id, email }) => [

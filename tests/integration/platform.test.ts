@@ -77,6 +77,7 @@ test("platform console", { timeout: 120000 }, async (t) => {
         total: 2,
         active: 2,
         suspended: 0,
+        pending: 0,
         new7: 2,
         new30: 2,
       });

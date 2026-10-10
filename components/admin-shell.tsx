@@ -14,11 +14,14 @@ import {
   Command,
   CircleHelp,
   ArrowRight,
+  Hourglass,
+  Undo2,
 } from "lucide-react";
 import { moduleAllowed } from "@/lib/access";
 import { navigation, modules } from "@/lib/navigation";
 import { signOut } from "@/app/auth/actions";
 import type { AdminData } from "@/lib/admin-data";
+import { REVIEW_LABELS } from "@/lib/salon-application";
 import { ActivityBell } from "./activity-bell";
 export function AdminShell({
   data,
@@ -122,8 +125,15 @@ export function AdminShell({
             <strong>{current}</strong>
           </div>
           <div className="header-actions">
-            <span className="workspace-status">
-              <i /> {data.preview ? "Танилцах горим" : "Идэвхтэй"}
+            <span
+              className={`workspace-status ${data.review.status === "APPROVED" ? "" : "waiting"}`}
+            >
+              <i />{" "}
+              {data.preview
+                ? "Танилцах горим"
+                : data.review.status === "APPROVED"
+                  ? "Идэвхтэй"
+                  : REVIEW_LABELS[data.review.status]}
             </span>
             {!data.preview && data.role !== "STAFF" && <ActivityBell />}
             <button
@@ -173,6 +183,12 @@ export function AdminShell({
             </div>
           </div>
         </header>
+        {data.review.status !== "APPROVED" && (
+          <ReviewBanner
+            review={data.review}
+            owner={data.role === "SALON_OWNER"}
+          />
+        )}
         <main
           className={fullHeight ? "page-content full-height" : "page-content"}
         >
@@ -244,6 +260,43 @@ export function AdminShell({
         </div>
       )}
     </div>
+  );
+}
+// Shown until the platform approves the salon: setup works, the public side
+// stays closed.
+function ReviewBanner({
+  review,
+  owner,
+}: {
+  review: AdminData["review"];
+  owner: boolean;
+}) {
+  const rejected = review.status === "REJECTED";
+  return (
+    <aside
+      className={`review-banner ${rejected ? "rejected" : ""}`}
+      role="status"
+    >
+      {rejected ? <Undo2 size={18} /> : <Hourglass size={18} />}
+      <div>
+        <strong>
+          {rejected ? "Хүсэлтийг тань буцаалаа" : "Хүсэлт хянагдаж байна"}
+        </strong>
+        <p>
+          {rejected
+            ? review.note
+              ? `Шалтгаан: ${review.note}`
+              : "Мэдээллээ засаад дахин илгээнэ үү."
+            : "Салоноо бэлдэж болно. Баталгаажих хүртэл салон тань нийтэд харагдахгүй, онлайн захиалгын холбоос ажиллахгүй."}
+        </p>
+      </div>
+      {owner && (
+        <Link href="/onboarding/review">
+          {rejected ? "Засаад дахин илгээх" : "Хүсэлтээ харах"}
+          <ArrowRight size={14} />
+        </Link>
+      )}
+    </aside>
   );
 }
 function ScissorMark() {

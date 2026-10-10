@@ -15,6 +15,7 @@ import {
 import { Button } from "./ui/button";
 import { Feedback } from "./ui/feature-dialog";
 import { NotificationLog } from "./notification-log";
+import { GalleryCard } from "./gallery-card";
 import { requestJson } from "@/lib/client-request";
 import { clockTime } from "@/lib/schedule-time";
 import type { BranchView } from "@/lib/admin-data";
@@ -132,6 +133,7 @@ export function BookingSettings({
             disabled={preview}
             onChange={(url) => setCover(url)}
           />
+          <GalleryCard preview={preview} />
           <Feedback error={error} message={message} />
           {loading ? (
             <section className="panel settings-card">

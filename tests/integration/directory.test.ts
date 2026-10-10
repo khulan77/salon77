@@ -21,15 +21,22 @@ test("public salon directory", { timeout: 120000 }, async (t) => {
       assert.deepEqual(Object.keys(a).sort(), [
         "address",
         "branches",
+        "categories",
         "coverUrl",
         "description",
         "district",
         "fromMnt",
         "hasDiscount",
+        "isNew",
         "name",
+        "photos",
         "services",
         "slug",
       ]);
+      assert.deepEqual(a.categories, ["Захиалгын ангилал"]);
+      assert.equal(a.isNew, true);
+      assert.deepEqual(d.stats, { salons: 2, services: 4, bookingsToday: 0 });
+      assert.deepEqual(d.popular, ["Захиалгын ангилал"]);
       const json = JSON.stringify(d);
       for (const secret of [
         "99112233",
@@ -69,6 +76,11 @@ test("public salon directory", { timeout: 120000 }, async (t) => {
         assert.ok(
           d.districts.includes("Баянгол") && d.districts.includes("Хан-Уул"),
         );
+        // Category names match as well, so the quick filters work.
+        assert.deepEqual(await slugs({ query: "захиалгын ангилал" }), [
+          "salon-a",
+          "salon-b",
+        ]);
         assert.deepEqual(await slugs({ query: "байхгүй үйлчилгээ" }), []);
         await assert.rejects(listDirectory(db, { salonId: "a" }));
       },

@@ -7,8 +7,10 @@ import {
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hourglass } from "lucide-react";
 import { Button } from "./ui/button";
+import { ApplicationFields } from "./application-fields";
+import { hasSocial, socialRequired } from "@/lib/salon-application";
 export function Onboarding({ preview }: { preview: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -18,6 +20,9 @@ export function Onboarding({ preview }: { preview: boolean }) {
     name: "",
     phone: "",
     instagram: "",
+    facebook: "",
+    serviceTypes: [] as string[],
+    staffCount: "",
     description: "",
     slug: "",
     branch: { name: "", district: "", address: "", phone: "" },
@@ -26,14 +31,14 @@ export function Onboarding({ preview }: { preview: boolean }) {
     "Салоныхоо тухай танилцуулаарай.",
     "Салоныхоо цахим хаягийг сонгоорой.",
     "Эхний салбараа бүртгээрэй.",
-    "Салоныхоо өнгө төрхийг бүрдүүлье.",
-    "Таны Salon77 бэлэн боллоо.",
+    "Салоноо баталгаажуулахад туслаарай.",
+    "Таны хүсэлтийг хүлээн авлаа.",
   ];
   const descriptions = [
     "Үндсэн мэдээллээс эхэлье. Бусдыг нь дараа нэмж болно.",
     "Салоны танилцуулга хуудсандаа тогтооход хялбар хаяг сонгоорой.",
     "Эхний салбараа нэмээрэй. Бусад салбараа дараа бүртгэж болно.",
-    "Лого болон нүүр зураг оруулах боломж дараагийн шатанд нэмэгдэнэ.",
+    "Бид салон бүрийг шалгаж баталгаажуулдаг. Доорх мэдээлэл үүнд тусална.",
   ];
   async function next(e: React.FormEvent) {
     e.preventDefault();
@@ -90,6 +95,14 @@ export function Onboarding({ preview }: { preview: boolean }) {
       setStep(3);
       return;
     }
+    if (!hasSocial(data)) {
+      setError(socialRequired);
+      return;
+    }
+    if (!data.serviceTypes.length) {
+      setError("Үйлчилгээний төрлөөс дор хаяж нэгийг сонгоно уу.");
+      return;
+    }
     if (preview) {
       setError(
         "Салоноо үүсгэхийн тулд бүртгүүлж, системийн холболтыг тохируулна уу.",
@@ -101,7 +114,7 @@ export function Onboarding({ preview }: { preview: boolean }) {
       const result = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, staffCount: Number(data.staffCount) }),
       });
       const body = await result.json();
       if (!result.ok) throw new Error(body.error);
@@ -109,7 +122,7 @@ export function Onboarding({ preview }: { preview: boolean }) {
       router.refresh();
     } catch (e) {
       setError(
-        userFacingError(e, "Салон үүсгэж чадсангүй. Дахин оролдоно уу."),
+        userFacingError(e, "Хүсэлт илгээж чадсангүй. Дахин оролдоно уу."),
       );
     } finally {
       setPending(false);
@@ -189,17 +202,6 @@ export function Onboarding({ preview }: { preview: boolean }) {
                           setData({ ...data, phone: e.target.value })
                         }
                         placeholder="+976"
-                      />
-                    </label>
-                    <label className="field">
-                      Инстаграм хаяг · заавал биш
-                      <input
-                        maxLength={100}
-                        value={data.instagram}
-                        onChange={(e) =>
-                          setData({ ...data, instagram: e.target.value })
-                        }
-                        placeholder="@salon77"
                       />
                     </label>
                     <label className="field">
@@ -310,20 +312,10 @@ export function Onboarding({ preview }: { preview: boolean }) {
                   </>
                 )}
                 {step === 3 && (
-                  <div
-                    className="empty-page"
-                    style={{ minHeight: 200, padding: "15px 0" }}
-                  >
-                    <div className="empty-page-icon">
-                      <ImagePlus size={27} />
-                    </div>
-                    <h2 style={{ fontSize: 17 }}>Зургаа дараа нэмж болно</h2>
-                    <p>
-                      Лого болон нүүр зургаа дараа оруулах боломжтой.
-                      <br />
-                      Одоо салоныхоо үндсэн тохиргоог дуусгая.
-                    </p>
-                  </div>
+                  <ApplicationFields
+                    value={data}
+                    onChange={(patch) => setData({ ...data, ...patch })}
+                  />
                 )}
                 <div className="form-actions">
                   {step > 0 && (
@@ -343,7 +335,7 @@ export function Onboarding({ preview }: { preview: boolean }) {
                     {pending
                       ? "Түр хүлээнэ үү…"
                       : step === 3
-                        ? "Алгасаж, салон үүсгэх"
+                        ? "Хүсэлт илгээх"
                         : "Үргэлжлүүлэх"}
                     <ArrowRight size={14} />
                   </Button>
@@ -352,9 +344,13 @@ export function Onboarding({ preview }: { preview: boolean }) {
             </>
           ) : (
             <div className="onboarding-success">
-              <CheckCircle2 size={52} strokeWidth={1.2} />
+              <Hourglass size={52} strokeWidth={1.2} />
               <h1>{titles[4]}</h1>
-              <p>Салон тань бэлэн боллоо. Ажлаа эхлүүлээрэй.</p>
+              <p>
+                Бид мэдээллийг тань шалгаад салоныг баталгаажуулна. Энэ хооронд
+                үйлчилгээ, ажилтан, зургаа бэлдээрэй. Баталгаажмагц салон тань
+                нийтэд харагдаж, онлайн захиалга авч эхэлнэ.
+              </p>
               <Button asChild>
                 <Link href="/">
                   Удирдлагын хэсэгт орох <ArrowRight size={15} />

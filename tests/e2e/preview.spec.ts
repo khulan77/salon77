@@ -66,7 +66,22 @@ test("preview onboarding validates and does not pretend to save", async ({
   await page.getByRole("textbox", { name: "Дүүрэг" }).fill("Khan-Uul");
   await page.getByRole("textbox", { name: "Хаяг" }).fill("Street 1");
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
-  await page.getByRole("button", { name: "Алгасаж, салон үүсгэх" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Салоноо баталгаажуулахад туслаарай." }),
+  ).toBeVisible();
+  // A social page and at least one service type are required to apply.
+  await page.getByRole("spinbutton", { name: "Ажилтны тоо" }).fill("3");
+  await page.getByRole("button", { name: "Хүсэлт илгээх" }).click();
+  await expect(page.locator(".error-message")).toContainText(
+    "Инстаграм эсвэл Фэйсбүүк",
+  );
+  await page.getByRole("textbox", { name: "Инстаграм хаяг" }).fill("@salon77");
+  await page.getByRole("button", { name: "Хүсэлт илгээх" }).click();
+  await expect(page.locator(".error-message")).toContainText(
+    "Үйлчилгээний төрлөөс",
+  );
+  await page.getByRole("checkbox", { name: "Хумс" }).check();
+  await page.getByRole("button", { name: "Хүсэлт илгээх" }).click();
   await expect(
     page
       .getByRole("alert")

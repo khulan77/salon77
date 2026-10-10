@@ -28,6 +28,14 @@ enum SalonStatus {
   SUSPENDED
 }
 
+// Platform review of a salon's application. Unapproved salons can be set up
+// by their owner but are hidden from the public.
+enum SalonReview {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id              String             @id @db.Uuid
   email           String             @unique
@@ -47,9 +55,17 @@ model Salon {
   phone           String
   email           String?
   instagram       String?
+  facebook        String?
+  serviceTypes    String[]           @default([])
+  staffCount      Int?
   logoUrl         String?
   coverUrl        String?
   status          SalonStatus        @default(ACTIVE)
+  // Onboarding always writes PENDING; the default only covers older salons.
+  reviewStatus    SalonReview        @default(APPROVED)
+  reviewNote      String?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   members         SalonMember[]
@@ -60,6 +76,7 @@ model Salon {
   services        Service[]
   bookings        Booking[]
   notifications   Notification[]
+  images          SalonImage[]
   platformAudit   PlatformAuditLog[]
   activity        BookingActivity[]
   bookingSettings BookingSettings?
@@ -67,6 +84,7 @@ model Salon {
   products        Product[]
 
   @@index([createdAt])
+  @@index([reviewStatus, submittedAt])
 }
 
 model SalonMember {
@@ -559,4 +577,16 @@ model BookingActivity {
   booking   Booking             @relation(fields: [bookingId, salonId], references: [id, salonId], onDelete: Cascade)
 
   @@index([salonId, createdAt])
+}
+
+// Photos of the salon's space and work for its public pages.
+model SalonImage {
+  id        String   @id @default(cuid())
+  salonId   String
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  salon     Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, sortOrder])
 }

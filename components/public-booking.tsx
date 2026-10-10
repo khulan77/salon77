@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import {
   ArrowLeft,
   CalendarDays,
@@ -19,6 +18,7 @@ import { tone, initials } from "@/lib/avatar";
 import { formatDuration, formatMnt, userFacingError } from "@/lib/ui-language";
 import { depositAmount } from "@/lib/booking-settings";
 import { DepositInstructions } from "./deposit-instructions";
+import { SalonGallery } from "./salon-gallery";
 type Service = PublicCatalog["services"][number];
 type Step = "menu" | "time" | "details" | "done";
 const MAX_SERVICES = 2;
@@ -43,6 +43,14 @@ export function PublicBooking({
   catalog: PublicCatalog;
 }) {
   const { salon, policy } = catalog;
+  // Cover first, then the gallery, without repeats.
+  const photos = [
+    ...new Set(
+      [salon.coverUrl, ...salon.images.map((i) => i.url)].filter(
+        (url): url is string => Boolean(url),
+      ),
+    ),
+  ];
   const [step, setStep] = useState<Step>("menu");
   const [branchId, setBranchId] = useState(catalog.branches[0]?.id ?? "");
   const [category, setCategory] = useState("all");
@@ -192,20 +200,7 @@ export function PublicBooking({
   }
   const hero = (
     <header className="pb-hero">
-      <div className="pb-cover">
-        {salon.coverUrl ? (
-          <Image
-            src={salon.coverUrl}
-            alt={`${salon.name} салоны зураг`}
-            fill
-            unoptimized
-            priority
-            sizes="(max-width: 700px) 100vw, 720px"
-          />
-        ) : (
-          <span aria-hidden="true">{initials(salon.name)}</span>
-        )}
-      </div>
+      <SalonGallery name={salon.name} photos={photos} />
       <div className="pb-hero-body">
         <h1>{salon.name}</h1>
         {salon.description && <p className="pb-about">{salon.description}</p>}

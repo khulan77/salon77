@@ -135,6 +135,14 @@ Local Node is v20. Production requires Node ≥ 22.
 - **Phase 4.6 admin activity:**
   - `BookingActivity` is written in the same transaction for online creation, customer cancel/reschedule and auto-expiry.
   - The top-bar bell (owner, manager, reception, branch-scoped) shows unread counts per member (`SalonMember.activitySeenAt`), the pending-confirmation count and the latest 30 events, polling every 60 s.
+- **Salon applications** (2026-10-10):
+  - Onboarding now asks for an Instagram or Facebook page (one is required), the service types (`lib/salon-application.ts`) and the staff count, and creates the salon with `Salon.reviewStatus = PENDING`.
+  - While `PENDING` or `REJECTED` the owner can use the whole admin (a banner explains the state), but `resolveContext` and `listDirectory` hide the salon from every public path: booking page, manage links, public APIs and the home directory.
+  - The operator sees the queue on `/platform` and approves or sends back with a reason from the salon page (`reviewSalon`, audited as `APPROVE_SALON` / `REJECT_SALON`). An approval can be withdrawn the same way.
+  - The owner reads the reason on `/onboarding/review`, corrects the details and resubmits (`PATCH /api/onboarding`), which returns the salon to the queue.
+  - `reviewStatus` defaults to `APPROVED` in the database so salons created before this change stay public; onboarding is the only code that creates a salon and it always writes `PENDING`.
+  - The operator is not notified by message; new requests appear on `/platform`.
+  - Migration `202610100022_salon_review`.
 
 ## Recommended sequencing and dependencies
 

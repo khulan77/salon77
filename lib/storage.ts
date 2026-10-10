@@ -1,5 +1,6 @@
 // Server-only: uses the Supabase secret key. Never import from client components.
-import { createClient } from "@supabase/supabase-js";
+// Talks to the Storage REST API directly: the full supabase-js client also
+// starts a realtime socket, which is unavailable on Node 20 and not needed here.
 export const MEDIA_BUCKET = "salon-media";
 export type MediaStore = {
   upload(path: string, bytes: Uint8Array, contentType: string): Promise<string>;
@@ -8,25 +9,34 @@ export type MediaStore = {
   pathOf(url: string): string | null;
 };
 export function supabaseMediaStore(): MediaStore | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, ""),
     key = process.env.SUPABASE_SECRET_KEY;
   if (!url || !key || !/^sb_secret_[A-Za-z0-9_-]+$/.test(key)) return null;
-  const bucket = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  }).storage.from(MEDIA_BUCKET);
-  const prefix = `${url.replace(/\/$/, "")}/storage/v1/object/public/${MEDIA_BUCKET}/`;
+  const storage = `${url}/storage/v1`;
+  const auth = { apikey: key, Authorization: `Bearer ${key}` };
+  const prefix = `${storage}/object/public/${MEDIA_BUCKET}/`;
   return {
     async upload(path, bytes, contentType) {
-      const { error } = await bucket.upload(path, bytes, {
-        contentType,
-        cacheControl: "31536000",
-        upsert: false,
+      const response = await fetch(`${storage}/object/${MEDIA_BUCKET}/${path}`, {
+        method: "POST",
+        headers: {
+          ...auth,
+          "Content-Type": contentType,
+          "Cache-Control": "max-age=31536000",
+          "x-upsert": "false",
+        },
+        body: new Blob([bytes as BlobPart], { type: contentType }),
       });
-      if (error) throw new Error("Storage upload failed");
+      // Never surface the provider's response; it may echo request details.
+      if (!response.ok) throw new Error("Storage upload failed");
       return prefix + path;
     },
     async remove(path) {
-      await bucket.remove([path]);
+      await fetch(`${storage}/object/${MEDIA_BUCKET}`, {
+        method: "DELETE",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({ prefixes: [path] }),
+      });
     },
     pathOf(value) {
       return value.startsWith(prefix) ? value.slice(prefix.length) : null;

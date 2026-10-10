@@ -128,16 +128,9 @@ test("appointment reminders", { timeout: 120000 }, async (t) => {
     await t.test(
       "nothing is scheduled for lead times already passed",
       async () => {
-        const soon = new Date(Date.now() + 90 * 60000);
-        const day = localStamp(soon).slice(0, 10);
-        const minute = Math.ceil(Number(localStamp(soon).slice(14)) / 15) * 15;
-        if (minute >= 60) return; // Rare clock edge; covered by the other cases.
-        const hour = localStamp(soon).slice(11, 13);
-        await db.workingHours.updateMany({
-          where: { salonId: "a" },
-          data: { startMinute: 0, endMinute: 1440 },
-        });
-        await db.workingBreak.deleteMany({ where: { salonId: "a" } });
+        // Tomorrow 10:00 is always less than two days away, whatever the clock.
+        await settings({ reminderMinutes: [2880, 60] });
+        const tomorrow = addDays(localStamp(new Date()).slice(0, 10), 1);
         const b = await createBooking(
           db,
           { actor: actors.owner },
@@ -145,12 +138,17 @@ test("appointment reminders", { timeout: 120000 }, async (t) => {
             branchId: "z",
             serviceId: "book-service-a-60",
             staffId: "book-staff-a-2",
-            startAt: at(`${hour}:${String(minute).padStart(2, "0")}`, day),
+            startAt: at("10:00", tomorrow),
             customer: { name: "Түргэн", phone: "99001144" },
             idempotencyKey: randomUUID(),
           },
         );
-        assert.equal((await reminders(b.id)).length, 0);
+        const rows = await reminders(b.id);
+        assert.deepEqual(
+          rows.map((r) => +b.startAt - +r.availableAt),
+          [60 * 60000],
+        );
+        await settings();
       },
     );
     await t.test("delivery re-checks status and the salon switch", async () => {
