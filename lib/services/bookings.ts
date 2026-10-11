@@ -676,6 +676,7 @@ export async function publicCatalog(db: Database, slug: string) {
         id: true,
         name: true,
         description: true,
+        imageUrl: true,
         categoryId: true,
         durationMinutes: true,
         priceMnt: true,
@@ -693,6 +694,7 @@ export async function publicCatalog(db: Database, slug: string) {
         id: true,
         name: true,
         title: true,
+        imageUrl: true,
         branches: {
           where: { branch: { active: true } },
           select: { branchId: true },

@@ -9,7 +9,9 @@ import type { CatalogData } from "@/lib/services/catalog";
 import { requestJson } from "@/lib/client-request";
 import { userFacingError } from "@/lib/ui-language";
 import { clockTime, parseClock, weekdays } from "@/lib/schedule-time";
+import Image from "next/image";
 import { tone, initials } from "@/lib/avatar";
+import { PhotoField } from "./photo-field";
 import {
   localizeInvalidField,
   clearFieldValidity,
@@ -127,7 +129,11 @@ export function StaffDirectory({
       >
         <header>
           <span className={`staff-avatar tone-${tone(s.id)}`}>
-            {initials(s.name)}
+            {s.imageUrl ? (
+              <Image src={s.imageUrl} alt="" fill unoptimized sizes="40px" />
+            ) : (
+              initials(s.name)
+            )}
           </span>
           <div>
             <h3>{s.name}</h3>
@@ -381,7 +387,9 @@ function StaffForm({
       ),
     ),
     [pending, setPending] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [photo, setPhoto] = useState(current?.imageUrl ?? null);
+  const router = useRouter();
   // Only services sold in a chosen branch can be assigned.
   const offered = catalog.services.filter((s) =>
       s.branchIds.some((id) => branchIds.includes(id)),
@@ -497,6 +505,18 @@ function StaffForm({
       >
         <div className="quick-body">
           <Feedback error={error} />
+          {!data.preview && data.role === "SALON_OWNER" && (
+            <PhotoField
+              target="staff"
+              id={current?.id ?? null}
+              url={photo}
+              round
+              onChange={(url) => {
+                setPhoto(url);
+                router.refresh();
+              }}
+            />
+          )}
           <div className="form-grid">
             <label className="field">
               Нэр

@@ -43,6 +43,7 @@ model User {
   isSuperAdmin    Boolean            @default(false)
   lastLoginAt     DateTime?
   platformActions PlatformAuditLog[]
+  feedback        Feedback[]
   createdAt       DateTime           @default(now())
   memberships     SalonMember[]
 }
@@ -82,6 +83,7 @@ model Salon {
   bookingSettings BookingSettings?
   customers       Customer[]
   products        Product[]
+  feedback        Feedback[]
 
   @@index([createdAt])
   @@index([reviewStatus, submittedAt])
@@ -589,4 +591,33 @@ model SalonImage {
   salon     Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
 
   @@index([salonId, sortOrder])
+}
+
+enum FeedbackKind {
+  BUG
+  SUGGESTION
+  QUESTION
+}
+
+enum FeedbackStatus {
+  OPEN
+  DONE
+}
+
+// A salon member's request to the platform operator, with the operator's answer.
+model Feedback {
+  id        String         @id @default(cuid())
+  salonId   String
+  userId    String         @db.Uuid
+  kind      FeedbackKind
+  message   String
+  status    FeedbackStatus @default(OPEN)
+  reply     String?
+  repliedAt DateTime?
+  createdAt DateTime       @default(now())
+  salon     Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([salonId, createdAt])
 }

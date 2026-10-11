@@ -16,6 +16,8 @@ import { CustomerDirectory } from "@/components/customer-directory";
 import { StaffDirectory } from "@/components/staff-directory";
 import { StaffSchedules } from "@/components/staff-schedules";
 import { Inventory } from "@/components/inventory";
+import { SupportDesk } from "@/components/support-desk";
+import { listOwnFeedback } from "@/lib/services/feedback";
 import { readInventory } from "@/lib/services/inventory";
 import { readStaff, readSchedules } from "@/lib/services/staff";
 import { moduleAllowed } from "@/lib/access";
@@ -36,8 +38,6 @@ import { Button } from "@/components/ui/button";
 const descriptions: Record<string, string> = {
   "salon-page":
     "Салоноо цахимаар танилцуулах хуудас дараагийн шатанд нэмэгдэнэ.",
-  support:
-    "Систем дотроос тусламж авах боломж дараагийн шатанд нэмэгдэнэ. Одоогоор тохируулах зааврыг төслийн баримт бичгээс үзнэ үү.",
 };
 export default async function Page({
   params,
@@ -222,6 +222,17 @@ export default async function Page({
       />
     );
   }
+  if (module === "support")
+    return (
+      <SupportDesk
+        preview={data.preview}
+        initial={
+          configured
+            ? await listOwnFeedback(db, actorFromMember(await membership()))
+            : []
+        }
+      />
+    );
   if (module === "inventory") {
     const actor = configured ? actorFromMember(await membership()) : null;
     return (

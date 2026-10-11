@@ -19,7 +19,7 @@ import {
   ChartNoAxesCombined,
   Gem,
   Handshake,
-  CircleHelp,
+  MessageSquare,
   Settings,
 } from "lucide-react";
 // The sidebar lists working modules only.
@@ -52,6 +52,7 @@ export const navigation = [
     items: [
       { title: "Салбарууд", href: "/branches", icon: MapPin },
       { title: "Тохиргоо", href: "/settings", icon: Settings },
+      { title: "Санал хүсэлт", href: "/support", icon: MessageSquare },
     ],
   },
 ];
@@ -70,7 +71,6 @@ export const hiddenModules = [
   { title: "Зургийн цомог", href: "/gallery", icon: Images },
   { title: "Миний багц", href: "/plan", icon: Gem },
   { title: "Хамтын ажиллагаа", href: "/partnership", icon: Handshake },
-  { title: "Тусламж", href: "/support", icon: CircleHelp },
 ];
 export const modules = [
   ...navigation.flatMap((g) => g.items),

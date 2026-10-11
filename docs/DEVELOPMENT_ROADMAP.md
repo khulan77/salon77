@@ -143,6 +143,16 @@ Local Node is v20. Production requires Node ≥ 22.
   - `reviewStatus` defaults to `APPROVED` in the database so salons created before this change stay public; onboarding is the only code that creates a salon and it always writes `PENDING`.
   - The operator is not notified by message; new requests appear on `/platform`.
   - Migration `202610100022_salon_review`.
+- **Service and staff photos** (2026-10-11):
+  - `Service.imageUrl` and `Staff.imageUrl` (columns existed, unused) are set through `POST/DELETE /api/photo?target=service|staff&id=` (`setPhoto` / `removePhoto` in `lib/services/salon-media.ts`): owner only, own salon only, same byte-sniffing and 4 MB limit as the cover.
+  - The editors show a photo field once the record is saved; the public booking page shows service thumbnails and staff portraits.
+  - The `salon-media` Storage bucket now exists on the live project (public, 4 MB, JPEG/PNG/WebP).
+  - The platform header shows the number of pending applications on every console page. Email alerts for new applications wait on choosing an email provider.
+  - No migration.
+- **Requests to the platform** (2026-10-11):
+  - `/support` (sidebar «Санал хүсэлт») lets any salon member send a bug report, suggestion or question (`Feedback` model, 10 per account per day) and read the operator's answer. Owners and managers see everything their salon sent; others see their own.
+  - `/platform/feedback` is the operator's inbox: open requests oldest first, a reply box and "resolved" toggle. The header shows the open count.
+  - Migration `202610110023_feedback`.
 
 ## Recommended sequencing and dependencies
 
@@ -158,6 +168,6 @@ Local Node is v20. Production requires Node ≥ 22.
 - No rate limiting, CAPTCHA or audit trail.
 - No per-salon timezone; Asia/Ulaanbaatar is hardcoded as the default.
 - No workspace switcher; a user with several memberships uses the cookie selector or the oldest membership.
-- No image upload pipeline: `imageUrl`/`logoUrl` fields exist but are unused.
+- `Salon.logoUrl` exists but is unused.
 - No deployment configuration (Vercel project, Node 22 pinning) is committed.
 - The real-account manual acceptance flow (public booking → calendar → double-booking rejection → reschedule → completion → customer history) has **no recorded evidence** of being completed by a person. Automated browser tests cover it against local fixtures only.

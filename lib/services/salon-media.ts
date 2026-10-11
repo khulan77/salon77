@@ -189,3 +189,80 @@ export async function moveGalleryImage(
     return galleryView(rows);
   });
 }
+// Photos of a single service or staff member, shown on the booking page.
+export type PhotoTarget = "service" | "staff";
+async function photoRow(
+  db: PrismaClient,
+  target: PhotoTarget,
+  salonId: string,
+  id: string,
+) {
+  const where = { id, salonId };
+  const row =
+    target === "service"
+      ? await db.service.findFirst({ where, select: { imageUrl: true } })
+      : await db.staff.findFirst({ where, select: { imageUrl: true } });
+  if (!row)
+    throw new HttpError(
+      404,
+      target === "service" ? "Үйлчилгээ олдсонгүй." : "Ажилтан олдсонгүй.",
+    );
+  return row;
+}
+const savePhoto = (
+  db: PrismaClient,
+  target: PhotoTarget,
+  id: string,
+  imageUrl: string | null,
+) =>
+  target === "service"
+    ? db.service.update({ where: { id }, data: { imageUrl } })
+    : db.staff.update({ where: { id }, data: { imageUrl } });
+export async function setPhoto(
+  db: PrismaClient,
+  actor: Actor,
+  target: PhotoTarget,
+  id: string,
+  bytes: Uint8Array,
+  store: MediaStore | null,
+) {
+  const current = await refreshActor(db, actor);
+  requireOwner(current);
+  if (!store) throw new HttpError(503, notConfigured);
+  const before = await photoRow(db, target, current.salonId, id);
+  if (!bytes.length) throw new HttpError(400, "Зургаа сонгоно уу.");
+  if (bytes.length > MAX_IMAGE_BYTES)
+    throw new HttpError(413, "Зургийн хэмжээ 4 МБ-аас ихгүй байна.");
+  const type = imageType(bytes);
+  if (!type)
+    throw new HttpError(
+      400,
+      "Зөвхөн зургийн файл (жпег, пнг, вебп) оруулна уу.",
+    );
+  const imageUrl = await store
+    .upload(
+      `${current.salonId}/${target}-${randomUUID()}.${type.ext}`,
+      bytes,
+      type.mime,
+    )
+    .catch(() => {
+      throw new HttpError(502, "Зургийг хадгалж чадсангүй. Дахин оролдоно уу.");
+    });
+  await savePhoto(db, target, id, imageUrl);
+  await forgetOld(store, current.salonId, before.imageUrl);
+  return { imageUrl };
+}
+export async function removePhoto(
+  db: PrismaClient,
+  actor: Actor,
+  target: PhotoTarget,
+  id: string,
+  store: MediaStore | null,
+) {
+  const current = await refreshActor(db, actor);
+  requireOwner(current);
+  const before = await photoRow(db, target, current.salonId, id);
+  await savePhoto(db, target, id, null);
+  if (store) await forgetOld(store, current.salonId, before.imageUrl);
+  return { imageUrl: null };
+}

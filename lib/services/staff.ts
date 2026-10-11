@@ -77,6 +77,7 @@ export async function readStaff(
         ? (s.phone ?? "")
         : "",
     bio: s.bio ?? "",
+    imageUrl: s.imageUrl,
     active: s.active,
     memberId: owner ? s.memberId : null,
     branchIds: s.branches.map((b) => b.branchId),

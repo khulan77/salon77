@@ -181,53 +181,63 @@ const byStaff = [
 ];
 const showcaseRevenue = byService.reduce((sum, s) => sum + s.revenue, 0);
 const showcaseCount = byService.reduce((sum, s) => sum + s.count, 0);
-const week = [
+// Week view events: hours after 09:00, length in hours, tone, customer.
+const week: {
+  day: string;
+  date: number;
+  events: [number, number, string, string][];
+}[] = [
   {
     day: "Да",
     date: 5,
     events: [
-      ["10:00", "violet"],
-      ["13:30", "sky"],
+      [1, 1.5, "violet", "Сараа"],
+      [4.5, 1.5, "sky", "Оюун"],
     ],
   },
-  { day: "Мя", date: 6, events: [["11:00", "rose"]] },
+  { day: "Мя", date: 6, events: [[2, 2, "rose", "Номин"]] },
   {
     day: "Лх",
     date: 7,
     events: [
-      ["09:30", "sage"],
-      ["12:00", "violet"],
-      ["15:00", "sand"],
+      [0.5, 1.5, "sage", "Ану"],
+      [3, 1.5, "violet", "Болор"],
+      [6, 1.5, "sand", "Сувд"],
     ],
   },
   {
     day: "Пү",
     date: 8,
     events: [
-      ["10:30", "sky"],
-      ["14:00", "rose"],
+      [1.5, 1.5, "sky", "Заяа"],
+      [5, 2, "rose", "Номин"],
     ],
   },
   {
     day: "Ба",
     date: 9,
     events: [
-      ["10:00", "violet"],
-      ["11:30", "sage"],
-      ["16:00", "rose"],
+      [1, 1.5, "violet", "Сараа"],
+      [2.5, 1.5, "sage", "Ану"],
+      [6, 1.5, "rose", "Туяа"],
     ],
   },
   {
     day: "Бя",
     date: 10,
     events: [
-      ["10:00", "sand"],
-      ["12:30", "sky"],
-      ["14:00", "violet"],
+      [1, 1.5, "sand", "Болор"],
+      [3.5, 1.5, "sky", "Оюун"],
+      [5, 1.5, "violet", "Заяа"],
     ],
   },
-  { day: "Ня", date: 11, events: [["12:00", "sage"]] },
+  { day: "Ня", date: 11, events: [[3, 1.5, "sage", "Ану"]] },
 ];
+const WEEK_HOURS = 8;
+function weekTime(offset: number) {
+  const minutes = 9 * 60 + offset * 60;
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
 // W = worked, O = day off, "." = not marked yet.
 const attendance = [
   { name: "Ану", days: "WWWWWOWWWWWWOW" },
@@ -410,21 +420,47 @@ export default async function BusinessPage() {
                 </span>
                 <div>
                   <h3>Календар</h3>
-                  <p>Өдөр, долоо хоногоор. Салбар, ажилтнаар шүүнэ.</p>
+                  <p>Өдөр, долоо хоногоор харна.</p>
                 </div>
               </header>
-              <div className="lp-week" aria-hidden="true">
-                {week.map((d) => (
-                  <div key={d.day} className={d.date === 9 ? "today" : ""}>
-                    <span>{d.day}</span>
-                    <b>{d.date}</b>
-                    {d.events.map(([time, tone]) => (
-                      <i key={time} className={`tone-${tone}`}>
-                        {time}
-                      </i>
+              <div className="lp-laptop" aria-hidden="true">
+                <div className="lp-laptop-screen">
+                  <div className="lp-window-bar">
+                    <i />
+                    <i />
+                    <i />
+                    <span>Календар · 7 хоног</span>
+                  </div>
+                  <div className="lp-wk">
+                    <div className="lp-wk-times">
+                      {[0, 2, 4, 6, 8].map((h) => (
+                        <span key={h}>{weekTime(h)}</span>
+                      ))}
+                    </div>
+                    {week.map((d) => (
+                      <div key={d.day} className={d.date === 9 ? "today" : ""}>
+                        <span>{d.day}</span>
+                        <b>{d.date}</b>
+                        <div className="lp-wk-track">
+                          {d.events.map(([start, length, tone, name]) => (
+                            <i
+                              key={start}
+                              className={`tone-${tone}`}
+                              style={{
+                                top: `${(start / WEEK_HOURS) * 100}%`,
+                                height: `calc(${(length / WEEK_HOURS) * 100}% - 2px)`,
+                              }}
+                            >
+                              <small>{weekTime(start)}</small>
+                              <em>{name}</em>
+                            </i>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
-                ))}
+                </div>
+                <div className="lp-laptop-base" />
               </div>
             </article>
             <article className="lp-tile">
@@ -434,7 +470,7 @@ export default async function BusinessPage() {
                 </span>
                 <div>
                   <h3>Орлогын тайлан</h3>
-                  <p>Өдөр, 7 хоног, сар, салбараар шүүж харна.</p>
+                  <p>Өдөр, сар, салбараар шүүнэ.</p>
                 </div>
               </header>
               <div className="lp-report" aria-hidden="true">
@@ -481,7 +517,7 @@ export default async function BusinessPage() {
                 </span>
                 <div>
                   <h3>Үйлчилгээгээр орсон орлого</h3>
-                  <p>Аль үйлчилгээ хамгийн их орлого авчирдгийг харна.</p>
+                  <p>Аль үйлчилгээ их орлоготойг харна.</p>
                 </div>
               </header>
               <ul className="lp-breakdown" aria-hidden="true">
@@ -510,7 +546,7 @@ export default async function BusinessPage() {
                 </span>
                 <div>
                   <h3>Ажилтнаар орсон орлого</h3>
-                  <p>Хэн хэдэн үйлчилгээ хийж, хэдийг оруулсныг харна.</p>
+                  <p>Хэн хэдийг оруулсныг харна.</p>
                 </div>
               </header>
               <ul className="lp-staff" aria-hidden="true">
@@ -534,10 +570,7 @@ export default async function BusinessPage() {
                 </span>
                 <div>
                   <h3>Цагийн бүртгэл</h3>
-                  <p>
-                    Ажилтны ажилласан өдрийг нэг товшилтоор чагтална. Сарын
-                    эцэст нийт өдөр бэлэн.
-                  </p>
+                  <p>Ажилласан өдрийг чагтална.</p>
                 </div>
               </header>
               <div className="lp-sheet" aria-hidden="true">
@@ -583,7 +616,7 @@ export default async function BusinessPage() {
                 </span>
                 <div>
                   <h3>Бараа бүртгэл</h3>
-                  <p>Салбар бүрийн үлдэгдэл, дуусах дөхсөн барааг харна.</p>
+                  <p>Үлдэгдэл, дуусах дөхсөн бараа.</p>
                 </div>
               </header>
               <ul className="lp-stock" aria-hidden="true">

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Eraser } from "lucide-react";
 import { Button } from "./ui/button";
 import { Feedback } from "./ui/feature-dialog";
 import { addDays } from "@/lib/business-time";
@@ -19,10 +19,11 @@ function shiftMonth(month: string, by: number) {
   const total = y * 12 + (m - 1) + by;
   return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
 }
-// Cells cycle ✓ → А → · ; future days only allow А or empty.
-function next(status: Status, future: boolean): Status {
+// A click flips ✓ ↔ А; erasing clears. Future days only allow А or empty.
+function next(status: Status, future: boolean, erase: boolean): Status {
+  if (erase) return null;
   if (future) return status === "OFF" ? null : "OFF";
-  return status === null ? "WORKED" : status === "WORKED" ? "OFF" : null;
+  return status === "WORKED" ? "OFF" : "WORKED";
 }
 const labels = { WORKED: "Ажилласан", OFF: "Амарсан" } as const;
 export function Timesheet({
@@ -43,6 +44,7 @@ export function Timesheet({
       ),
   );
   const [busy, setBusy] = useState<string | null>(null);
+  const [erase, setErase] = useState(false);
   const [error, setError] = useState("");
   const month = data.from.slice(0, 7),
     end = monthEnd(month);
@@ -251,6 +253,17 @@ export function Timesheet({
             ))}
           </div>
         )}
+        {!preview && (
+          <div className="segmented timesheet-erase">
+            <button
+              type="button"
+              aria-pressed={erase}
+              onClick={() => setErase(!erase)}
+            >
+              <Eraser size={13} /> Арилгах
+            </button>
+          </div>
+        )}
         <div className="timesheet-legend" aria-hidden="true">
           <span>
             <i className="mark worked">✓</i> Ажилласан
@@ -323,9 +336,11 @@ export function Timesheet({
                           <button
                             type="button"
                             className={`mark ${v === "WORKED" ? "worked" : v === "OFF" ? "off" : "empty"}`}
-                            disabled={preview || busy === key}
+                            disabled={preview || busy === key || (erase && !v)}
                             aria-label={`${s.name}, ${d}: ${v ? labels[v] : "Тэмдэглээгүй"}`}
-                            onClick={() => save(s.id, d, next(v, future))}
+                            onClick={() =>
+                              save(s.id, d, next(v, future, erase))
+                            }
                           >
                             {v === "WORKED" ? "✓" : v === "OFF" ? "А" : "·"}
                           </button>
@@ -349,10 +364,11 @@ export function Timesheet({
         </section>
       )}
       <p className="timesheet-help">
-        <strong>Нүд дээр дарж солино:</strong> ✓ Ажилласан → А Амарсан → ·
-        Тэмдэглээгүй. Ирэх өдрүүдэд зөвхөн «А» тавина. <strong>А</strong> гэж
-        тэмдэглэсэн ажилтан тэр өдөр шинэ захиалга авахгүй. Одоо байгаа захиалга
-        хэвээр үлдэх тул өөр ажилтан эсвэл цаг руу шилжүүлнэ үү.
+        <strong>Нүд дээр дарах бүрд солигдоно:</strong> ✓ Ажилласан ↔ А Амарсан.
+        Тэмдэглэгээг арилгахдаа «Арилгах»-ыг идэвхжүүлээд нүдээ дарна. Ирэх
+        өдрүүдэд зөвхөн «А» тавина. <strong>А</strong> гэж тэмдэглэсэн ажилтан
+        тэр өдөр шинэ захиалга авахгүй. Одоо байгаа захиалга хэвээр үлдэх тул
+        өөр ажилтан эсвэл цаг руу шилжүүлнэ үү.
       </p>
     </div>
   );

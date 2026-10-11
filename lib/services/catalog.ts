@@ -60,6 +60,7 @@ export async function readCatalog(
       id: s.id,
       name: s.name,
       description: s.description ?? "",
+      imageUrl: s.imageUrl,
       categoryId: s.categoryId,
       priceMnt: s.priceMnt,
       durationMinutes: s.durationMinutes,

@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import type { AdminData } from "@/lib/admin-data";
 import type { CatalogData } from "@/lib/services/catalog";
+import Image from "next/image";
 import { Button } from "./ui/button";
+import { PhotoField } from "./photo-field";
 import { FeatureDialog, Feedback } from "./ui/feature-dialog";
 import { requestJson } from "@/lib/client-request";
 import {
@@ -292,7 +294,17 @@ export function ServiceCatalog({
               }`}
             >
               <span className="service-thumb" aria-hidden="true">
-                {s.name.trim().charAt(0).toUpperCase()}
+                {s.imageUrl ? (
+                  <Image
+                    src={s.imageUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="48px"
+                  />
+                ) : (
+                  s.name.trim().charAt(0).toUpperCase()
+                )}
               </span>
               <div className="service-row-body">
                 <div className="service-row-title">
@@ -439,6 +451,8 @@ function ServiceEditor({
   const ref = useRef<HTMLElement>(null);
   const [duration, setDuration] = useState(service?.durationMinutes ?? 60);
   const [price, setPrice] = useState(service?.priceMnt ?? 0);
+  const [photo, setPhoto] = useState(service?.imageUrl ?? null);
+  const router = useRouter();
   const title = service ? "Үйлчилгээ засах" : "Шинэ үйлчилгээ";
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -453,6 +467,17 @@ function ServiceEditor({
       aria-labelledby="service-editor-title"
     >
       <h2 id="service-editor-title">{title}</h2>
+      {!data.preview && (
+        <PhotoField
+          target="service"
+          id={service?.id ?? null}
+          url={photo}
+          onChange={(url) => {
+            setPhoto(url);
+            router.refresh();
+          }}
+        />
+      )}
       <form
         onSubmit={onSubmit}
         onInvalidCapture={localizeInvalidField}

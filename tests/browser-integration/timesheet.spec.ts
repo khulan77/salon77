@@ -24,6 +24,10 @@ test("reception marks attendance on the timesheet", async ({ page }, info) => {
   await expect(cell).toHaveAccessibleName(`Ану, ${day}: Ажилласан`);
   await cell.click();
   await expect(cell).toHaveAccessibleName(`Ану, ${day}: Амарсан`);
+  await cell.click();
+  await expect(cell).toHaveAccessibleName(`Ану, ${day}: Ажилласан`);
+  await cell.click();
+  await expect(cell).toHaveAccessibleName(`Ану, ${day}: Амарсан`);
   const future = page.getByRole("button", {
     name: new RegExp(`^Ану, ${addDays(today, 1)}:`),
   });
@@ -50,6 +54,7 @@ test("reception marks attendance on the timesheet", async ({ page }, info) => {
     path: `test-results/timesheet-${info.project.name}.png`,
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Арилгах", exact: true }).click();
   await cell.click();
   await expect(cell).toHaveAccessibleName(`Ану, ${day}: Тэмдэглээгүй`);
 });

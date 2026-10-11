@@ -14,6 +14,7 @@ import type { PublicCatalog } from "@/lib/services/bookings";
 import type { VisitReceipt } from "@/lib/services/visits";
 import { addDays, localStamp } from "@/lib/business-time";
 import { clockTime } from "@/lib/schedule-time";
+import Image from "next/image";
 import { tone, initials } from "@/lib/avatar";
 import { formatDuration, formatMnt, userFacingError } from "@/lib/ui-language";
 import { depositAmount } from "@/lib/booking-settings";
@@ -418,7 +419,18 @@ export function PublicBooking({
                         disabled={full}
                         onClick={() => toggle(s.id)}
                       >
-                        <div>
+                        {s.imageUrl && (
+                          <span className="pb-service-photo">
+                            <Image
+                              src={s.imageUrl}
+                              alt=""
+                              fill
+                              unoptimized
+                              sizes="72px"
+                            />
+                          </span>
+                        )}
+                        <div className="pb-service-text">
                           <strong>{s.name}</strong>
                           {s.description && <p>{s.description}</p>}
                           <span className="pb-meta">
@@ -503,7 +515,17 @@ export function PublicBooking({
                     }}
                   >
                     <span className={`pb-avatar tone-${tone(p.id)}`}>
-                      {initials(p.name)}
+                      {p.imageUrl ? (
+                        <Image
+                          src={p.imageUrl}
+                          alt=""
+                          fill
+                          unoptimized
+                          sizes="54px"
+                        />
+                      ) : (
+                        initials(p.name)
+                      )}
                     </span>
                     {p.name}
                   </button>

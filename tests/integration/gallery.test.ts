@@ -11,6 +11,8 @@ import {
   moveGalleryImage,
   readGallery,
   removeGalleryImage,
+  removePhoto,
+  setPhoto,
 } from "../../lib/services/salon-media";
 import type { MediaStore } from "../../lib/storage";
 import { HttpError } from "../../lib/errors";
@@ -162,6 +164,125 @@ test("salon photo gallery", { timeout: 120000 }, async (t) => {
         );
         assert.equal(left.length, MAX_GALLERY_IMAGES - 1);
         assert.equal(objects.size, size - 1);
+      },
+    );
+    await t.test(
+      "service and staff photos reach the booking page",
+      async () => {
+        const png = new Uint8Array([
+          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        ]);
+        const service = await setPhoto(
+          db,
+          actors.owner,
+          "service",
+          "book-service-a-60",
+          png,
+          store,
+        );
+        assert.match(service.imageUrl, /\/a\/service-.+\.png$/);
+        const person = await setPhoto(
+          db,
+          actors.owner,
+          "staff",
+          "book-staff-a-1",
+          jpeg,
+          store,
+        );
+        assert.match(person.imageUrl, /\/a\/staff-.+\.jpg$/);
+        const catalog = await publicCatalog(db, "salon-a");
+        assert.equal(
+          catalog.services.find((s) => s.id === "book-service-a-60")?.imageUrl,
+          service.imageUrl,
+        );
+        assert.equal(
+          catalog.staff.find((s) => s.id === "book-staff-a-1")?.imageUrl,
+          person.imageUrl,
+        );
+        // Replacing drops the old object; removing drops the new one.
+        const size = objects.size;
+        const next = await setPhoto(
+          db,
+          actors.owner,
+          "service",
+          "book-service-a-60",
+          jpeg,
+          store,
+        );
+        assert.equal(objects.size, size);
+        assert.notEqual(next.imageUrl, service.imageUrl);
+        await removePhoto(
+          db,
+          actors.owner,
+          "service",
+          "book-service-a-60",
+          store,
+        );
+        assert.equal(objects.size, size - 1);
+        assert.equal(
+          (await publicCatalog(db, "salon-a")).services.find(
+            (s) => s.id === "book-service-a-60",
+          )?.imageUrl,
+          null,
+        );
+      },
+    );
+    await t.test(
+      "photos are owner-only, own salon only, images only",
+      async () => {
+        const size = objects.size;
+        for (const actor of [actors.manager, actors.reception])
+          await assert.rejects(
+            setPhoto(db, actor, "staff", "book-staff-a-1", jpeg, store),
+            status(403),
+          );
+        // Another salon's owner cannot touch this salon's rows.
+        await assert.rejects(
+          setPhoto(db, actors.other, "staff", "book-staff-a-1", jpeg, store),
+          status(404),
+        );
+        await assert.rejects(
+          removePhoto(db, actors.other, "staff", "book-staff-a-1", store),
+          status(404),
+        );
+        await assert.rejects(
+          setPhoto(
+            db,
+            actors.owner,
+            "service",
+            "book-service-a-60",
+            new Uint8Array([1, 2, 3]),
+            store,
+          ),
+          status(400),
+        );
+        await assert.rejects(
+          setPhoto(
+            db,
+            actors.owner,
+            "service",
+            "book-service-a-60",
+            new Uint8Array(MAX_IMAGE_BYTES + 1),
+            store,
+          ),
+          status(413),
+        );
+        await assert.rejects(
+          setPhoto(
+            db,
+            actors.owner,
+            "service",
+            "book-service-a-60",
+            jpeg,
+            null,
+          ),
+          status(503),
+        );
+        assert.equal(objects.size, size);
+        const staff = await db.staff.findUniqueOrThrow({
+          where: { id: "book-staff-a-1" },
+        });
+        assert.match(staff.imageUrl ?? "", /\/a\/staff-/);
       },
     );
   } finally {
