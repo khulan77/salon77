@@ -11,6 +11,8 @@ import Link from "next/link";
 import { MapPin, Plus, Pencil, Power, X, ArrowRight } from "lucide-react";
 import type { AdminData, BranchView } from "@/lib/admin-data";
 import { Button } from "./ui/button";
+import { DistrictSelect } from "./district-select";
+import { normalizeDistrict } from "@/lib/districts";
 export function Branches({ data }: { data: AdminData }) {
   const router = useRouter();
   const [editing, setEditing] = useState<BranchView | "new" | null>(null);
@@ -59,6 +61,12 @@ export function Branches({ data }: { data: AdminData }) {
     }
   }
   async function toggle(branch: BranchView) {
+    // A free-text district from before the list must be picked first.
+    if (!normalizeDistrict(branch.district)) {
+      setError("Дүүргээ жагсаалтаас сонгоод хадгална уу.");
+      setEditing(branch);
+      return;
+    }
     if (
       !window.confirm(
         `«${branch.name}» салбарыг ${branch.active ? "идэвхгүй болгох" : "идэвхжүүлэх"} уу? ${branch.active ? "Бүртгэл, мэдээлэл нь хадгалагдана." : ""}`,
@@ -245,16 +253,7 @@ export function Branches({ data }: { data: AdminData }) {
               />
             </label>
             <div className="form-grid">
-              <label className="field">
-                Дүүрэг
-                <input
-                  name="district"
-                  required
-                  maxLength={100}
-                  defaultValue={values?.district}
-                  placeholder="Жишээ: Хан-Уул"
-                />
-              </label>
+              <DistrictSelect name="district" stored={values?.district} />
               <label className="field">
                 Утасны дугаар
                 <input

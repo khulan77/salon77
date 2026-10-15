@@ -116,7 +116,7 @@ test("browser form validation stays Mongolian in an English browser", async ({
     .fill("99112233");
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await expect(
-    page.getByRole("heading", { name: "Салоныхоо цахим хаягийг сонгоорой." }),
+    page.getByRole("heading", { name: "Салоныхоо хаяг, байршлыг оруулаарай." }),
   ).toBeVisible();
 });
 

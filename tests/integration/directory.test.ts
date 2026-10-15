@@ -2,7 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { testDatabase, seed } from "../fixtures/database";
 import { bookingSeed } from "../fixtures/bookings";
-import { listDirectory } from "../../lib/services/directory";
+import {
+  directoryThreshold,
+  listDirectory,
+  listedSalonCount,
+  showDirectory,
+} from "../../lib/services/directory";
 test("public salon directory", { timeout: 120000 }, async (t) => {
   const fixture = await testDatabase(55491),
     { db } = fixture;
@@ -76,6 +81,24 @@ test("public salon directory", { timeout: 120000 }, async (t) => {
         assert.ok(
           d.districts.includes("Баянгол") && d.districts.includes("Хан-Уул"),
         );
+        // A free-text spelling saved before the district list still files
+        // under its standard district, without rewriting the stored value.
+        await db.branch.update({
+          where: { id: "other" },
+          data: { district: "БГД" },
+        });
+        const legacy = await listDirectory(db, { district: "Баянгол" });
+        assert.deepEqual(
+          legacy.salons.map((s) => [s.slug, s.district]),
+          [["salon-b", "Баянгол"]],
+        );
+        assert.ok(legacy.districts.includes("Баянгол"));
+        assert.ok(!legacy.districts.some((v) => (v as string) === "БГД"));
+        await assert.rejects(listDirectory(db, { district: "БГД" }));
+        await db.branch.update({
+          where: { id: "other" },
+          data: { district: "Баянгол" },
+        });
         // Category names match as well, so the quick filters work.
         assert.deepEqual(await slugs({ query: "захиалгын ангилал" }), [
           "salon-a",
@@ -117,6 +140,29 @@ test("public salon directory", { timeout: 120000 }, async (t) => {
         });
         assert.deepEqual(await slugs(), ["salon-a"]);
         assert.ok(!(await listDirectory(db, {})).districts.includes("Баянгол"));
+      },
+    );
+    await t.test(
+      "the root shows the directory only above the salon threshold",
+      async () => {
+        assert.equal(directoryThreshold(undefined), 5);
+        assert.equal(directoryThreshold(""), 5);
+        assert.equal(directoryThreshold("abc"), 5);
+        assert.equal(directoryThreshold("-1"), 5);
+        assert.equal(directoryThreshold("0"), 0);
+        assert.equal(directoryThreshold("12"), 12);
+        // Only salon-a is still listed after the previous step.
+        assert.equal(await listedSalonCount(db), 1);
+        const start = 1_000_000;
+        assert.equal(await showDirectory(db, 5, start), false);
+        assert.equal(await showDirectory(db, 1, start), true);
+        // The count is reused within a minute, then read again.
+        await db.service.updateMany({
+          where: { salonId: "b" },
+          data: { onlineBookable: true },
+        });
+        assert.equal(await showDirectory(db, 2, start + 30_000), false);
+        assert.equal(await showDirectory(db, 2, start + 60_000), true);
       },
     );
   } finally {

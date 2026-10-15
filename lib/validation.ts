@@ -5,11 +5,17 @@ import {
   hasSocial,
   socialRequired,
 } from "./salon-application";
+import { serviceTemplateIds } from "./service-templates";
+import { DISTRICTS, normalizeDistrict } from "./districts";
 const text = (max: number) => z.string().trim().min(1).max(max);
 export const branchSchema = z
   .object({
     name: text(100),
-    district: text(100),
+    // Known abbreviations ("СБД") are stored under the standard name.
+    district: z.preprocess(
+      (v) => (typeof v === "string" ? (normalizeDistrict(v) ?? v) : v),
+      z.enum(DISTRICTS, { message: "Дүүргээ жагсаалтаас сонгоно уу." }),
+    ),
     address: text(500),
     phone: text(30),
     latitude: z.number().min(-90).max(90).nullable().optional(),
@@ -141,6 +147,27 @@ export const serviceSchema = z
     onlineBookable: z.boolean(),
     active: z.boolean(),
     branchIds: ids,
+  })
+  .strict();
+// Only the template and its price come from the client; the name, category
+// and duration are looked up on the server.
+export const serviceTemplatesSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            id: z.enum(serviceTemplateIds),
+            priceMnt: serviceSchema.shape.priceMnt,
+          })
+          .strict(),
+      )
+      .min(1, "Дор хаяж нэг үйлчилгээ сонгоно уу.")
+      .max(serviceTemplateIds.length)
+      .refine(
+        (items) => new Set(items.map((i) => i.id)).size === items.length,
+        "Нэг үйлчилгээг давхар сонгосон байна.",
+      ),
   })
   .strict();
 

@@ -437,3 +437,103 @@ export async function removeSchedule(
     { isolationLevel: "Serializable" },
   );
 }
+// The dashboard's "ready" checks for services, staff and working hours.
+export async function setupProgress(
+  db: Prisma.TransactionClient,
+  salonId: string,
+) {
+  const [services, staff, hours] = await Promise.all([
+    db.service.count({
+      where: {
+        salonId,
+        active: true,
+        category: { active: true },
+        branches: { some: { branch: { active: true } } },
+      },
+    }),
+    db.staff.count({
+      where: {
+        salonId,
+        active: true,
+        services: { some: { service: { active: true } } },
+      },
+    }),
+    db.workingHours.count({
+      where: {
+        salonId,
+        active: true,
+        assignment: { staff: { active: true }, branch: { active: true } },
+      },
+    }),
+  ]);
+  return { services: services > 0, staff: staff > 0, hours: hours > 0 };
+}
+// Monday to Saturday.
+const SOLO_DAYS = [1, 2, 3, 4, 5, 6];
+// A one-person salon: the owner becomes the only master in one step. Safe to
+// repeat: an existing profile is reused and only missing pieces are added.
+export async function setupSoloOwner(db: PrismaClient, actor: Actor) {
+  return db.$transaction(
+    async (tx) => {
+      const current = await refreshActor(tx, actor);
+      requireOwner(current);
+      const salonId = current.salonId;
+      const branch = await tx.branch.findFirst({
+        where: { salonId, active: true },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+      if (!branch) throw new HttpError(409, "Эхлээд салбар нэмнэ үү.");
+      const services = await tx.service.findMany({
+        where: { salonId, active: true, category: { active: true } },
+        select: { id: true },
+      });
+      if (!services.length)
+        throw new HttpError(409, "Эхлээд үйлчилгээ нэмнэ үү.");
+      const member = await tx.salonMember.findUniqueOrThrow({
+        where: { id: current.id },
+        select: { user: { select: { name: true } } },
+      });
+      let staff = await tx.staff.findFirst({
+        where: { memberId: current.id, salonId },
+      });
+      const created = !staff;
+      if (!staff)
+        staff = await tx.staff.create({
+          data: {
+            salonId,
+            memberId: current.id,
+            name: member.user.name?.trim() || "Салоны эзэн",
+            title: "",
+          },
+        });
+      else if (!staff.active)
+        await tx.staff.update({
+          where: { id_salonId: { id: staff.id, salonId } },
+          data: { active: true },
+        });
+      const staffId = staff.id;
+      await tx.staffBranch.createMany({
+        data: [{ staffId, branchId: branch.id, salonId }],
+        skipDuplicates: true,
+      });
+      await tx.staffService.createMany({
+        data: services.map((s) => ({ staffId, serviceId: s.id, salonId })),
+        skipDuplicates: true,
+      });
+      // Hours someone already set are kept as they are.
+      if (!(await tx.workingHours.count({ where: { staffId, salonId } })))
+        await tx.workingHours.createMany({
+          data: SOLO_DAYS.map((dayOfWeek) => ({
+            salonId,
+            staffId,
+            branchId: branch.id,
+            dayOfWeek,
+            startMinute: branch.openMinute,
+            endMinute: branch.closeMinute,
+          })),
+        });
+      return { staffId, created };
+    },
+    { isolationLevel: "Serializable" },
+  );
+}

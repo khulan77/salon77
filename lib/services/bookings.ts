@@ -23,11 +23,15 @@ import { enqueueNotice } from "../notifications/outbox";
 import { recordActivity } from "./activity";
 type Clock = { now?: () => Date };
 type Database = Prisma.TransactionClient;
-export type BookingContext = { actor: Actor } | { slug: string };
+// previewUserId lets an active booking-role member open their own salon's
+// catalog before approval. Public API routes never pass it.
+export type BookingContext =
+  { actor: Actor } | { slug: string; previewUserId?: string };
+const bookingRoles = ["SALON_OWNER", "MANAGER", "RECEPTIONIST"] as const;
 export const bookingConflict =
   "Сонгосон цаг саяхан захиалагдсан байна. Өөр цаг сонгоно уу.";
 export function requireBookingRole(actor: Actor) {
-  if (!["SALON_OWNER", "MANAGER", "RECEPTIONIST"].includes(actor.role))
+  if (!(bookingRoles as readonly string[]).includes(actor.role))
     throw new HttpError(403, "Захиалга удирдах эрхгүй байна.");
 }
 export function bookingScope(actor: Actor): Prisma.BookingWhereInput {
@@ -45,7 +49,13 @@ export async function resolveContext(db: Database, context: BookingContext) {
     requireBookingRole(actor);
     const policy = await salonBookingPolicy(db, actor.salonId);
     await expireStalePending(db, actor.salonId, policy);
-    return { salonId: actor.salonId, actor, online: false, policy };
+    return {
+      salonId: actor.salonId,
+      actor,
+      online: false,
+      preview: false,
+      policy,
+    };
   }
   if (
     !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(context.slug) ||
@@ -53,14 +63,27 @@ export async function resolveContext(db: Database, context: BookingContext) {
   )
     throw new HttpError(404, "Салон олдсонгүй.");
   const salon = await db.salon.findFirst({
-    // A salon still under review is not reachable by the public.
-    where: { slug: context.slug, status: "ACTIVE", reviewStatus: "APPROVED" },
-    select: { id: true },
+    where: { slug: context.slug, status: "ACTIVE" },
+    select: { id: true, reviewStatus: true },
   });
-  if (!salon) throw new HttpError(404, "Салон олдсонгүй.");
+  // A salon still under review is reachable only by its own team.
+  const preview =
+    !!salon &&
+    salon.reviewStatus !== "APPROVED" &&
+    !!context.previewUserId &&
+    (await db.salonMember.count({
+      where: {
+        salonId: salon.id,
+        userId: context.previewUserId,
+        active: true,
+        role: { in: [...bookingRoles] },
+      },
+    })) > 0;
+  if (!salon || (salon.reviewStatus !== "APPROVED" && !preview))
+    throw new HttpError(404, "Салон олдсонгүй.");
   const policy = await salonBookingPolicy(db, salon.id);
   await expireStalePending(db, salon.id, policy);
-  return { salonId: salon.id, actor: null, online: true, policy };
+  return { salonId: salon.id, actor: null, online: true, preview, policy };
 }
 type Scope = Awaited<ReturnType<typeof resolveContext>>;
 export async function resources(
@@ -614,8 +637,12 @@ export async function listBookings(
     );
   return rows.map(bookingView);
 }
-export async function publicCatalog(db: Database, slug: string) {
-  const scope = await resolveContext(db, { slug });
+export async function publicCatalog(
+  db: Database,
+  slug: string,
+  previewUserId?: string,
+) {
+  const scope = await resolveContext(db, { slug, previewUserId });
   const salon = await db.salon.findUniqueOrThrow({
     where: { id: scope.salonId },
     select: {
@@ -637,6 +664,7 @@ export async function publicCatalog(db: Database, slug: string) {
     return {
       salon,
       policy: scope.policy,
+      preview: scope.preview,
       branches: [],
       categories: [],
       services: [],
@@ -716,6 +744,7 @@ export async function publicCatalog(db: Database, slug: string) {
   return {
     salon,
     policy: scope.policy,
+    preview: scope.preview,
     branches,
     categories,
     services: services.map((s) => ({

@@ -125,6 +125,33 @@ test("salon applications", { timeout: 120000 }, async (t) => {
       assert.equal(queue[0].resubmitted, false);
       assert.equal((await platformOverview(db, admin)).salons.pending, 1);
     });
+    await t.test("the salon team can preview a pending page", async () => {
+      for (const userId of [
+        userIds.owner,
+        userIds.manager,
+        userIds.reception,
+      ]) {
+        const catalog = await publicCatalog(db, "salon-a", userId);
+        assert.equal(catalog.salon.slug, "salon-a");
+        assert.equal(catalog.preview, true);
+      }
+      // Outsiders, other salons' owners and non-booking roles still get 404.
+      for (const userId of [userIds.other, userIds.staff, userIds.invite])
+        await assert.rejects(publicCatalog(db, "salon-a", userId), status(404));
+      await db.salonMember.update({
+        where: { id: "manager" },
+        data: { active: false },
+      });
+      await assert.rejects(
+        publicCatalog(db, "salon-a", userIds.manager),
+        status(404),
+      );
+      await db.salonMember.update({
+        where: { id: "manager" },
+        data: { active: true },
+      });
+      assert.equal((await publicCatalog(db, "salon-b")).preview, false);
+    });
     await t.test("only the platform operator decides", async () => {
       for (const userId of [userIds.owner, userIds.other, userIds.manager]) {
         await assert.rejects(

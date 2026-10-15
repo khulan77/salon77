@@ -20,11 +20,13 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await client.auth.getUser();
-  // Signed-out visitors to the root see the salon directory, not a login wall.
+  // Signed-out visitors to the root see a public page, not a login wall.
+  // /landing picks the directory or the business page; the salon count it
+  // needs is a database read, which does not belong in the proxy.
   if (!user && request.nextUrl.pathname === "/") {
     // Clone so search parameters (query, district, page) survive the rewrite.
     const home = request.nextUrl.clone();
-    home.pathname = "/home";
+    home.pathname = "/landing";
     const landing = NextResponse.rewrite(home);
     response.cookies.getAll().forEach((c) => landing.cookies.set(c));
     return landing;

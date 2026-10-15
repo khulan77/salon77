@@ -5,6 +5,7 @@ import { membership, HttpError } from "./auth";
 import { actorFromMember, branchWhere } from "./access";
 import { invitationStatus } from "./services/team";
 import { db } from "./db";
+import { setupProgress } from "./services/staff";
 export type BranchView = {
   id: string;
   name: string;
@@ -107,34 +108,11 @@ export const adminData = cache(async (): Promise<AdminData> => {
   ]);
   const setup =
     actor.role === "SALON_OWNER"
-      ? await Promise.all([
-          db.service.count({
-            where: {
-              salonId: actor.salonId,
-              active: true,
-              category: { active: true },
-              branches: { some: { branch: { active: true } } },
-            },
-          }),
-          db.staff.count({
-            where: {
-              salonId: actor.salonId,
-              active: true,
-              services: { some: { service: { active: true } } },
-            },
-          }),
-          db.workingHours.count({
-            where: {
-              salonId: actor.salonId,
-              active: true,
-              assignment: { staff: { active: true }, branch: { active: true } },
-            },
-          }),
-        ])
-      : [0, 0, 0];
+      ? await setupProgress(db, actor.salonId)
+      : { services: false, staff: false, hours: false };
   return {
     preview: false,
-    setup: { services: setup[0] > 0, staff: setup[1] > 0, hours: setup[2] > 0 },
+    setup,
     role: member.role,
     memberId: member.id,
     salonName: member.salon.name,

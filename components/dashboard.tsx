@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -20,9 +21,11 @@ import {
   X,
   Store,
   ShieldCheck,
+  UserRoundPlus,
 } from "lucide-react";
 import { Button } from "./ui/button";
-import { formatMongolianDate } from "@/lib/ui-language";
+import { formatMongolianDate, userFacingError } from "@/lib/ui-language";
+import { requestJson } from "@/lib/client-request";
 import type { AdminData } from "@/lib/admin-data";
 import type { BookingView } from "@/lib/services/bookings";
 import { localStamp } from "@/lib/business-time";
@@ -239,7 +242,7 @@ export function Dashboard({
               <p>Өнөөдрийн ажлаа төлөвлөөрэй.</p>
             </div>
             <Link href="/calendar" className="text-link">
-              Календар харах <ArrowUpRight size={14} />
+              Календарь харах <ArrowUpRight size={14} />
             </Link>
           </div>
           {todayBookings.length ? (
@@ -282,12 +285,12 @@ export function Dashboard({
               </h3>
               <p>Өнөөдрийн захиалга алга.</p>
               <span className="empty-detail">
-                Захиалгаа календар хэсгээс удирдаарай.
+                Захиалгаа календарь хэсгээс удирдаарай.
               </span>
               <Button variant="outline" size="sm" asChild>
                 <Link href={data.role === "STAFF" ? "/schedules" : "/calendar"}>
                   <CalendarDays size={14} />{" "}
-                  {data.role === "STAFF" ? "Ажлын хуваарь" : "Календар нээх"}{" "}
+                  {data.role === "STAFF" ? "Ажлын хуваарь" : "Календарь нээх"}{" "}
                   <ArrowRight size={14} />
                 </Link>
               </Button>
@@ -320,6 +323,9 @@ export function Dashboard({
                 <span style={{ width: `${(done / complete.length) * 100}%` }} />
               </div>
             </div>
+            {(!data.setup.staff || !data.setup.hours) && (
+              <SoloSetup preview={data.preview} ready={data.setup.services} />
+            )}
             <div className="checklist">
               {[
                 {
@@ -474,5 +480,51 @@ export function Dashboard({
         </div>
       )}
     </>
+  );
+}
+// One-person salons: register the owner as the master with default hours.
+function SoloSetup({ preview, ready }: { preview: boolean; ready: boolean }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  async function start() {
+    setPending(true);
+    setError("");
+    try {
+      await requestJson("/api/staff/solo", "POST");
+      router.refresh();
+    } catch (e) {
+      setError(userFacingError(e, "Тохируулж чадсангүй. Дахин оролдоно уу."));
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <div className="solo-setup">
+      <span className="check-circle">
+        <UserRoundPlus size={15} />
+      </span>
+      <div>
+        <strong>Ганцаараа ажилладаг уу?</strong>
+        <span>
+          {ready
+            ? "Таныг ажилтнаар бүртгэж, бүх үйлчилгээг оноон, салбарын цагаар Даваа–Бямба гарагийн хуваарь үүсгэнэ."
+            : "Эхлээд үйлчилгээгээ нэмээд, дараа нь нэг товчоор өөрийгөө ажилтан болгоно."}
+        </span>
+        {error && (
+          <span className="solo-error" role="alert">
+            {error}
+          </span>
+        )}
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={preview || !ready || pending}
+        onClick={start}
+      >
+        {pending ? "Тохируулж байна…" : "Би өөрөө үйлчилгээ үзүүлдэг"}
+      </Button>
+    </div>
   );
 }

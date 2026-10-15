@@ -15,7 +15,7 @@ Do the steps in order; each ends with a check. Never paste secret values into ch
    - Redirect URLs: add `https://<your-domain>/auth/callback` (keep `http://localhost:3000/auth/callback` for development).
 2. **Auth → Providers → Email**: email/password on, "Confirm email" on.
 3. **Auth → SMTP Settings**: configure a real sender (Supabase's built-in sender is rate-limited to a few emails per hour and is not for production). Any SMTP provider works (e.g. a Gmail Workspace account, Mailgun, Resend, Brevo). Sender name: `Salon77`.
-4. **Storage**: a **public** bucket named `salon-media` must exist (salon cover images).
+4. **Storage**: a **public** bucket named `salon-media` must exist (cover, gallery, service and staff photos). Created on the current project on 2026-10-11.
 5. **Project Settings → API Keys**: note the **publishable** key (`sb_publishable_…`) and the **secret** key (`sb_secret_…`). The secret key is only ever stored as a server environment variable.
 6. **Project Settings → Database → Connection string**: note the **Transaction pooler** URL (port 6543) and the **Session/direct** URL (port 5432).
 
@@ -28,18 +28,22 @@ Check: you can sign up locally and receive the confirmation email from your SMTP
 3. **Settings → General → Node.js Version: 22.x** (the app requires Node ≥ 22).
 4. **Settings → Environment Variables** (Production; copy to Preview only if you use a separate database):
 
-| Variable                               | Value                                                       | Secret?    |
-| -------------------------------------- | ----------------------------------------------------------- | ---------- |
-| `NEXT_PUBLIC_SUPABASE_URL`             | `https://<project-ref>.supabase.co`                         | public     |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…`                                          | public     |
-| `DATABASE_URL`                         | pooler URL, port 6543, ending `?pgbouncer=true`             | **secret** |
-| `DIRECT_URL`                           | direct/session URL, port 5432                               | **secret** |
-| `SUPABASE_SECRET_KEY`                  | `sb_secret_…` (cover image uploads)                         | **secret** |
-| `APP_URL`                              | `https://<your-domain>` (manage links in messages, sitemap) | public     |
-| `CRON_SECRET`                          | 32+ random characters (`openssl rand -hex 32`)              | **secret** |
-| `RATE_LIMIT_SALT`                      | 32+ random characters                                       | **secret** |
-| `SMS_PROVIDER`                         | leave empty until a gateway is integrated                   | —          |
-| `ALLOW_DEVELOPMENT_INVITE_LINKS`       | `true` only while invitation emails are not integrated      | —          |
+| Variable                               | Value                                                                     | Secret?    |
+| -------------------------------------- | ------------------------------------------------------------------------- | ---------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | `https://<project-ref>.supabase.co`                                       | public     |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…`                                                        | public     |
+| `DATABASE_URL`                         | pooler URL, port 6543, ending `?pgbouncer=true`                           | **secret** |
+| `DIRECT_URL`                           | direct/session URL, port 5432                                             | **secret** |
+| `SUPABASE_SECRET_KEY`                  | `sb_secret_…` (cover image uploads)                                       | **secret** |
+| `APP_URL`                              | `https://<your-domain>` (manage links in messages, sitemap)               | public     |
+| `CRON_SECRET`                          | 32+ random characters (`openssl rand -hex 32`)                            | **secret** |
+| `RATE_LIMIT_SALT`                      | 32+ random characters                                                     | **secret** |
+| `SMS_PROVIDER`                         | empty (record only), `log` (dev), or `http` (real gateway)                | —          |
+| `SMS_HTTP_URL`                         | gateway endpoint, only with `SMS_PROVIDER=http`                           | —          |
+| `SMS_HTTP_API_KEY`                     | gateway key, sent as `Authorization: Bearer …`                            | **secret** |
+| `SMS_SENDER`                           | sender name or number registered with the gateway                         | —          |
+| `DIRECTORY_MIN_SALONS`                 | optional; listed salons needed before `/` shows the directory (default 5) | —          |
+| `ALLOW_DEVELOPMENT_INVITE_LINKS`       | `true` only while invitation emails are not integrated                    | —          |
 
 Never set `RATE_LIMIT_*` overrides in production unless you mean to loosen protection.
 
@@ -79,13 +83,15 @@ Check: `https://<your-domain>/platform` opens for you and returns 404 for anyone
 
 ## 6. Smoke test on production
 
-1. Signed out: `/` lists salons; `/business` → "Бизнесээ бүртгүүлэх" → sign-up → confirmation email arrives → onboarding → dashboard.
+1. Signed out: `/` lists salons; `/business` → "Бизнесээ бүртгүүлэх" → sign-up → confirmation email arrives → onboarding (Instagram/Facebook, service types, staff count) → dashboard with the "Хүсэлт хянагдаж байна" banner.
+   - `/platform` → «Шинэ хүсэлтүүд» → «Шалгах» → «Зөвшөөрөх». Until then the salon's booking page returns 404.
 2. Add a service (online bookable), a staff member with working hours.
 3. On a phone, open `/<slug>/book`, book a time; the receipt shows "Захиалгаа удирдах".
 4. Admin: the bell shows the new booking; confirm it in the calendar.
 5. Open the manage link, move the time, then cancel.
 6. `/platform` shows the salon with its counts.
-7. Settings: upload a cover image (verifies `SUPABASE_SECRET_KEY` and the bucket).
+7. Settings: upload a cover image (verifies `SUPABASE_SECRET_KEY` and the bucket); add a photo to a service and a staff member and see them on `/<slug>/book`.
+8. `/support`: send a request; it appears at `/platform/feedback`; answer it and see the answer on `/support`.
 
 ## Rollback
 
@@ -93,6 +99,6 @@ Vercel → **Deployments** → previous successful deployment → **Promote to P
 
 ## Known production limits
 
-- No SMS gateway yet: notifications are recorded and shown in Settings but not sent.
+- No SMS gateway yet: notifications are recorded and shown in Settings but not sent. Until `SMS_PROVIDER=http` and all three `SMS_*` values are set, the business page marks SMS features "Удахгүй" and Settings says messages are not sent. The `http` provider's request body is a placeholder: adapt it in `lib/notifications/provider.ts` to the chosen gateway before turning it on.
 - Invitation emails are not integrated; use development links only in a controlled period.
 - Payments (QPay) are not integrated; deposits are by bank transfer and checked manually.

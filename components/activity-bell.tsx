@@ -130,7 +130,7 @@ export function ActivityBell() {
             className="bell-footer"
             onClick={() => setOpen(false)}
           >
-            Календар нээх
+            Календарь нээх
           </Link>
         </section>
       )}

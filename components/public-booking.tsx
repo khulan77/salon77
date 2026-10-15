@@ -106,7 +106,9 @@ export function PublicBooking({
     0,
   );
   const request =
-    step === "time" && chosen.length && !sameStaff
+    // The public availability API stays closed until approval, so a preview
+    // never asks it.
+    step === "time" && chosen.length && !sameStaff && !catalog.preview
       ? new URLSearchParams({
           branchId,
           date,
@@ -153,7 +155,7 @@ export function PublicBooking({
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (sending) return;
+    if (sending || catalog.preview) return;
     setSending(true);
     setError("");
     const body = {
@@ -565,7 +567,12 @@ export function PublicBooking({
                 : formatDuration(longest)}
             </small>
           </h2>
-          {loading ? (
+          {catalog.preview ? (
+            <p className="pb-empty" role="status">
+              Урьдчилан харах горимд сул цаг харуулахгүй. Салон баталгаажсаны
+              дараа үйлчлүүлэгчид энд цагаа сонгоно.
+            </p>
+          ) : loading ? (
             <p className="pb-empty" role="status">
               Сул цаг хайж байна…
             </p>
@@ -692,7 +699,7 @@ export function PublicBooking({
               type="submit"
               form="pb-details"
               className="pb-primary"
-              disabled={sending}
+              disabled={sending || catalog.preview}
             >
               {sending ? "Илгээж байна…" : "Захиалах"}
             </button>

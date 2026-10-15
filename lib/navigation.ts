@@ -34,7 +34,7 @@ export const navigation = [
   {
     label: "ЗАХИАЛГА",
     items: [
-      { title: "Календар", href: "/calendar", icon: CalendarDays },
+      { title: "Календарь", href: "/calendar", icon: CalendarDays },
       { title: "Үйлчлүүлэгчид", href: "/customers", icon: Users },
     ],
   },

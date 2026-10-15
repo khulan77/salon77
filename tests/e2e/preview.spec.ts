@@ -38,10 +38,10 @@ test("dashboard is honest, responsive, and links to working branch form", async 
 test("search navigates to the booking calendar", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Хуудас хайх" }).click();
-  await page.getByPlaceholder("Хуудасны нэрээр хайх…").fill("Календар");
+  await page.getByPlaceholder("Хуудасны нэрээр хайх…").fill("Календарь");
   await page
     .getByRole("dialog")
-    .getByRole("link", { name: "Календар", exact: true })
+    .getByRole("link", { name: "Календарь", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Шинэ захиалга", exact: true }),
@@ -61,10 +61,19 @@ test("preview onboarding validates and does not pretend to save", async ({
   await expect(
     page.getByRole("textbox", { name: "Салоны цахим хаяг" }),
   ).toHaveValue("cloud-nail");
-  await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
-  await page.getByRole("textbox", { name: "Салбарын нэр" }).fill("Main branch");
-  await page.getByRole("textbox", { name: "Дүүрэг" }).fill("Khan-Uul");
-  await page.getByRole("textbox", { name: "Хаяг" }).fill("Street 1");
+  // One step for the address; a single-location salon has no branch name
+  // or second phone to fill.
+  await expect(page.getByText("2 / 3")).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Салбарын нэр" }),
+  ).not.toBeVisible();
+  await expect(page.getByRole("textbox", { name: /утас/i })).toHaveCount(0);
+  await page.getByRole("combobox", { name: "Дүүрэг" }).selectOption("Хан-Уул");
+  await page.getByRole("textbox", { name: "Байршлын хаяг" }).fill("Street 1");
+  await page.getByRole("button", { name: "Олон салбартай" }).click();
+  await expect(page.getByRole("textbox", { name: "Салбарын нэр" })).toHaveValue(
+    "Үндсэн салбар",
+  );
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await expect(
     page.getByRole("heading", { name: "Салоноо баталгаажуулахад туслаарай." }),

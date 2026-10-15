@@ -29,11 +29,11 @@ test("a new salon applies, is sent back, corrects itself and is approved", async
     .fill("88001122");
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByRole("textbox", { name: "Салоны цахим хаяг" }).fill(slug);
-  await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
-  await page.getByRole("textbox", { name: "Салбарын нэр" }).fill("Төв салбар");
-  await page.getByRole("textbox", { name: "Дүүрэг" }).fill("Сүхбаатар");
   await page
-    .getByRole("textbox", { name: "Хаяг" })
+    .getByRole("combobox", { name: "Дүүрэг" })
+    .selectOption("Сүхбаатар");
+  await page
+    .getByRole("textbox", { name: "Байршлын хаяг" })
     .fill("Энхтайвны өргөн чөлөө 1");
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page

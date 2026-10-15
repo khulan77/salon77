@@ -6,11 +6,18 @@ async function login(page: Page, email: string) {
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"));
 }
-test("signed-out visitors see the salon directory at the root", async ({
-  page,
-}, info) => {
+// The fixture lists fewer salons than the default threshold (5).
+test("with few salons the root shows the business page", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("h1")).toContainText("салоноо онлайн болгоё");
+  await expect(page.locator(".hp-card")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: /Бизнесээ бүртгүүлэх/ }).first(),
+  ).toHaveAttribute("href", "/sign-up");
+});
+test("the salon directory stays at /home", async ({ page }, info) => {
+  await page.goto("/home");
   await expect(page.locator("h1")).toContainText("хэдхэн товшилтоор");
   const card = page.locator(".hp-card").filter({ hasText: "Туршилтын салон" });
   await expect(card).toContainText("үйлчилгээ");
@@ -28,10 +35,10 @@ test("signed-out visitors see the salon directory at the root", async ({
   await page.getByRole("button", { name: "Хайх" }).click();
   await expect(page.locator(".hp-card")).toHaveCount(1);
   await expect(page.locator(".hp-card")).toContainText("Өөр салон");
-  await page.goto("/");
+  await page.goto("/home");
   await page.locator(".hp-card").filter({ hasText: "Туршилтын салон" }).click();
   await expect(page).toHaveURL(/\/salon-a\/book$/);
-  await page.goto("/");
+  await page.goto("/home");
   await page.getByRole("link", { name: "Бизнесээ бүртгүүлэх" }).first().click();
   await expect(page).toHaveURL(/\/business$/);
   await page

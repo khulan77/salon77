@@ -27,6 +27,7 @@ import { configured } from "@/lib/env";
 import { identity } from "@/lib/auth";
 import { site, formatSitePhone } from "@/lib/site";
 import { formatMnt } from "@/lib/ui-language";
+import { smsDelivers } from "@/lib/notifications/provider";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Salon77 · Салоны цаг захиалга, удирдлагын систем",
@@ -260,6 +261,7 @@ const extras = [
     icon: BellRing,
     title: "Мэдэгдэл, сануулга",
     text: "Захиалга бүрд үйлчлүүлэгчид мессеж очно.",
+    sms: true,
   },
 ];
 // Signed-in visitors skip sign-up: straight to their salon, or to onboarding.
@@ -274,6 +276,8 @@ async function startHref() {
   return member ? "/" : "/onboarding";
 }
 export default async function BusinessPage() {
+  // Messages are promised only once a real SMS gateway delivers them.
+  const sms = smsDelivers();
   const start = await startHref();
   const signedIn = start !== "/sign-up";
   const phone = site.phone && formatSitePhone(site.phone);
@@ -287,7 +291,7 @@ export default async function BusinessPage() {
           salon77<span className="lp-dot">.</span>
         </Link>
         <nav aria-label="Хуудасны хэсгүүд">
-          <a href="#product">Тайлан, календар</a>
+          <a href="#product">Тайлан, календарь</a>
           <a href="#features">Боломжууд</a>
           <a href="#how">Хэрхэн ажилладаг</a>
           <a href="#faq">Асуулт</a>
@@ -334,7 +338,7 @@ export default async function BusinessPage() {
                 <i />
                 <i />
                 <i />
-                <span>Календар · Өнөөдөр</span>
+                <span>Календарь · Өнөөдөр</span>
               </div>
               <div className="lp-cal">
                 <div className="lp-cal-times">
@@ -408,7 +412,7 @@ export default async function BusinessPage() {
             <span className="lp-eyebrow">НЭГ ДЭЛГЭЦЭЭС</span>
             <h2>Орлого, захиалга, ажилтнаа тоогоор хараарай</h2>
             <p>
-              Тайлан, календар, үйлчилгээ болон ажилтнаар орсон орлого бүгд
+              Тайлан, календарь, үйлчилгээ болон ажилтнаар орсон орлого бүгд
               автоматаар бодогдоно. Дэвтэр, тооны машин хэрэггүй.
             </p>
           </div>
@@ -419,7 +423,7 @@ export default async function BusinessPage() {
                   <CalendarDays size={19} />
                 </span>
                 <div>
-                  <h3>Календар</h3>
+                  <h3>Календарь</h3>
                   <p>Өдөр, долоо хоногоор харна.</p>
                 </div>
               </header>
@@ -429,7 +433,7 @@ export default async function BusinessPage() {
                     <i />
                     <i />
                     <i />
-                    <span>Календар · 7 хоног</span>
+                    <span>Календарь · 7 хоног</span>
                   </div>
                   <div className="lp-wk">
                     <div className="lp-wk-times">
@@ -644,7 +648,12 @@ export default async function BusinessPage() {
               <article key={e.title}>
                 <e.icon size={18} />
                 <div>
-                  <h3>{e.title}</h3>
+                  <h3>
+                    {e.title}
+                    {"sms" in e && !sms && (
+                      <span className="lp-soon">Удахгүй</span>
+                    )}
+                  </h3>
                   <p>{e.text}</p>
                 </div>
               </article>
@@ -695,11 +704,12 @@ export default async function BusinessPage() {
               </p>
             </div>
             <div className="lp-url">
-              <span className="lp-url-bar">salon77.mn/таны-салон/book</span>
+              <span className="lp-url-bar">{site.domain}/tanii-salon/book</span>
               <ul>
                 <li>
                   <MessageSquare size={15} /> Захиалга бүрд үйлчлүүлэгчид мессеж
                   мэдэгдэл
+                  {!sms && <span className="lp-soon">Удахгүй</span>}
                 </li>
                 <li>
                   <CalendarCheck size={15} /> Захиалга шууд таны календарьт орно

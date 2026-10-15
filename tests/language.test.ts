@@ -106,3 +106,39 @@ test("relative login times read naturally in Mongolian", async () => {
   assert.equal(ago(60 * 24 * 5), "5 өдрийн өмнө");
   assert.match(ago(60 * 24 * 40), /^2026 оны 8-р сарын 30/);
 });
+test("service templates and their validation read in Mongolian", async () => {
+  const { SERVICE_TEMPLATES } = await import("../lib/service-templates");
+  const { serviceTemplatesSchema } = await import("../lib/validation");
+  for (const t of SERVICE_TEMPLATES) {
+    assert.match(t.name, /^[А-Яа-яЁёӨөҮү ,]+$/);
+    assert.match(t.category, /^[А-Яа-яЁёӨөҮү ]+$/);
+  }
+  const empty = serviceTemplatesSchema.safeParse({ items: [] });
+  assert.equal(empty.success, false);
+  assert.equal(
+    empty.error?.issues[0].message,
+    "Дор хаяж нэг үйлчилгээ сонгоно уу.",
+  );
+});
+test("branch districts come from one Mongolian list", async () => {
+  const { DISTRICTS, normalizeDistrict } = await import("../lib/districts");
+  assert.equal(DISTRICTS.length, 9);
+  for (const d of DISTRICTS) {
+    assert.match(d, /^[А-Яа-яӨөҮү-]+$/);
+    assert.equal(normalizeDistrict(d), d);
+  }
+  assert.equal(normalizeDistrict("СБД"), "Сүхбаатар");
+  assert.equal(normalizeDistrict(" сүхбаатар дүүрэг "), "Сүхбаатар");
+  assert.equal(normalizeDistrict("Хан Уул"), "Хан-Уул");
+  assert.equal(normalizeDistrict("Khan-Uul"), "Хан-Уул");
+  assert.equal(normalizeDistrict("Дархан"), null);
+  const branch = { name: "Үндсэн салбар", address: "Хаяг", phone: "99112233" };
+  const parsed = branchSchema.safeParse({ ...branch, district: "БЗД" });
+  assert.equal(parsed.success && parsed.data.district, "Баянзүрх");
+  const unknown = branchSchema.safeParse({ ...branch, district: "Дархан" });
+  assert.equal(unknown.success, false);
+  assert.equal(
+    unknown.error?.issues[0].message,
+    "Дүүргээ жагсаалтаас сонгоно уу.",
+  );
+});

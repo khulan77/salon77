@@ -1,7 +1,7 @@
 import { BookingSettings } from "@/components/booking-settings";
 import { SettingsTabs } from "@/components/settings-tabs";
 import { discountedPrice } from "@/lib/pricing";
-import { smsProvider } from "@/lib/notifications/provider";
+import { smsDelivers } from "@/lib/notifications/provider";
 import { RevenueReport } from "@/components/revenue-report";
 import { Timesheet } from "@/components/timesheet";
 import { readTimesheet, timesheetQuery } from "@/lib/services/timesheet";
@@ -99,7 +99,7 @@ export default async function Page({
           slug={data.slug}
           coverUrl={salon?.coverUrl ?? null}
           branches={data.branches.filter((b) => b.active)}
-          smsReady={smsProvider() !== null}
+          smsReady={smsDelivers()}
           services={services.map((s) => ({
             name: s.name,
             durationMinutes: s.durationMinutes,
@@ -189,17 +189,25 @@ export default async function Page({
         <Team data={data} />
       </>
     );
-  if (module === "services")
+  if (module === "services") {
+    const actor = configured ? actorFromMember(await membership()) : null;
+    const [catalog, salon] = actor
+      ? await Promise.all([
+          readCatalog(db, actor),
+          db.salon.findUnique({
+            where: { id: actor.salonId },
+            select: { serviceTypes: true },
+          }),
+        ])
+      : [{ categories: [], services: [] }, null];
     return (
       <ServiceCatalog
         data={data}
-        catalog={
-          configured
-            ? await readCatalog(db, actorFromMember(await membership()))
-            : { categories: [], services: [] }
-        }
+        catalog={catalog}
+        serviceTypes={salon?.serviceTypes ?? []}
       />
     );
+  }
   if (module === "employees") {
     const actor = configured ? actorFromMember(await membership()) : null;
     const [staff, catalog, schedule] = actor

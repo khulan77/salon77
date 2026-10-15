@@ -187,6 +187,11 @@ export function AdminShell({
           <ReviewBanner
             review={data.review}
             owner={data.role === "SALON_OWNER"}
+            previewHref={
+              !data.preview && data.role !== "STAFF"
+                ? `/${data.slug}/book`
+                : null
+            }
           />
         )}
         <main
@@ -267,9 +272,11 @@ export function AdminShell({
 function ReviewBanner({
   review,
   owner,
+  previewHref,
 }: {
   review: AdminData["review"];
   owner: boolean;
+  previewHref: string | null;
 }) {
   const rejected = review.status === "REJECTED";
   return (
@@ -290,6 +297,12 @@ function ReviewBanner({
             : "Салоноо бэлдэж болно. Баталгаажих хүртэл салон тань нийтэд харагдахгүй, онлайн захиалгын холбоос ажиллахгүй."}
         </p>
       </div>
+      {previewHref && (
+        <a href={previewHref} target="_blank" rel="noreferrer">
+          Захиалгын хуудсаа урьдчилан харах
+          <ArrowUpRight size={14} />
+        </a>
+      )}
       {owner && (
         <Link href="/onboarding/review">
           {rejected ? "Засаад дахин илгээх" : "Хүсэлтээ харах"}

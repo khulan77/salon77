@@ -62,6 +62,9 @@ const steps = [
     text: "Бүртгэл, апп шаардлагагүй. Цагаа линкээрээ өөрчилж, цуцалж болно.",
   },
 ];
+// Search, filters and paging stay on the directory even while "/" shows the
+// business page (see app/landing).
+const DIRECTORY = "/home";
 export default async function HomePage({
   searchParams,
 }: {
@@ -88,7 +91,7 @@ export default async function HomePage({
   const filtered = Boolean(data.query || data.district);
   const pages = Math.max(1, Math.ceil(data.total / data.pageSize));
   const link = (page: number) =>
-    `/?${new URLSearchParams({ query: data.query, district: data.district, page: String(page) })}`;
+    `${DIRECTORY}?${new URLSearchParams({ query: data.query, district: data.district, page: String(page) })}`;
   const stats = [
     data.stats.salons > 0 && `${data.stats.salons} салон`,
     data.stats.services > 0 && `${data.stats.services} үйлчилгээ`,
@@ -105,7 +108,7 @@ export default async function HomePage({
         </Link>
         <div className="lp-nav-actions">
           <Link href="/sign-in" className="lp-link hp-hide-sm">
-            Нэвтрэх
+            Салон эзэмшигч нэвтрэх
           </Link>
           <Link href="/business" className="lp-btn small outline">
             Бизнесээ бүртгүүлэх
@@ -126,7 +129,12 @@ export default async function HomePage({
             Салоноо сонгоод сул цагийг нь шууд хараарай. Залгаж, мессеж бичиж
             хүлээх шаардлагагүй.
           </p>
-          <form className="hp-search" method="get" action="/" role="search">
+          <form
+            className="hp-search"
+            method="get"
+            action={DIRECTORY}
+            role="search"
+          >
             <label>
               <Search size={19} />
               <input
@@ -160,7 +168,7 @@ export default async function HomePage({
               {data.popular.map((name) => (
                 <Link
                   key={name}
-                  href={`/?${new URLSearchParams({ query: name })}`}
+                  href={`${DIRECTORY}?${new URLSearchParams({ query: name })}`}
                   aria-current={data.query === name ? "true" : undefined}
                 >
                   {name}
@@ -181,7 +189,7 @@ export default async function HomePage({
           {categories.map((c) => (
             <Link
               key={c.name}
-              href={`/?${new URLSearchParams({ query: c.name })}`}
+              href={`${DIRECTORY}?${new URLSearchParams({ query: c.name })}`}
               className={`tone-${c.tone}`}
               aria-current={data.query === c.name ? "true" : undefined}
             >
@@ -208,7 +216,7 @@ export default async function HomePage({
               </p>
             </div>
             {filtered && (
-              <Link href="/" className="lp-link underline">
+              <Link href={DIRECTORY} className="lp-link underline">
                 Шүүлтүүр арилгах
               </Link>
             )}
@@ -279,7 +287,7 @@ export default async function HomePage({
                 <>
                   <h3>Тохирох салон олдсонгүй</h3>
                   <p>Өөр нэр, үйлчилгээ эсвэл дүүргээр хайгаад үзээрэй.</p>
-                  <Link href="/" className="lp-btn small outline">
+                  <Link href={DIRECTORY} className="lp-btn small outline">
                     Бүх салоныг харах
                   </Link>
                 </>
@@ -347,7 +355,7 @@ export default async function HomePage({
         </div>
         <nav aria-label="Үйлчлүүлэгчдэд">
           <strong>Үйлчлүүлэгчдэд</strong>
-          <Link href="/">Салон хайх</Link>
+          <Link href={DIRECTORY}>Салон хайх</Link>
           <a href="#hp-how-title">Хэрхэн захиалах вэ</a>
         </nav>
         <nav aria-label="Салон эзэмшигчдэд">

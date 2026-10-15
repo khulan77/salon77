@@ -16,6 +16,7 @@ import type { CatalogData } from "@/lib/services/catalog";
 import Image from "next/image";
 import { Button } from "./ui/button";
 import { PhotoField } from "./photo-field";
+import { ServiceTemplates } from "./service-templates";
 import { FeatureDialog, Feedback } from "./ui/feature-dialog";
 import { requestJson } from "@/lib/client-request";
 import {
@@ -48,9 +49,11 @@ function payload(s: Service, active = s.active) {
 export function ServiceCatalog({
   data,
   catalog,
+  serviceTypes = [],
 }: {
   data: AdminData;
   catalog: CatalogData;
+  serviceTypes?: string[];
 }) {
   const router = useRouter();
   const owner = data.role === "SALON_OWNER";
@@ -223,6 +226,9 @@ export function ServiceCatalog({
           onSubmit={submitService}
           onCancel={() => openService(null)}
         />
+      )}
+      {owner && !catalog.services.length && !service && (
+        <ServiceTemplates serviceTypes={serviceTypes} disabled={data.preview} />
       )}
       <div className="catalog-toolbar">
         <div className="segmented" role="group" aria-label="Ангиллаар шүүх">

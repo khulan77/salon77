@@ -2,11 +2,12 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { discountedPrice } from "../pricing";
 import { localStamp } from "../business-time";
+import { DISTRICTS, normalizeDistrict } from "../districts";
 type Database = Prisma.TransactionClient;
 export const directoryQuery = z
   .object({
     query: z.string().trim().max(100).default(""),
-    district: z.string().trim().max(100).default(""),
+    district: z.union([z.enum(DISTRICTS), z.literal("")]).default(""),
     page: z.coerce.number().int().min(0).max(1000).default(0),
   })
   .strict();
@@ -26,6 +27,34 @@ const listed: Prisma.SalonWhereInput = {
   bookingSettings: { publicBookingEnabled: true, listedInDirectory: true },
   services: { some: bookable },
 };
+// Below this many listed salons, signed-out visitors to "/" see the business
+// page instead of a near-empty directory. DIRECTORY_MIN_SALONS overrides it.
+export function directoryThreshold(raw = process.env.DIRECTORY_MIN_SALONS) {
+  const value = Number(raw);
+  return raw?.trim() && Number.isInteger(value) && value >= 0 ? value : 5;
+}
+export function listedSalonCount(db: Database) {
+  return db.salon.count({ where: listed });
+}
+// The root page asks on every signed-out visit, so the count is reused for a
+// minute instead of hitting the database each time.
+const COUNT_TTL_MS = 60_000;
+let countCache: { at: number; value: Promise<number> } | null = null;
+export async function showDirectory(
+  db: Database,
+  threshold = directoryThreshold(),
+  now = Date.now(),
+) {
+  if (!countCache || now - countCache.at >= COUNT_TTL_MS) {
+    const value = listedSalonCount(db);
+    countCache = { at: now, value };
+    // A failed count is not kept, so the next visit asks again.
+    value.catch(() => {
+      if (countCache?.value === value) countCache = null;
+    });
+  }
+  return (await countCache.value) >= threshold;
+}
 export async function listDirectory(
   db: Database,
   raw: unknown,
@@ -33,6 +62,17 @@ export async function listDirectory(
 ) {
   const input = directoryQuery.parse(raw);
   const text = { contains: input.query, mode: "insensitive" as const };
+  // Older branches may still hold a free-text spelling ("СБД"); each one
+  // counts under its standard district.
+  const stored = (
+    await db.branch.findMany({
+      where: { active: true, salon: listed },
+      distinct: ["district"],
+      select: { district: true },
+    })
+  ).map((b) => b.district);
+  const spellings = (district: string) =>
+    stored.filter((v) => normalizeDistrict(v) === district);
   const where: Prisma.SalonWhereInput = {
     ...listed,
     AND: [
@@ -53,12 +93,19 @@ export async function listDirectory(
           }
         : {},
       input.district
-        ? { branches: { some: { active: true, district: input.district } } }
+        ? {
+            branches: {
+              some: {
+                active: true,
+                district: { in: spellings(input.district) },
+              },
+            },
+          }
         : {},
     ],
   };
   const today = new Date(`${localStamp(now).slice(0, 10)}T00:00:00+08:00`);
-  const [total, salons, districts, allSalons, allServices, bookingsToday] =
+  const [total, salons, allSalons, allServices, bookingsToday] =
     await Promise.all([
       db.salon.count({ where }),
       db.salon.findMany({
@@ -85,12 +132,6 @@ export async function listDirectory(
             orderBy: { createdAt: "asc" },
           },
         },
-      }),
-      db.branch.findMany({
-        where: { active: true, salon: listed },
-        distinct: ["district"],
-        select: { district: true },
-        orderBy: { district: "asc" },
       }),
       db.salon.count({ where: listed }),
       db.service.findMany({
@@ -119,7 +160,7 @@ export async function listDirectory(
     ...input,
     total,
     pageSize: PAGE,
-    districts: districts.map((d) => d.district).filter(Boolean),
+    districts: DISTRICTS.filter((d) => spellings(d).length),
     stats: {
       salons: allSalons,
       services: allServices.length,
@@ -141,7 +182,10 @@ export async function listDirectory(
         coverUrl: s.coverUrl ?? s.images[0]?.url ?? null,
         photos: s.images.length + (s.coverUrl ? 1 : 0),
         description: s.description ?? "",
-        district: s.branches[0]?.district ?? "",
+        district: s.branches[0]
+          ? (normalizeDistrict(s.branches[0].district) ??
+            s.branches[0].district)
+          : "",
         address: s.branches[0]?.address ?? "",
         branches: s.branches.length,
         services: own.length,

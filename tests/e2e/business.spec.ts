@@ -11,7 +11,7 @@ test("business page explains the product and leads to sign-up", async ({
     "Найдвартай, аюулгүй",
   ])
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
-  await expect(page.getByText("salon77.mn/таны-салон/book")).toBeVisible();
+  await expect(page.getByText("salon77.mn/tanii-salon/book")).toBeVisible();
   const start = page.getByRole("link", { name: /Бизнесээ бүртгүүлэх/ });
   await expect(start).toHaveCount(2);
   await expect(start.first()).toHaveAttribute("href", "/sign-up");

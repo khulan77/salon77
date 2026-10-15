@@ -306,7 +306,7 @@ export function BookingCalendar({
             <span>{date.split("-").reverse().join(" / ")}</span>
             <small>{weekdayName(date)}</small>
             <span className="sr-only">
-              {mode === "calendar" ? "Календар" : "Захиалгууд"}
+              {mode === "calendar" ? "Календарь" : "Захиалгууд"}
             </span>
           </h1>
           <button

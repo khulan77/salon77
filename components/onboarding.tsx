@@ -9,13 +9,25 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Hourglass } from "lucide-react";
 import { Button } from "./ui/button";
+import { slugify } from "@/lib/slug";
 import { ApplicationFields } from "./application-fields";
+import { DistrictSelect } from "./district-select";
 import { hasSocial, socialRequired } from "@/lib/salon-application";
-export function Onboarding({ preview }: { preview: boolean }) {
+import { site } from "@/lib/site";
+import { signOut } from "@/app/auth/actions";
+export function Onboarding({
+  preview,
+  hasSalon,
+}: {
+  preview: boolean;
+  hasSalon: boolean;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [manyBranches, setManyBranches] = useState(false);
   const [data, setData] = useState({
     name: "",
     phone: "",
@@ -25,35 +37,25 @@ export function Onboarding({ preview }: { preview: boolean }) {
     staffCount: "",
     description: "",
     slug: "",
-    branch: { name: "", district: "", address: "", phone: "" },
+    // A one-location salon never sees the branch name.
+    branch: { name: "Үндсэн салбар", district: "", address: "" },
   });
   const titles = [
     "Салоныхоо тухай танилцуулаарай.",
-    "Салоныхоо цахим хаягийг сонгоорой.",
-    "Эхний салбараа бүртгээрэй.",
+    "Салоныхоо хаяг, байршлыг оруулаарай.",
     "Салоноо баталгаажуулахад туслаарай.",
     "Таны хүсэлтийг хүлээн авлаа.",
   ];
   const descriptions = [
     "Үндсэн мэдээллээс эхэлье. Бусдыг нь дараа нэмж болно.",
-    "Салоны танилцуулга хуудсандаа тогтооход хялбар хаяг сонгоорой.",
-    "Эхний салбараа нэмээрэй. Бусад салбараа дараа бүртгэж болно.",
+    "Цахим хаягаа сонгоод салон хаана байрладгийг оруулаарай. Бусад салбараа дараа нэмж болно.",
     "Бид салон бүрийг шалгаж баталгаажуулдаг. Доорх мэдээлэл үүнд тусална.",
   ];
+  const steps = titles.length - 1;
   async function next(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (step === 0) {
-      if (!data.slug)
-        setData({
-          ...data,
-          slug: data.name
-            .toLowerCase()
-            .normalize("NFKD")
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, ""),
-          branch: { ...data.branch, phone: data.phone },
-        });
       setStep(1);
       return;
     }
@@ -91,10 +93,6 @@ export function Onboarding({ preview }: { preview: boolean }) {
       setStep(2);
       return;
     }
-    if (step === 2) {
-      setStep(3);
-      return;
-    }
     if (!hasSocial(data)) {
       setError(socialRequired);
       return;
@@ -114,11 +112,16 @@ export function Onboarding({ preview }: { preview: boolean }) {
       const result = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, staffCount: Number(data.staffCount) }),
+        body: JSON.stringify({
+          ...data,
+          staffCount: Number(data.staffCount),
+          // The branch is reached on the salon's own number.
+          branch: { ...data.branch, phone: data.phone },
+        }),
       });
       const body = await result.json();
       if (!result.ok) throw new Error(body.error);
-      setStep(4);
+      setStep(steps);
       router.refresh();
     } catch (e) {
       setError(
@@ -140,14 +143,23 @@ export function Onboarding({ preview }: { preview: boolean }) {
             <span className="brand-dot">.</span>
           </span>
         </Link>
-        <Link href="/">Удирдлагын хэсэгт буцах ↗</Link>
+        {/* Without a salon, "/" would only send the user back here. */}
+        {preview || hasSalon ? (
+          <Link href="/">Удирдлагын хэсэгт буцах ↗</Link>
+        ) : (
+          <form action={signOut}>
+            <button type="submit" className="onboarding-sign-out">
+              Гарах
+            </button>
+          </form>
+        )}
       </header>
       <main className="onboarding-container">
         <div
           className="onboarding-steps"
-          aria-label={`5 алхмын ${step + 1} дахь алхам`}
+          aria-label={`${steps} алхмын ${Math.min(step + 1, steps)} дахь алхам`}
         >
-          {titles.map((t, i) => (
+          {titles.slice(0, steps).map((t, i) => (
             <div
               className={`onboarding-step ${i <= step ? "done" : ""}`}
               key={t}
@@ -155,9 +167,11 @@ export function Onboarding({ preview }: { preview: boolean }) {
           ))}
         </div>
         <section className="onboarding-card">
-          {step < 4 ? (
+          {step < steps ? (
             <>
-              <div className="eyebrow">ЭХЛЭХ ТОХИРГОО · {step + 1} / 5</div>
+              <div className="eyebrow">
+                ЭХЛЭХ ТОХИРГОО · {step + 1} / {steps}
+              </div>
               <h1>{titles[step]}</h1>
               <p>{descriptions[step]}</p>
               {preview && (
@@ -186,7 +200,14 @@ export function Onboarding({ preview }: { preview: boolean }) {
                         maxLength={100}
                         value={data.name}
                         onChange={(e) =>
-                          setData({ ...data, name: e.target.value })
+                          setData({
+                            ...data,
+                            name: e.target.value,
+                            // Follows the name until the owner edits it.
+                            slug: slugEdited
+                              ? data.slug
+                              : slugify(e.target.value),
+                          })
                         }
                         placeholder="Салоныхоо нэрийг оруулна уу"
                       />
@@ -226,12 +247,13 @@ export function Onboarding({ preview }: { preview: boolean }) {
                         minLength={3}
                         maxLength={63}
                         value={data.slug}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          setSlugEdited(true);
                           setData({
                             ...data,
                             slug: e.target.value.toLowerCase(),
-                          })
-                        }
+                          });
+                        }}
                         placeholder="tanii-salon"
                       />
                       <small>
@@ -240,47 +262,20 @@ export function Onboarding({ preview }: { preview: boolean }) {
                       </small>
                     </label>
                     <div className="url-preview">
-                      salon77.mn/<strong>{data.slug || "tanii-salon"}</strong>
+                      {site.domain}/
+                      <strong>{data.slug || "tanii-salon"}</strong>/book
                     </div>
-                  </>
-                )}
-                {step === 2 && (
-                  <>
+                    <DistrictSelect
+                      value={data.branch.district}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          branch: { ...data.branch, district: e.target.value },
+                        })
+                      }
+                    />
                     <label className="field">
-                      Салбарын нэр
-                      <input
-                        required
-                        maxLength={100}
-                        value={data.branch.name}
-                        onChange={(e) =>
-                          setData({
-                            ...data,
-                            branch: { ...data.branch, name: e.target.value },
-                          })
-                        }
-                        placeholder="Жишээ: Төв салбар"
-                      />
-                    </label>
-                    <label className="field">
-                      Дүүрэг
-                      <input
-                        required
-                        maxLength={100}
-                        value={data.branch.district}
-                        onChange={(e) =>
-                          setData({
-                            ...data,
-                            branch: {
-                              ...data.branch,
-                              district: e.target.value,
-                            },
-                          })
-                        }
-                        placeholder="Жишээ: Сүхбаатар"
-                      />
-                    </label>
-                    <label className="field">
-                      Хаяг
+                      Байршлын хаяг
                       <textarea
                         required
                         maxLength={500}
@@ -294,24 +289,37 @@ export function Onboarding({ preview }: { preview: boolean }) {
                         placeholder="Гудамж, байр, давхар"
                       />
                     </label>
-                    <label className="field">
-                      Салбарын утас
-                      <input
-                        type="tel"
-                        required
-                        maxLength={30}
-                        value={data.branch.phone}
-                        onChange={(e) =>
-                          setData({
-                            ...data,
-                            branch: { ...data.branch, phone: e.target.value },
-                          })
-                        }
-                      />
-                    </label>
+                    {manyBranches ? (
+                      <label className="field">
+                        Салбарын нэр
+                        <input
+                          required
+                          maxLength={100}
+                          value={data.branch.name}
+                          onChange={(e) =>
+                            setData({
+                              ...data,
+                              branch: { ...data.branch, name: e.target.value },
+                            })
+                          }
+                          placeholder="Жишээ: Зайсан салбар"
+                        />
+                        <small>
+                          Бусад салбараа дараа «Салбарууд» хэсгээс нэмнэ.
+                        </small>
+                      </label>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-action quiet"
+                        onClick={() => setManyBranches(true)}
+                      >
+                        Олон салбартай
+                      </button>
+                    )}
                   </>
                 )}
-                {step === 3 && (
+                {step === 2 && (
                   <ApplicationFields
                     value={data}
                     onChange={(patch) => setData({ ...data, ...patch })}
@@ -334,7 +342,7 @@ export function Onboarding({ preview }: { preview: boolean }) {
                   <Button disabled={pending}>
                     {pending
                       ? "Түр хүлээнэ үү…"
-                      : step === 3
+                      : step === steps - 1
                         ? "Хүсэлт илгээх"
                         : "Үргэлжлүүлэх"}
                     <ArrowRight size={14} />
@@ -345,7 +353,7 @@ export function Onboarding({ preview }: { preview: boolean }) {
           ) : (
             <div className="onboarding-success">
               <Hourglass size={52} strokeWidth={1.2} />
-              <h1>{titles[4]}</h1>
+              <h1>{titles[steps]}</h1>
               <p>
                 Бид мэдээллийг тань шалгаад салоныг баталгаажуулна. Энэ хооронд
                 үйлчилгээ, ажилтан, зургаа бэлдээрэй. Баталгаажмагц салон тань

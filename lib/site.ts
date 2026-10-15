@@ -2,6 +2,8 @@
 // so nothing placeholder-like ever reaches visitors.
 export const site = {
   name: "Salon77",
+  // Shown in booking-link examples; the live address comes from APP_URL.
+  domain: "salon77.mn",
   // Shown as "@handle" and linked to instagram.com/<handle>.
   instagram: "",
   // Mongolian numbers are formatted as "9911 2233".
