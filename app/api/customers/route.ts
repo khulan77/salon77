@@ -7,6 +7,7 @@ import {
   listCustomers,
   customerDetail,
   updateCustomer,
+  deleteCustomer,
 } from "@/lib/services/customers";
 const query = z
   .object({
@@ -40,6 +41,23 @@ export async function PATCH(request: Request) {
         actorFromMember(await membership()),
         z.string().min(1).parse(q.id),
         await request.json(),
+      ),
+    );
+  } catch (e) {
+    return failure(e);
+  }
+}
+export async function DELETE(request: Request) {
+  try {
+    sameOrigin(request);
+    const q = query.parse(
+      Object.fromEntries(new URL(request.url).searchParams),
+    );
+    return Response.json(
+      await deleteCustomer(
+        db,
+        actorFromMember(await membership()),
+        z.string().min(1).parse(q.id),
       ),
     );
   } catch (e) {

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   ArrowUpRight,
@@ -8,20 +9,17 @@ import {
   ChevronsUpDown,
   Menu,
   X,
-  Sparkles,
   LogOut,
   Search,
   Command,
   CircleHelp,
   ArrowRight,
-  Hourglass,
-  Undo2,
+  CalendarClock,
 } from "lucide-react";
 import { moduleAllowed } from "@/lib/access";
 import { navigation, modules } from "@/lib/navigation";
 import { signOut } from "@/app/auth/actions";
 import type { AdminData } from "@/lib/admin-data";
-import { REVIEW_LABELS } from "@/lib/salon-application";
 import { ActivityBell } from "./activity-bell";
 export function AdminShell({
   data,
@@ -37,8 +35,7 @@ export function AdminShell({
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
   const [profile, setProfile] = useState(false);
-  const current =
-    modules.find((i) => i.href === path)?.title ?? "Хяналтын самбар";
+  const current = modules.find((i) => i.href === path)?.title ?? "Календарь";
   return (
     <div className="app-shell">
       {open && (
@@ -59,8 +56,12 @@ export function AdminShell({
           </span>
         </Link>
         <div className="workspace">
-          <div className="workspace-avatar">
-            <ScissorMark />
+          <div className={`workspace-avatar ${data.logoUrl ? "has-logo" : ""}`}>
+            {data.logoUrl ? (
+              <Image src={data.logoUrl} alt="" fill unoptimized sizes="40px" />
+            ) : (
+              <ScissorMark />
+            )}
           </div>
           <div>
             <strong>{data.salonName}</strong>
@@ -95,20 +96,6 @@ export function AdminShell({
               </div>
             ))}
         </nav>
-        {data.role === "SALON_OWNER" && (
-          <div className="sidebar-footer">
-            <div className="small-spark">
-              <Sparkles size={16} />
-            </div>
-            <div>
-              <strong>Илүү олон боломж.</strong>
-              <p>Шинэ боломжууд удахгүй.</p>
-            </div>
-            <Link href="/plan" aria-label="Багц харах">
-              <ArrowUpRight size={17} />
-            </Link>
-          </div>
-        )}
       </aside>
       <div className="main-shell">
         <header className="topbar">
@@ -126,14 +113,14 @@ export function AdminShell({
           </div>
           <div className="header-actions">
             <span
-              className={`workspace-status ${data.review.status === "APPROVED" ? "" : "waiting"}`}
+              className={`workspace-status ${data.billing.warn ? "waiting" : ""}`}
             >
               <i />{" "}
               {data.preview
                 ? "Танилцах горим"
-                : data.review.status === "APPROVED"
-                  ? "Идэвхтэй"
-                  : REVIEW_LABELS[data.review.status]}
+                : data.billing.state === "TRIAL"
+                  ? `Туршилт · ${data.billing.daysLeft} хоног`
+                  : "Идэвхтэй"}
             </span>
             {!data.preview && data.role !== "STAFF" && <ActivityBell />}
             <button
@@ -183,16 +170,22 @@ export function AdminShell({
             </div>
           </div>
         </header>
-        {data.review.status !== "APPROVED" && (
-          <ReviewBanner
-            review={data.review}
-            owner={data.role === "SALON_OWNER"}
-            previewHref={
-              !data.preview && data.role !== "STAFF"
-                ? `/${data.slug}/book`
-                : null
-            }
-          />
+        {data.billing.warn && data.role === "SALON_OWNER" && (
+          <aside className="billing-banner" role="status">
+            <CalendarClock size={18} />
+            <p>
+              <strong>
+                {data.billing.state === "TRIAL"
+                  ? "Үнэгүй туршилт"
+                  : "Төлсөн хугацаа"}{" "}
+                {data.billing.daysLeft} хоногийн дараа дуусна.
+              </strong>{" "}
+              Үргэлжлүүлэн ашиглахын тулд сарын төлбөрөө төлнө үү.
+            </p>
+            <Link href="/billing">
+              Төлбөрийн мэдээлэл <ArrowRight size={14} />
+            </Link>
+          </aside>
         )}
         <main
           className={fullHeight ? "page-content full-height" : "page-content"}
@@ -265,51 +258,6 @@ export function AdminShell({
         </div>
       )}
     </div>
-  );
-}
-// Shown until the platform approves the salon: setup works, the public side
-// stays closed.
-function ReviewBanner({
-  review,
-  owner,
-  previewHref,
-}: {
-  review: AdminData["review"];
-  owner: boolean;
-  previewHref: string | null;
-}) {
-  const rejected = review.status === "REJECTED";
-  return (
-    <aside
-      className={`review-banner ${rejected ? "rejected" : ""}`}
-      role="status"
-    >
-      {rejected ? <Undo2 size={18} /> : <Hourglass size={18} />}
-      <div>
-        <strong>
-          {rejected ? "Хүсэлтийг тань буцаалаа" : "Хүсэлт хянагдаж байна"}
-        </strong>
-        <p>
-          {rejected
-            ? review.note
-              ? `Шалтгаан: ${review.note}`
-              : "Мэдээллээ засаад дахин илгээнэ үү."
-            : "Салоноо бэлдэж болно. Баталгаажих хүртэл салон тань нийтэд харагдахгүй, онлайн захиалгын холбоос ажиллахгүй."}
-        </p>
-      </div>
-      {previewHref && (
-        <a href={previewHref} target="_blank" rel="noreferrer">
-          Захиалгын хуудсаа урьдчилан харах
-          <ArrowUpRight size={14} />
-        </a>
-      )}
-      {owner && (
-        <Link href="/onboarding/review">
-          {rejected ? "Засаад дахин илгээх" : "Хүсэлтээ харах"}
-          <ArrowRight size={14} />
-        </Link>
-      )}
-    </aside>
   );
 }
 function ScissorMark() {

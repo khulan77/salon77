@@ -114,7 +114,9 @@ Apply the migrations in order using `bun run db:migrate`: `202610050001_foundati
 - `/api/categories`, `/api/services`, `/api/staff` — GET scoped lists, POST create, PATCH update
 - `/api/working-hours`, `/api/time-off` — GET scoped schedule, POST/PATCH save, DELETE correction
 - Operational GET endpoints accept optional `branchId`, which is checked against server-resolved access.
-- Future pages: `/reviews`, `/packages`, `/promotions`, `/inventory`, `/sales`, `/salon-page`, `/gallery`, `/reports`, `/plan`, `/partnership`, `/support`, `/settings`.
+- Placeholder pages for unbuilt features were removed; unknown admin paths return 404.
+- Billing: approval starts a 14-day free trial (`Salon.trialEndsAt`). The operator sets one price per active branch at `/platform`, may override it per salon (`Salon.monthlyPriceMnt`), and records each received fee, which extends `Salon.paidUntil` by 30 days from the current end. Owners are warned 3 days before access ends; after that members only reach `/billing`, and the booking page and directory listing close. Salons with neither date (created outside onboarding) are not billed.
+- Until the platform approves a salon, its members reach only `/onboarding/review` (admin pages and APIs return 403). A suspended salon (e.g. unpaid monthly fee) sends its members to `/suspended`.
 
 Public `/{salon-slug}/book` is available in Phase 3; a standalone salon landing page is not enabled yet. The onboarding validator reserves application paths, and PostgreSQL guarantees uniqueness. Future public rendering must select only publishable fields, never reuse the private admin data loader.
 

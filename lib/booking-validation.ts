@@ -48,6 +48,14 @@ export const availabilitySchema = z
     durationMinutes: durationOverride.optional(),
   })
   .strict();
+// Desk only: an extra charge on top of the service price, and how it was paid.
+const extraAmount = z
+  .number({ message: "Нэмэлт төлбөрийг тоогоор оруулна уу." })
+  .int("Нэмэлт төлбөрийг бүхэл тоогоор оруулна уу.")
+  .min(0, "Нэмэлт төлбөр сөрөг байж болохгүй.")
+  .max(100_000_000, "Нэмэлт төлбөр хэт өндөр байна.");
+export const extraCharge = extraAmount.default(0);
+export const paymentMethodSchema = z.enum(["POS", "TRANSFER", "CASH"]);
 export const bookingSchema = z
   .object({
     branchId: id,
@@ -57,6 +65,8 @@ export const bookingSchema = z
     customerId: id.optional(),
     customer: customerInput.optional(),
     durationMinutes: durationOverride.optional(),
+    extraMnt: extraCharge,
+    paymentMethod: paymentMethodSchema.optional(),
     notes: z.string().trim().max(2000).default(""),
     idempotencyKey: z.uuid(),
   })
@@ -81,6 +91,22 @@ export const changeBookingSchema = z.discriminatedUnion("action", [
       version: z.number().int().positive(),
     })
     .strict(),
+  z
+    .object({
+      action: z.literal("payment"),
+      paymentMethod: paymentMethodSchema.nullable(),
+      // Left out, the current extra stays as it is.
+      extraMnt: extraAmount.optional(),
+      version: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("lock"),
+      locked: z.boolean(),
+      version: z.number().int().positive(),
+    })
+    .strict(),
 ]);
 export const statusLabels: Record<string, string> = {
   PENDING: "Хүлээгдэж буй",
@@ -88,6 +114,11 @@ export const statusLabels: Record<string, string> = {
   COMPLETED: "Дууссан",
   CANCELLED: "Цуцалсан",
   NO_SHOW: "Ирээгүй",
+};
+export const paymentLabels: Record<string, string> = {
+  POS: "POS",
+  TRANSFER: "Шилжүүлэг",
+  CASH: "Бэлэн",
 };
 export const sourceLabels: Record<string, string> = {
   ONLINE: "Цахим",

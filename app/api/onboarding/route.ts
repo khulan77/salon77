@@ -5,6 +5,7 @@ import { resubmitApplication } from "@/lib/services/application";
 import { db } from "@/lib/db";
 import { onboardingSchema } from "@/lib/validation";
 import { failure, sameOrigin } from "@/lib/http";
+import { notifyApplication } from "@/lib/notifications/platform-email";
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -49,6 +50,10 @@ export async function POST(request: Request) {
       sameSite: "lax",
       path: "/",
     });
+    notifyApplication(
+      { id: salon.id, name: salon.name, ownerEmail: user.email ?? "" },
+      false,
+    );
     return Response.json({ success: true }, { status: 201 });
   } catch (e) {
     return failure(e);
@@ -57,14 +62,23 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     sameOrigin(request);
-    const member = await membership();
-    return Response.json(
-      await resubmitApplication(
-        db,
-        actorFromMember(member),
-        await request.json(),
-      ),
+    // The application itself stays editable while the salon is under review.
+    const member = await membership({ unapproved: true });
+    const application = await resubmitApplication(
+      db,
+      actorFromMember(member),
+      await request.json(),
     );
+    const user = await identity();
+    notifyApplication(
+      {
+        id: member.salonId,
+        name: application.name,
+        ownerEmail: user.email ?? "",
+      },
+      true,
+    );
+    return Response.json(application);
   } catch (e) {
     return failure(e);
   }

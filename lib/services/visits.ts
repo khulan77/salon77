@@ -1,8 +1,14 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Booking, PrismaClient } from "@prisma/client";
+import type { Actor } from "../access";
 import { HttpError } from "../errors";
-import { customerInput, dateSchema } from "../booking-validation";
+import {
+  customerInput,
+  dateSchema,
+  extraCharge,
+  paymentMethodSchema,
+} from "../booking-validation";
 import { localStamp } from "../business-time";
 import { depositAmount, publicBookingClosed } from "../booking-settings";
 import { discountedPrice } from "../pricing";
@@ -236,6 +242,136 @@ export async function createVisit(
       { manageUrl: absoluteManageUrl(slug, manageToken) },
     );
     return Object.assign(created, { manageToken });
+  });
+}
+// Desk visits: staff book one or two services that start together, each by
+// a different staff member, with an optional extra charge and payment.
+export const deskVisitSchema = z
+  .object({
+    branchId: id,
+    items,
+    startAt: z.iso.datetime({ offset: true }),
+    customer: customerInput,
+    extraMnt: extraCharge,
+    paymentMethod: paymentMethodSchema.optional(),
+    notes: z.string().trim().max(2000).default(""),
+    idempotencyKey: z.uuid(),
+  })
+  .strict();
+export async function deskVisitAvailability(
+  db: Database,
+  actor: Actor,
+  raw: unknown,
+) {
+  const input = visitAvailabilitySchema.parse(raw);
+  const scope = await resolveContext(db, { actor });
+  const { results, slots } = await visitSlots(db, scope, input);
+  return {
+    durationMinutes: Math.max(...results.map((r) => r.service.durationMinutes)),
+    slots: slots.map((s) => ({ startAt: s.startAt })),
+  };
+}
+export async function createDeskVisit(
+  db: PrismaClient,
+  actor: Actor,
+  raw: unknown,
+): Promise<Booking[]> {
+  const input = deskVisitSchema.parse(raw);
+  return transaction(db, async (tx) => {
+    const scope = await resolveContext(tx, { actor }),
+      current = scope.actor!;
+    const hash = createHash("sha256")
+      .update(JSON.stringify({ input, principal: `member:${current.id}` }))
+      .digest("hex");
+    const existing = await tx.booking.findUnique({
+      where: {
+        salonId_idempotencyKey: {
+          salonId: scope.salonId,
+          idempotencyKey: input.idempotencyKey,
+        },
+      },
+    });
+    if (existing) {
+      if (existing.requestHash !== hash)
+        throw new HttpError(
+          409,
+          "Давтан хүсэлтийн мэдээлэл зөрж байна. Шинэ захиалга эхлүүлнэ үү.",
+        );
+      return existing.groupId
+        ? tx.booking.findMany({
+            where: { salonId: scope.salonId, groupId: existing.groupId },
+            orderBy: { idempotencyKey: "asc" },
+          })
+        : [existing];
+    }
+    const candidates = new Set<string>();
+    for (const item of input.items)
+      for (const s of (
+        await resources(tx, scope, input.branchId, item.serviceId, item.staffId)
+      ).staff)
+        candidates.add(s.id);
+    await lockStaff(tx, [...candidates]);
+    const startAt = new Date(input.startAt);
+    const { results, slots: open } = await visitSlots(tx, scope, {
+      branchId: input.branchId,
+      date: localStamp(startAt).slice(0, 10),
+      items: input.items,
+    });
+    const slot = open.find((s) => s.startAt === startAt.toISOString());
+    if (!slot) throw new HttpError(409, bookingConflict);
+    const customer = await tx.customer.upsert({
+      where: {
+        salonId_phone: { salonId: scope.salonId, phone: input.customer.phone },
+      },
+      create: {
+        salonId: scope.salonId,
+        name: input.customer.name,
+        phone: input.customer.phone,
+        email: input.customer.email || null,
+      },
+      update: {},
+    });
+    const groupId = input.items.length > 1 ? randomUUID() : null;
+    const created: Booking[] = [];
+    for (const [i, { service }] of results.entries())
+      created.push(
+        await tx.booking.create({
+          data: {
+            salonId: scope.salonId,
+            branchId: input.branchId,
+            serviceId: service.id,
+            staffId: slot.staff[i],
+            customerId: customer.id,
+            startAt,
+            endAt: new Date(+startAt + service.durationMinutes * 60000),
+            status: "CONFIRMED",
+            source: current.role === "SALON_OWNER" ? "OWNER" : "RECEPTION",
+            createdByMemberId: current.id,
+            serviceNameSnapshot: service.name,
+            durationMinutesSnapshot: service.durationMinutes,
+            priceSnapshot: discountedPrice(
+              service.priceMnt,
+              service.discountPercent,
+            ),
+            discountPercentSnapshot: service.discountPercent,
+            depositAmountSnapshot: 0,
+            // The visit's extra and payment sit on its first booking only,
+            // so revenue counts them once.
+            extraMnt: i ? 0 : input.extraMnt,
+            paymentMethod: input.paymentMethod ?? null,
+            customerNameSnapshot: input.customer.name,
+            customerPhoneSnapshot: input.customer.phone,
+            notes: input.notes,
+            idempotencyKey: i
+              ? `${input.idempotencyKey}:${i + 1}`
+              : input.idempotencyKey,
+            requestHash: hash,
+            groupId,
+          },
+        }),
+      );
+    await enqueueNotice(tx, created, "BOOKING_CONFIRMED");
+    return created;
   });
 }
 export async function visitReceipt(db: Database, bookings: Booking[]) {

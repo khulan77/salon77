@@ -6,6 +6,7 @@ import {
   directoryThreshold,
   listDirectory,
   listedSalonCount,
+  listedSalonSlugs,
   showDirectory,
 } from "../../lib/services/directory";
 test("public salon directory", { timeout: 120000 }, async (t) => {
@@ -153,6 +154,10 @@ test("public salon directory", { timeout: 120000 }, async (t) => {
         assert.equal(directoryThreshold("12"), 12);
         // Only salon-a is still listed after the previous step.
         assert.equal(await listedSalonCount(db), 1);
+        assert.deepEqual(
+          (await listedSalonSlugs(db)).map((s) => s.slug),
+          ["salon-a"],
+        );
         const start = 1_000_000;
         assert.equal(await showDirectory(db, 5, start), false);
         assert.equal(await showDirectory(db, 1, start), true);

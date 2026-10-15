@@ -1,25 +1,37 @@
 "use client";
+import { Stars } from "./manage-visit";
+import { socialUrl } from "@/lib/salon-application";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   CalendarDays,
   Check,
   Clock3,
+  AtSign,
+  Globe,
   MapPin,
+  Navigation,
   Phone,
   Plus,
+  Star,
   UserRound,
+  X,
 } from "lucide-react";
 import type { PublicCatalog } from "@/lib/services/bookings";
 import type { VisitReceipt } from "@/lib/services/visits";
 import { addDays, localStamp } from "@/lib/business-time";
-import { clockTime } from "@/lib/schedule-time";
 import Image from "next/image";
 import { tone, initials } from "@/lib/avatar";
-import { formatDuration, formatMnt, userFacingError } from "@/lib/ui-language";
+import { optimizable } from "@/lib/image";
+import {
+  formatDayLabel,
+  formatDuration,
+  formatMnt,
+  userFacingError,
+} from "@/lib/ui-language";
 import { depositAmount } from "@/lib/booking-settings";
 import { DepositInstructions } from "./deposit-instructions";
-import { SalonGallery } from "./salon-gallery";
+import { SalonGallery, WorkGallery } from "./salon-gallery";
 type Service = PublicCatalog["services"][number];
 type Step = "menu" | "time" | "details" | "done";
 const MAX_SERVICES = 2;
@@ -31,10 +43,25 @@ function period(time: string) {
   const hour = Number(time.slice(0, 2));
   return hour < 12 ? "Өглөө" : hour < 17 ? "Өдөр" : "Орой";
 }
-function instagramUrl(handle: string) {
-  return handle.startsWith("http")
-    ? handle
-    : `https://instagram.com/${handle.replace(/^@/, "")}`;
+// Opens the branch in Google Maps: its pin when set, else the address.
+function mapsUrl(branch: {
+  address: string;
+  district: string;
+  latitude: number | null;
+  longitude: number | null;
+}) {
+  const query =
+    branch.latitude !== null && branch.longitude !== null
+      ? `${branch.latitude},${branch.longitude}`
+      : [branch.address, branch.district, "Улаанбаатар"]
+          .filter(Boolean)
+          .join(", ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+// "11 сарын 5, Пүрэв · 14:30"
+function friendlyTime(iso: string) {
+  const stamp = localStamp(iso);
+  return `${formatDayLabel(stamp.slice(0, 10))} · ${stamp.slice(11)}`;
 }
 export function PublicBooking({
   slug,
@@ -44,14 +71,8 @@ export function PublicBooking({
   catalog: PublicCatalog;
 }) {
   const { salon, policy } = catalog;
-  // Cover first, then the gallery, without repeats.
-  const photos = [
-    ...new Set(
-      [salon.coverUrl, ...salon.images.map((i) => i.url)].filter(
-        (url): url is string => Boolean(url),
-      ),
-    ),
-  ];
+  // The gallery shows the salon's work; the top photo is the branch's own.
+  const work = salon.images.map((i) => i.url);
   const [step, setStep] = useState<Step>("menu");
   const [branchId, setBranchId] = useState(catalog.branches[0]?.id ?? "");
   const [category, setCategory] = useState("all");
@@ -201,22 +222,57 @@ export function PublicBooking({
       setSending(false);
     }
   }
+  // Only real profile links on the networks themselves.
+  const instagram = salon.instagram && socialUrl("instagram", salon.instagram),
+    facebook = salon.facebook && socialUrl("facebook", salon.facebook);
   const hero = (
     <header className="pb-hero">
-      <SalonGallery name={salon.name} photos={photos} />
+      <SalonGallery
+        name={salon.name}
+        photos={[branch?.imageUrl ?? salon.coverUrl ?? work[0]].filter(
+          (url): url is string => Boolean(url),
+        )}
+      />
       <div className="pb-hero-body">
-        <h1>{salon.name}</h1>
+        <div className="pb-title">
+          {salon.logoUrl && (
+            <span className="pb-logo">
+              <Image
+                src={salon.logoUrl}
+                alt=""
+                fill
+                unoptimized={!optimizable(salon.logoUrl)}
+                sizes="48px"
+              />
+            </span>
+          )}
+          <div>
+            <h1>{salon.name}</h1>
+            {catalog.reviews.average !== null && (
+              <a className="pb-rating" href="#pb-reviews">
+                <Star size={14} /> {catalog.reviews.average.toFixed(1)}
+                <span>· {catalog.reviews.count} үнэлгээ</span>
+              </a>
+            )}
+          </div>
+        </div>
         {salon.description && <p className="pb-about">{salon.description}</p>}
         {branch && (
           <ul className="pb-facts">
             <li>
               <MapPin size={14} />
-              {[branch.district, branch.address].filter(Boolean).join(", ")}
+              <a
+                className="pb-map-link"
+                href={mapsUrl(branch)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {[branch.district, branch.address].filter(Boolean).join(", ")}
+              </a>
             </li>
             <li>
               <Clock3 size={14} />
-              Өдөр бүр {clockTime(branch.openMinute)} –{" "}
-              {clockTime(branch.closeMinute)}
+              {branch.hours}
             </li>
           </ul>
         )}
@@ -226,13 +282,19 @@ export function PublicBooking({
               <Phone size={14} /> Залгах
             </a>
           )}
-          {salon.instagram && (
-            <a
-              href={instagramUrl(salon.instagram)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Инстаграм
+          {branch && (
+            <a href={mapsUrl(branch)} target="_blank" rel="noreferrer">
+              <Navigation size={14} /> Чиглэл
+            </a>
+          )}
+          {instagram && (
+            <a href={instagram} target="_blank" rel="noreferrer">
+              <AtSign size={14} /> Инстаграм
+            </a>
+          )}
+          {facebook && (
+            <a href={facebook} target="_blank" rel="noreferrer">
+              <Globe size={14} /> Фэйсбүүк
             </a>
           )}
         </div>
@@ -262,11 +324,14 @@ export function PublicBooking({
               ? "Таны цаг баталгаажлаа."
               : "Салон таны захиалгыг хүлээн авлаа. Баталгаажуулахыг хүлээнэ үү."}
           </p>
+          {receipt.status !== "CONFIRMED" && receipt.manageUrl && (
+            <StatusCheck slug={slug} manageUrl={receipt.manageUrl} />
+          )}
           <div className="pb-ticket">
             <strong>{receipt.salonName}</strong>
             <span>
               <CalendarDays size={14} />
-              {localStamp(receipt.startAt).replace("T", " ")}
+              {friendlyTime(receipt.startAt)}
             </span>
             <span>
               <MapPin size={14} />
@@ -342,6 +407,40 @@ export function PublicBooking({
           </div>
         </div>
       )}
+      {step === "menu" && <WorkGallery name={salon.name} photos={work} />}
+      {step === "menu" && (
+        <StaffProfiles
+          staff={catalog.staff.filter((p) => p.branchIds.includes(branchId))}
+          services={catalog.services}
+        />
+      )}
+      {step === "menu" && catalog.reviews.latest.length > 0 && (
+        <section
+          className="pb-reviews"
+          id="pb-reviews"
+          aria-labelledby="pb-reviews-title"
+        >
+          <h2 id="pb-reviews-title">
+            Сэтгэгдлүүд
+            <span>
+              <Star size={14} /> {catalog.reviews.average?.toFixed(1)} ·{" "}
+              {catalog.reviews.count} үнэлгээ
+            </span>
+          </h2>
+          <ul>
+            {catalog.reviews.latest.map((r) => (
+              <li key={r.id}>
+                <div>
+                  <strong>{r.customerName}</strong>
+                  <Stars value={r.rating} />
+                </div>
+                <p>{r.comment}</p>
+                <small>{r.serviceName}</small>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <ol className="pb-progress" aria-label="Захиалгын алхмууд">
         {(["menu", "time", "details"] as const).map((s, i) => (
           <li
@@ -384,27 +483,32 @@ export function PublicBooking({
             Үйлчилгээ сонгох
             <small>Нэг удаад 2 хүртэл үйлчилгээг 2 ажилтан зэрэг хийнэ.</small>
           </h2>
-          <div className="pb-tabs" role="group" aria-label="Ангилал">
-            <button
-              type="button"
-              aria-pressed={category === "all"}
-              onClick={() => setCategory("all")}
-            >
-              Бүгд
-            </button>
-            {catalog.categories
-              .filter((c) => offered.some((s) => s.categoryId === c.id))
-              .map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  aria-pressed={category === c.id}
-                  onClick={() => setCategory(c.id)}
-                >
-                  {c.name}
-                </button>
-              ))}
-          </div>
+          {/* One category needs no filter. */}
+          {catalog.categories.filter((c) =>
+            offered.some((s) => s.categoryId === c.id),
+          ).length > 1 && (
+            <div className="pb-tabs" role="group" aria-label="Ангилал">
+              <button
+                type="button"
+                aria-pressed={category === "all"}
+                onClick={() => setCategory("all")}
+              >
+                Бүгд
+              </button>
+              {catalog.categories
+                .filter((c) => offered.some((s) => s.categoryId === c.id))
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    aria-pressed={category === c.id}
+                    onClick={() => setCategory(c.id)}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+            </div>
+          )}
           {offered.length ? (
             <ul className="pb-services">
               {offered
@@ -427,7 +531,7 @@ export function PublicBooking({
                               src={s.imageUrl}
                               alt=""
                               fill
-                              unoptimized
+                              unoptimized={!optimizable(s.imageUrl)}
                               sizes="72px"
                             />
                           </span>
@@ -460,10 +564,10 @@ export function PublicBooking({
                           >
                             {formatMnt(s.priceMnt)}
                           </b>
-                          <span className="pb-add" aria-hidden="true">
-                            {on ? <Check size={15} /> : <Plus size={15} />}
-                          </span>
                         </div>
+                        <span className="pb-add" aria-hidden="true">
+                          {on ? <Check size={15} /> : <Plus size={15} />}
+                        </span>
                       </button>
                     </li>
                   );
@@ -516,13 +620,16 @@ export function PublicBooking({
                       setStaff((m) => ({ ...m, [s.id]: p.id }));
                     }}
                   >
-                    <span className={`pb-avatar tone-${tone(p.id)}`}>
+                    <span
+                      className={`pb-avatar tone-${tone(p.id)}`}
+                      aria-hidden="true"
+                    >
                       {p.imageUrl ? (
                         <Image
                           src={p.imageUrl}
                           alt=""
                           fill
-                          unoptimized
+                          unoptimized={!optimizable(p.imageUrl)}
                           sizes="54px"
                         />
                       ) : (
@@ -530,6 +637,7 @@ export function PublicBooking({
                       )}
                     </span>
                     {p.name}
+                    {p.title && <small>{p.title}</small>}
                   </button>
                 ))}
               </div>
@@ -617,8 +725,7 @@ export function PublicBooking({
           <div className="pb-summary">
             <span>
               <CalendarDays size={14} />
-              {startAt && localStamp(startAt).replace("T", " ")} ·{" "}
-              {branch?.name}
+              {startAt && friendlyTime(startAt)} · {branch?.name}
             </span>
             {chosen.map((s) => (
               <div key={s.id}>
@@ -707,5 +814,154 @@ export function PublicBooking({
         </div>
       )}
     </div>
+  );
+}
+// After paying a deposit the guest can ask whether the salon confirmed yet.
+function StatusCheck({ slug, manageUrl }: { slug: string; manageUrl: string }) {
+  const [status, setStatus] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  async function check() {
+    setBusy(true);
+    setError("");
+    try {
+      const token =
+        new URL(manageUrl, window.location.origin).searchParams.get("token") ??
+        "";
+      const response = await fetch(
+        `/api/public/${encodeURIComponent(slug)}/manage?token=${encodeURIComponent(token)}`,
+        { cache: "no-store" },
+      );
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error);
+      setStatus(body.status);
+    } catch (e) {
+      setError(userFacingError(e, "Шалгаж чадсангүй. Дахин оролдоно уу."));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="pb-status-check">
+      <button type="button" disabled={busy} onClick={check}>
+        {busy ? "Шалгаж байна…" : "Баталгаажсан эсэхийг шалгах"}
+      </button>
+      {status && (
+        <p className={`pb-status ${status.toLowerCase()}`} role="status">
+          {status === "CONFIRMED"
+            ? "Баталгаажсан. Цагтаа ирээрэй!"
+            : status === "CANCELLED"
+              ? "Захиалга цуцлагдсан байна. Салон руу залгана уу."
+              : "Хараахан баталгаажаагүй байна. Салон урьдчилгааг шалгаад баталгаажуулна, түр хүлээгээд дахин шалгаарай."}
+        </p>
+      )}
+      {error && (
+        <p className="pb-status cancelled" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+// "Our masters": who works here, with their rating and a short profile.
+function StaffProfiles({
+  staff,
+  services,
+}: {
+  staff: PublicCatalog["staff"];
+  services: PublicCatalog["services"];
+}) {
+  const [open, setOpen] = useState<string | null>(null);
+  if (!staff.length) return null;
+  const person = staff.find((p) => p.id === open);
+  return (
+    <section className="pb-masters" aria-labelledby="pb-masters-title">
+      <h2 id="pb-masters-title">Манай мастерууд</h2>
+      <ul>
+        {staff.map((p) => (
+          <li key={p.id}>
+            <button type="button" onClick={() => setOpen(p.id)}>
+              <span
+                className={`pb-master-photo tone-${tone(p.id)}`}
+                aria-hidden="true"
+              >
+                {p.imageUrl ? (
+                  <Image
+                    src={p.imageUrl}
+                    alt=""
+                    fill
+                    unoptimized={!optimizable(p.imageUrl)}
+                    sizes="72px"
+                  />
+                ) : (
+                  initials(p.name)
+                )}
+              </span>
+              <strong>{p.name}</strong>
+              {p.title && <small>{p.title}</small>}
+              {p.rating !== null && (
+                <span className="pb-master-rating">
+                  <Star size={12} /> {p.rating.toFixed(1)} ({p.reviews})
+                </span>
+              )}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {person && (
+        <div
+          className="pb-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label={person.name}
+          onClick={() => setOpen(null)}
+        >
+          <div className="pb-sheet-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="pb-sheet-close"
+              aria-label="Хаах"
+              onClick={() => setOpen(null)}
+            >
+              <X size={18} />
+            </button>
+            <span className={`pb-master-photo large tone-${tone(person.id)}`}>
+              {person.imageUrl ? (
+                <Image
+                  src={person.imageUrl}
+                  alt=""
+                  fill
+                  unoptimized={!optimizable(person.imageUrl)}
+                  sizes="112px"
+                />
+              ) : (
+                initials(person.name)
+              )}
+            </span>
+            <h3>{person.name}</h3>
+            {person.title && <small>{person.title}</small>}
+            {person.rating !== null && (
+              <span className="pb-master-rating">
+                <Star size={13} /> {person.rating.toFixed(1)} · {person.reviews}{" "}
+                үнэлгээ
+              </span>
+            )}
+            {person.about && <p>{person.about}</p>}
+            {person.serviceIds.length > 0 && (
+              <>
+                <h4>Хийдэг үйлчилгээ</h4>
+                <ul className="pb-master-services">
+                  {services
+                    .filter((s) => person.serviceIds.includes(s.id))
+                    .map((s) => (
+                      <li key={s.id}>{s.name}</li>
+                    ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

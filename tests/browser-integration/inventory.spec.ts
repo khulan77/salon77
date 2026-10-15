@@ -9,7 +9,7 @@ test("owner registers a product and adjusts branch stock", async ({
     .fill("owner@example.test");
   await page.getByLabel("Нууц үг", { exact: true }).fill("TestPassword123!");
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   await page.goto("/inventory");
   await expect(
     page.getByRole("heading", { name: "Бараа бүртгэл.", exact: true }),
@@ -28,16 +28,23 @@ test("owner registers a product and adjusts branch stock", async ({
   await dialog.getByLabel("Яармаг", { exact: true }).fill("1");
   await dialog.getByRole("button", { name: "Хадгалах", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  const row = page.getByRole("article", { name });
+  const row = page.locator(".product-row").filter({ hasText: name });
   await expect(row).toContainText("35,000₮");
   await expect(row).toContainText("5 шил");
   await page.getByRole("tab", { name: "Зайсан" }).click();
   await expect(row).toContainText("4 шил");
   await row.getByRole("button", { name: `${name} · 1 хасах` }).click();
   await expect(row).toContainText("3 шил");
-  await expect(row.locator("b.low")).toBeVisible();
+  // Stock at or under the threshold is flagged on the row.
+  await expect(row).toHaveClass(/is-low/);
+  await expect(row).toContainText("Дуусах дөхсөн");
   await row.getByRole("button", { name: `${name} · 1 нэмэх` }).click();
   await expect(row).toContainText("4 шил");
+  await expect(row).toContainText("Хангалттай");
+  // No photo yet: the name's first letter stands in.
+  await expect(row.locator(".product-thumb")).toHaveText(
+    name.trim()[0].toUpperCase(),
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,

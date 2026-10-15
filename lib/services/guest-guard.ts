@@ -46,7 +46,12 @@ export async function expireStalePending(
   const { count } = await db.booking.updateMany({
     // Re-check the status so a booking confirmed meanwhile is left alone.
     where: { id: { in: stale.map((b) => b.id) }, status: "PENDING" },
-    data: { status: "CANCELLED", version: { increment: 1 } },
+    data: {
+      status: "CANCELLED",
+      version: { increment: 1 },
+      cancelledAt: now,
+      cancelSource: "EXPIRED",
+    },
   });
   // One feed entry per visit.
   const seen = new Set<string>();

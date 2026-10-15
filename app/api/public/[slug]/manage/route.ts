@@ -9,11 +9,19 @@ import {
 } from "@/lib/services/manage";
 type Params = { params: Promise<{ slug: string }> };
 // GET ?token&date: open times for moving the visit.
+// GET ?token alone: the visit's current status, for "is it confirmed yet?".
 export async function GET(request: Request, { params }: Params) {
   try {
     const { slug } = await params;
     await guardPublic(db, request, slug, "availability");
     const q = new URL(request.url).searchParams;
+    if (!q.has("date")) {
+      const visit = await readManagedVisit(db, slug, q.get("token"));
+      return Response.json(
+        { status: visit.status },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
     return Response.json(
       await managedAvailability(db, slug, {
         token: q.get("token"),

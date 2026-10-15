@@ -44,6 +44,7 @@ model User {
   lastLoginAt     DateTime?
   platformActions PlatformAuditLog[]
   feedback        Feedback[]
+  payments        SalonPayment[]
   createdAt       DateTime           @default(now())
   memberships     SalonMember[]
 }
@@ -67,6 +68,12 @@ model Salon {
   reviewNote      String?
   submittedAt     DateTime?
   reviewedAt      DateTime?
+  // Billing: a trial from approval, then paid 30-day periods. Access lasts
+  // until the later of the two; both empty means the salon is not billed.
+  trialEndsAt     DateTime?
+  paidUntil       DateTime?
+  // A fee the operator set for this salon; empty uses the per-branch price.
+  monthlyPriceMnt Int?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   members         SalonMember[]
@@ -80,28 +87,31 @@ model Salon {
   images          SalonImage[]
   platformAudit   PlatformAuditLog[]
   activity        BookingActivity[]
+  reviews         Review[]
   bookingSettings BookingSettings?
   customers       Customer[]
   products        Product[]
   feedback        Feedback[]
+  payments        SalonPayment[]
 
   @@index([createdAt])
   @@index([reviewStatus, submittedAt])
 }
 
 model SalonMember {
-  id              String            @id @default(cuid())
-  salonId         String
-  userId          String            @db.Uuid
-  role            Role
-  active          Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  salon           Salon             @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branches        MemberBranch[]
-  staff           Staff?
-  bookings        Booking[]
-  attendanceMarks StaffAttendance[]
+  id                String            @id @default(cuid())
+  salonId           String
+  userId            String            @db.Uuid
+  role              Role
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  salon             Salon             @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branches          MemberBranch[]
+  staff             Staff?
+  bookings          Booking[]         @relation("BookingCreatedBy")
+  cancelledBookings Booking[]         @relation("BookingCancelledBy")
+  attendanceMarks   StaffAttendance[]
 
   // Last time this member opened the activity bell.
   activitySeenAt DateTime?
@@ -123,6 +133,8 @@ model Branch {
   // Opening hours in minutes after local midnight; staff shifts default to these.
   openMinute   Int                @default(600)
   closeMinute  Int                @default(1140)
+  // The branch's own photo, shown at the top of the booking page.
+  imageUrl     String?
   active       Boolean            @default(true)
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -238,6 +250,8 @@ model Staff {
   title      String
   phone      String?
   bio        String?
+  // Shown to guests on the booking page; bio stays internal.
+  about      String?
   imageUrl   String?
   active     Boolean           @default(true)
   createdAt  DateTime          @default(now())
@@ -371,6 +385,7 @@ model Booking {
   manageTokenHash         String?
   notifications           Notification[]
   activity                BookingActivity[]
+  review                  Review?
   customerNameSnapshot    String
   customerPhoneSnapshot   String
   notes                   String?
@@ -378,6 +393,11 @@ model Booking {
   idempotencyKey          String
   requestHash             String
   version                 Int               @default(1)
+  // The customer wants this staff member only; the booking stays with them.
+  staffLocked             Boolean           @default(false)
+  // Added at the desk on top of the service price, e.g. extra nail art.
+  extraMnt                Int               @default(0)
+  paymentMethod           PaymentMethod?
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
   salon                   Salon             @relation(fields: [salonId], references: [id], onDelete: Restrict)
@@ -385,7 +405,12 @@ model Booking {
   customer                Customer          @relation(fields: [customerId, salonId], references: [id, salonId], onDelete: Restrict)
   service                 Service           @relation(fields: [serviceId, salonId], references: [id, salonId], onDelete: Restrict)
   staff                   Staff             @relation(fields: [staffId, salonId], references: [id, salonId], onDelete: Restrict)
-  createdBy               SalonMember?      @relation(fields: [createdByMemberId, salonId], references: [id, salonId], onDelete: Restrict)
+  createdBy               SalonMember?      @relation("BookingCreatedBy", fields: [createdByMemberId, salonId], references: [id, salonId], onDelete: Restrict)
+  // Who cancelled it: a team member, the customer, or the pending expiry.
+  cancelledAt             DateTime?
+  cancelSource            CancelSource?
+  cancelledByMemberId     String?
+  cancelledBy             SalonMember?      @relation("BookingCancelledBy", fields: [cancelledByMemberId, salonId], references: [id, salonId], onDelete: Restrict)
 
   @@unique([id, salonId])
   @@unique([salonId, idempotencyKey])
@@ -466,6 +491,8 @@ model Product {
   costMnt   Int            @default(0)
   priceMnt  Int            @default(0)
   lowStock  Int            @default(0)
+  // Optional photo; the list shows the name's first letter without one.
+  imageUrl  String?
   active    Boolean        @default(true)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
@@ -619,5 +646,63 @@ model Feedback {
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status, createdAt])
+  @@index([salonId, createdAt])
+}
+
+// A monthly fee the platform operator received, recorded by hand.
+model SalonPayment {
+  id           String   @id @default(cuid())
+  salonId      String
+  amountMnt    Int
+  branches     Int
+  periodStart  DateTime
+  periodEnd    DateTime
+  note         String?
+  recordedById String   @db.Uuid
+  createdAt    DateTime @default(now())
+  salon        Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  recordedBy   User     @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([salonId, createdAt])
+  @@index([createdAt])
+}
+
+// Platform-wide settings; a single row with id "default".
+model PlatformSetting {
+  id                String   @id @default("default")
+  pricePerBranchMnt Int?
+  updatedAt         DateTime @updatedAt
+}
+
+// How the customer paid at the salon.
+enum PaymentMethod {
+  POS
+  TRANSFER
+  CASH
+}
+
+enum CancelSource {
+  STAFF
+  CUSTOMER
+  EXPIRED
+}
+
+// A guest's rating after a finished visit, left from their private link.
+// One per visit, stored on its first booking.
+model Review {
+  id           String   @id @default(cuid())
+  salonId      String
+  bookingId    String   @unique
+  rating       Int
+  comment      String?
+  // First name only, as shown publicly.
+  customerName String
+  hidden       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  salon        Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  booking      Booking  @relation(fields: [bookingId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@unique([id, salonId])
+  @@unique([bookingId, salonId])
   @@index([salonId, createdAt])
 }

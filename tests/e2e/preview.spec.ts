@@ -1,25 +1,26 @@
 import { expect, test } from "@playwright/test";
-test("dashboard is honest, responsive, and links to working branch form", async ({
+test("the admin home is the calendar, with first steps for a new salon", async ({
   page,
 }, info) => {
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Өнөөдрийг бүтээлчээр эхэлье." }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/calendar$/);
   await expect(page.getByText("Танилцах горим", { exact: true })).toHaveCount(
     1,
   );
-  await expect(page.getByText("Өнөөдрийн захиалга алга.")).toBeVisible();
+  const steps = page.getByRole("region", {
+    name: "Салоноо захиалга авахад бэлдэе",
+  });
+  await expect(steps).toContainText("4 алхмаас 0 нь бэлэн");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
   await page.screenshot({
-    path: `test-results/dashboard-${info.project.name}.png`,
+    path: `test-results/home-calendar-${info.project.name}.png`,
     fullPage: true,
   });
-  await page.getByRole("link", { name: "Эхний салбараа нэмэх" }).click();
+  await steps.getByRole("link", { name: /Салбар/ }).click();
   await page.getByRole("button", { name: "Эхний салбараа нэмэх" }).click();
   await expect(
     page.getByRole("heading", { name: "Шинэ салбар нэмэх" }),

@@ -31,8 +31,9 @@ test("guest books two services done in parallel by two staff", async ({
   // Picking the same person for both services is blocked.
   const first = page.getByRole("group", { name: "Гел маникюр ажилтан" });
   const second = page.getByRole("group", { name: "Хумс арчилгаа ажилтан" });
-  await first.getByRole("button", { name: /Ану$/ }).click();
-  await second.getByRole("button", { name: /Ану$/ }).click();
+  // Each button reads "<name> <title>", e.g. "Ану Мастер".
+  await first.getByRole("button", { name: /^Ану(\s|$)/ }).click();
+  await second.getByRole("button", { name: /^Ану(\s|$)/ }).click();
   await expect(page.locator(".pb-error")).toContainText("өөр өөр ажилтан");
   await second.getByRole("button", { name: "Аль ч ажилтан" }).click();
   await page.getByRole("button", { name: date, exact: true }).click();
@@ -63,4 +64,43 @@ test("guest books two services done in parallel by two staff", async ({
     path: `test-results/public-done-${info.project.name}.png`,
     fullPage: true,
   });
+});
+test("guests meet the masters before booking", async ({ page }, info) => {
+  await page.goto("/salon-a/book");
+  const masters = page.getByRole("region", { name: "Манай мастерууд" });
+  await expect(masters).toContainText("Ану");
+  await masters
+    .getByRole("button", { name: /^Ану(\s|$)/ })
+    .first()
+    .click();
+  const profile = page.getByRole("dialog", { name: "Ану" });
+  await expect(profile).toContainText("Хийдэг үйлчилгээ");
+  await expect(profile).toContainText("Гел маникюр");
+  await page.screenshot({
+    path: `test-results/masters-${info.project.name}.png`,
+  });
+  await profile.getByRole("button", { name: "Хаах" }).click();
+  await expect(profile).toHaveCount(0);
+});
+test("booking pages describe the salon to search and link previews", async ({
+  page,
+}) => {
+  await page.goto("/salon-a/book");
+  await expect(page).toHaveTitle("Туршилтын салон · Цаг захиалах · Salon77");
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    "Туршилтын салон · Цаг захиалах",
+  );
+  await expect(
+    page.locator('meta[name="robots"][content*="noindex"]'),
+  ).toHaveCount(0);
+  const data = JSON.parse(
+    (await page.locator('script[type="application/ld+json"]').textContent()) ??
+      "{}",
+  );
+  expect(data["@type"]).toBe("BeautySalon");
+  expect(data.name).toBe("Туршилтын салон");
+  // A missing salon answers 404, which search engines never index.
+  const missing = await page.goto("/no-such-salon/book");
+  expect(missing?.status()).toBe(404);
 });

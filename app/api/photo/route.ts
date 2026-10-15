@@ -10,10 +10,11 @@ import {
   removePhoto,
   setPhoto,
 } from "@/lib/services/salon-media";
-// ?target=service|staff&id= — the photo of one service or staff member.
+// ?target=service|staff|product|branch&id= — the photo of one service, staff
+// member, product or branch; "logo" with the salon id for the salon logo.
 const query = z
   .object({
-    target: z.enum(["service", "staff"]),
+    target: z.enum(["service", "staff", "product", "branch", "logo"]),
     id: z.string().min(1).max(100),
   })
   .strict();

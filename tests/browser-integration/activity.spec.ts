@@ -30,7 +30,7 @@ test("the bell shows new online bookings and clears when opened", async ({
     .fill("owner@example.test");
   await page.getByLabel("Нууц үг", { exact: true }).fill("TestPassword123!");
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   const bell = page.getByRole("button", { name: /^Мэдэгдэл, \d+ шинэ$/ });
   await expect(bell).toBeVisible();
   await bell.click();

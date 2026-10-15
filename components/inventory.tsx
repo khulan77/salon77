@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Boxes, Minus, Plus, Search } from "lucide-react";
+import Image from "next/image";
+import { Boxes, Minus, Pencil, Plus, Search } from "lucide-react";
 import type { AdminData } from "@/lib/admin-data";
 import type { InventoryData } from "@/lib/services/inventory";
 import { productUnits } from "@/lib/inventory-validation";
@@ -13,6 +14,8 @@ import {
 } from "@/lib/form-validation";
 import { FeatureDialog, Feedback } from "./ui/feature-dialog";
 import { Button } from "./ui/button";
+import { PhotoField } from "./photo-field";
+import { tone } from "@/lib/avatar";
 type Product = InventoryData[number];
 export function Inventory({
   data,
@@ -173,79 +176,98 @@ export function Inventory({
         </div>
       </div>
       {visible.length ? (
-        <section className="panel inventory-table" aria-label="Бараанууд">
-          <div className="inventory-row inventory-head" aria-hidden>
-            <span>Бараа</span>
-            <span>Ангилал</span>
-            <span>Өртөг</span>
-            <span>Зарах үнэ</span>
-            <span>Үлдэгдэл</span>
-            <span />
-          </div>
-          {visible.map((p) => (
-            <article
-              key={p.id}
-              className={`inventory-row ${p.active ? "" : "inactive"}`}
-              aria-label={p.name}
-            >
-              <span className="inventory-name">
-                <strong>{p.name}</strong>
-                <small>
-                  {p.sku || "Кодгүй"}
-                  {!p.active && " · Идэвхгүй"}
-                </small>
-              </span>
-              <span className="inventory-muted">{p.category || "—"}</span>
-              <span className="inventory-num" data-label="Өртөг">
-                {p.costMnt === null ? "—" : formatMnt(p.costMnt)}
-              </span>
-              <span className="inventory-num" data-label="Зарах үнэ">
-                {formatMnt(p.priceMnt)}
-              </span>
-              <span className="inventory-stock">
-                {canEdit && branch !== "all" && (
-                  <button
-                    type="button"
-                    className="icon-button"
-                    aria-label={`${p.name} · 1 хасах`}
-                    disabled={pending === p.id || qty(p) === 0}
-                    onClick={() => adjust(p, -1)}
-                  >
-                    <Minus size={14} />
-                  </button>
-                )}
-                <b className={low(p) && p.active ? "low" : ""}>
-                  {qty(p)} {p.unit}
-                </b>
-                {canEdit && branch !== "all" && (
-                  <button
-                    type="button"
-                    className="icon-button"
-                    aria-label={`${p.name} · 1 нэмэх`}
-                    disabled={pending === p.id}
-                    onClick={() => adjust(p, 1)}
-                  >
-                    <Plus size={14} />
-                  </button>
-                )}
-              </span>
-              <span className="inventory-actions">
+        <ul className="panel product-list" aria-label="Бараанууд">
+          {visible.map((p) => {
+            const count = qty(p),
+              state = !p.active
+                ? "off"
+                : count === 0
+                  ? "out"
+                  : low(p)
+                    ? "low"
+                    : "ok";
+            return (
+              <li key={p.id} className={`product-row is-${state}`}>
+                <span className={`product-thumb tone-${tone(p.id)}`}>
+                  {p.imageUrl ? (
+                    <Image
+                      src={p.imageUrl}
+                      alt=""
+                      fill
+                      unoptimized
+                      sizes="52px"
+                    />
+                  ) : (
+                    (p.name.trim()[0] ?? "?").toUpperCase()
+                  )}
+                </span>
+                <span className="product-main">
+                  <strong>{p.name}</strong>
+                  <small>
+                    {p.sku || "Кодгүй"}
+                    {p.category && <em>{p.category}</em>}
+                  </small>
+                </span>
+                <span className="product-prices">
+                  <b>{formatMnt(p.priceMnt)}</b>
+                  {p.costMnt !== null && (
+                    <small>Өртөг {formatMnt(p.costMnt)}</small>
+                  )}
+                </span>
+                <span className="product-stock">
+                  {canEdit && branch !== "all" && p.active && (
+                    <button
+                      type="button"
+                      aria-label={`${p.name} · 1 хасах`}
+                      disabled={pending === p.id || count === 0}
+                      onClick={() => adjust(p, -1)}
+                    >
+                      <Minus size={14} />
+                    </button>
+                  )}
+                  <span className="product-count">
+                    <b>
+                      {count} {p.unit}
+                    </b>
+                    <small>
+                      {
+                        {
+                          ok: "Хангалттай",
+                          low: "Дуусах дөхсөн",
+                          out: "Дууссан",
+                          off: "Идэвхгүй",
+                        }[state]
+                      }
+                    </small>
+                  </span>
+                  {canEdit && branch !== "all" && p.active && (
+                    <button
+                      type="button"
+                      aria-label={`${p.name} · 1 нэмэх`}
+                      disabled={pending === p.id}
+                      onClick={() => adjust(p, 1)}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  )}
+                </span>
                 {canEdit && (
                   <button
                     type="button"
-                    className="text-link"
+                    className="product-edit"
+                    aria-label={`${p.name} засах`}
                     onClick={() => {
                       setError("");
                       setEditing(p);
                     }}
                   >
-                    Засах
+                    <Pencil size={15} />
                   </button>
                 )}
-              </span>
-            </article>
-          ))}
-        </section>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
         <section className="panel empty-page">
           <div className="empty-page-icon">
@@ -308,8 +330,10 @@ function ProductForm({
 }) {
   // Managers only edit stock in their own branches; data.branches is already scoped.
   const branches = data.branches.filter((b) => b.active);
+  const router = useRouter();
   const [pending, setPending] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [photo, setPhoto] = useState(product?.imageUrl ?? null);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -352,6 +376,17 @@ function ProductForm({
       >
         <div className="quick-body">
           <Feedback error={error} />
+          {!data.preview && data.role === "SALON_OWNER" && (
+            <PhotoField
+              target="product"
+              id={product?.id ?? null}
+              url={photo}
+              onChange={(url) => {
+                setPhoto(url);
+                router.refresh();
+              }}
+            />
+          )}
           <label className="field">
             Барааны нэр
             <input

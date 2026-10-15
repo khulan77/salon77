@@ -156,6 +156,15 @@ test(
           token,
         });
         assert.ok(cancelled.every((b) => b.status === "CANCELLED"));
+        // The calendar can say the customer cancelled it themselves.
+        assert.ok(
+          cancelled.every(
+            (b) =>
+              b.cancelSource === "CUSTOMER" &&
+              b.cancelledAt !== null &&
+              b.cancelledByMemberId === null,
+          ),
+        );
         assert.equal(
           (await readManagedVisit(db, "salon-a", token)).status,
           "CANCELLED",

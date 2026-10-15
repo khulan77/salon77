@@ -33,6 +33,7 @@ export type BookingOptions = {
     name: string;
     branchIds: string[];
     serviceIds: string[];
+    imageUrl?: string | null;
   }[];
 };
 // Prefill from the calendar grid: a clicked staff column and time slot.

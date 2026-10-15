@@ -101,6 +101,7 @@ export function moduleAllowed(role: string, module: string) {
     MANAGER: [
       "/",
       "/reports",
+      "/reviews",
       "/branches",
       "/services",
       "/employees",

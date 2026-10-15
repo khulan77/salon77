@@ -2,10 +2,19 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import QRCode from "qrcode";
+import { PhotoField } from "./photo-field";
 import {
   ArrowUpRight,
+  AtSign,
   CalendarCheck,
+  Check,
   Clock3,
+  Copy,
+  Download,
+  Link2,
+  Share2,
   MessageSquare,
   ImagePlus,
   Landmark,
@@ -41,6 +50,11 @@ export function BookingSettings({
   preview,
   salonName,
   slug,
+  salonId = "",
+  logoUrl = null,
+  instagram = "",
+  facebook = "",
+  origin = "",
   coverUrl: initialCover,
   services,
   branches = [],
@@ -49,6 +63,11 @@ export function BookingSettings({
   preview: boolean;
   salonName: string;
   slug: string;
+  salonId?: string;
+  logoUrl?: string | null;
+  instagram?: string;
+  facebook?: string;
+  origin?: string;
   coverUrl: string | null;
   services: SampleService[];
   branches?: BranchView[];
@@ -56,6 +75,8 @@ export function BookingSettings({
 }) {
   const [policy, setPolicy] = useState<BookingPolicy>(defaultBookingSettings);
   const [cover, setCover] = useState(initialCover);
+  const [logo, setLogo] = useState(logoUrl);
+  const router = useRouter();
   const [loading, setLoading] = useState(!preview),
     [loaded, setLoaded] = useState(preview),
     [saving, setSaving] = useState(false);
@@ -128,6 +149,23 @@ export function BookingSettings({
       )}
       <div className="settings-layout">
         <div className="settings-main">
+          {slug && <ShareLinkCard url={`${origin}/${slug}/book`} />}
+          {salonId && !preview && (
+            <section className="panel settings-card" aria-label="Салоны лого">
+              <PhotoField
+                target="logo"
+                id={salonId}
+                url={logo}
+                onChange={(url) => {
+                  setLogo(url);
+                  router.refresh();
+                }}
+              />
+            </section>
+          )}
+          {salonId && !preview && (
+            <SocialCard instagram={instagram} facebook={facebook} />
+          )}
           <CoverCard
             cover={cover}
             disabled={preview}
@@ -631,6 +669,207 @@ export function BookingSettings({
     </>
   );
 }
+// The one link a salon shares: Instagram bio, Facebook page, messages.
+function ShareLinkCard({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const [qr, setQr] = useState("");
+  // Known only in the browser, so it is set after the first render.
+  const [canShare, setCanShare] = useState(false);
+  useEffect(() => {
+    let live = true;
+    QRCode.toDataURL(url, { width: 264, margin: 1 })
+      .then((data) => {
+        if (!live) return;
+        setQr(data);
+        setCanShare("share" in navigator);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [url]);
+  // A large PNG for printing.
+  async function download() {
+    const data = await QRCode.toDataURL(url, { width: 1024, margin: 2 });
+    const a = document.createElement("a");
+    a.href = data;
+    a.download = "salon77-qr.png";
+    a.click();
+  }
+  async function share() {
+    try {
+      await navigator.share({ title: "Цаг захиалах", url });
+    } catch {
+      // Closing the share sheet is not an error worth showing.
+    }
+  }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard can be blocked; the link stays visible to copy by hand.
+    }
+  }
+  return (
+    <section
+      className="panel settings-card share-card"
+      aria-labelledby="share-title"
+    >
+      <div className="settings-card-heading">
+        <span className="settings-icon">
+          <Link2 size={17} />
+        </span>
+        <div>
+          <h2 id="share-title">Захиалгын линк</h2>
+          <p>
+            Инстаграм, Фэйсбүүк хуудасныхаа танилцуулга (bio) болон мессежэндээ
+            тавиарай. Энэ линкээр орсон хүн зөвхөн танай салоны үйлчилгээ, хаяг,
+            холбоо барих хаяг, сул цагийг хараад шууд цаг авна.
+          </p>
+        </div>
+      </div>
+      <div className="share-link">
+        <input
+          readOnly
+          value={url}
+          aria-label="Захиалгын линк"
+          onFocus={(e) => e.target.select()}
+        />
+        <Button type="button" onClick={copy}>
+          {copied ? <Check size={15} /> : <Copy size={15} />}
+          {copied ? "Хуулсан" : "Хуулах"}
+        </Button>
+        <Button variant="outline" asChild>
+          <a href={url} target="_blank" rel="noreferrer">
+            Нээх <ArrowUpRight size={15} />
+          </a>
+        </Button>
+      </div>
+      <div className="share-qr">
+        {qr ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={qr}
+            alt="Захиалгын линкийн QR код"
+            width={132}
+            height={132}
+          />
+        ) : (
+          <span className="share-qr-blank" aria-hidden="true" />
+        )}
+        <div>
+          <strong>QR код</strong>
+          <p>
+            Хэвлээд хаалга, ресепшний ширээн дээрээ тавиарай. Үйлчлүүлэгч утасны
+            камераар уншуулаад шууд цаг авна.
+          </p>
+          <div className="share-qr-actions">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!qr}
+              onClick={download}
+            >
+              <Download size={14} /> QR татах
+            </Button>
+            {canShare && (
+              <Button type="button" variant="outline" size="sm" onClick={share}>
+                <Share2 size={14} /> Хуваалцах
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+// Instagram and Facebook links on the booking page.
+function SocialCard({
+  instagram: initialInstagram,
+  facebook: initialFacebook,
+}: {
+  instagram: string;
+  facebook: string;
+}) {
+  const [instagram, setInstagram] = useState(initialInstagram),
+    [facebook, setFacebook] = useState(initialFacebook),
+    [saving, setSaving] = useState(false),
+    [error, setError] = useState(""),
+    [saved, setSaved] = useState(false);
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setSaved(false);
+    try {
+      await requestJson("/api/salon-profile", "PATCH", {
+        instagram: instagram.trim(),
+        facebook: facebook.trim(),
+      });
+      setSaved(true);
+    } catch (e) {
+      setError(userFacingError(e, "Хадгалж чадсангүй. Дахин оролдоно уу."));
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <section className="panel settings-card" aria-labelledby="social-title">
+      <div className="settings-card-heading">
+        <span className="settings-icon">
+          <AtSign size={17} />
+        </span>
+        <div>
+          <h2 id="social-title">Инстаграм, Фэйсбүүк</h2>
+          <p>
+            Захиалгын хуудсанд товч болж харагдана. Үйлчлүүлэгч дараад шууд таны
+            хуудас руу орно.
+          </p>
+        </div>
+      </div>
+      <form className="form-grid" onSubmit={save}>
+        <label className="field">
+          Инстаграм
+          <input
+            value={instagram}
+            maxLength={100}
+            placeholder="@tanii.salon"
+            onChange={(e) => {
+              setInstagram(e.target.value);
+              setSaved(false);
+            }}
+          />
+        </label>
+        <label className="field">
+          Фэйсбүүк
+          <input
+            value={facebook}
+            maxLength={200}
+            placeholder="facebook.com/tanii.salon"
+            onChange={(e) => {
+              setFacebook(e.target.value);
+              setSaved(false);
+            }}
+          />
+        </label>
+        <div className="social-actions">
+          {error && (
+            <span role="alert" className="field-error">
+              {error}
+            </span>
+          )}
+          {saved && <span role="status">Хадгаллаа.</span>}
+          <Button type="submit" disabled={saving}>
+            {saving ? "Хадгалж байна…" : "Хаяг хадгалах"}
+          </Button>
+        </div>
+      </form>
+    </section>
+  );
+}
 function CoverCard({
   cover,
   disabled,
@@ -673,7 +912,11 @@ function CoverCard({
         </span>
         <div>
           <h2 id="cover-title">Салоны нүүр зураг</h2>
-          <p>Онлайн захиалгын хуудасны дээд хэсэгт харагдана.</p>
+          <p>
+            Нүүр хуудасны жагсаалтад салоны зураг болж харагдана. Салбарын зураг
+            оруулаагүй бол захиалгын хуудасны дээд хэсэгт ч гарна. Салбар бүрийн
+            зургийг «Салбарууд» хэсгээс оруулна.
+          </p>
         </div>
       </div>
       <div className="cover-editor">

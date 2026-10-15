@@ -24,6 +24,7 @@ import { configured } from "@/lib/env";
 import { directoryQuery, listDirectory } from "@/lib/services/directory";
 import { formatMnt } from "@/lib/ui-language";
 import { initials, tone } from "@/lib/avatar";
+import { optimizable } from "@/lib/image";
 import { site, formatSitePhone } from "@/lib/site";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -232,7 +233,7 @@ export default async function HomePage({
                           src={s.coverUrl}
                           alt=""
                           fill
-                          unoptimized
+                          unoptimized={!optimizable(s.coverUrl)}
                           sizes="(max-width: 640px) 100vw, 380px"
                         />
                       ) : (

@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { discountedPrice } from "../pricing";
 import { localStamp } from "../business-time";
 import { DISTRICTS, normalizeDistrict } from "../districts";
+import { paidUp } from "../billing";
 type Database = Prisma.TransactionClient;
 export const directoryQuery = z
   .object({
@@ -20,21 +21,32 @@ const bookable: Prisma.ServiceWhereInput = {
   category: { active: true },
   branches: { some: { branch: { active: true } } },
 };
-// Only approved, active, publicly bookable salons that did not opt out are listed.
-const listed: Prisma.SalonWhereInput = {
+// Only approved, active, paid-up, publicly bookable salons that did not opt
+// out are listed.
+const listed = (now = new Date()): Prisma.SalonWhereInput => ({
   status: "ACTIVE",
+  ...paidUp(now),
   reviewStatus: "APPROVED",
   bookingSettings: { publicBookingEnabled: true, listedInDirectory: true },
   services: { some: bookable },
-};
+});
 // Below this many listed salons, signed-out visitors to "/" see the business
 // page instead of a near-empty directory. DIRECTORY_MIN_SALONS overrides it.
 export function directoryThreshold(raw = process.env.DIRECTORY_MIN_SALONS) {
   const value = Number(raw);
   return raw?.trim() && Number.isInteger(value) && value >= 0 ? value : 5;
 }
+// Booking pages worth indexing: the same salons the directory lists.
+export function listedSalonSlugs(db: Database) {
+  return db.salon.findMany({
+    where: listed(),
+    select: { slug: true, updatedAt: true },
+    orderBy: { createdAt: "asc" },
+    take: 5000,
+  });
+}
 export function listedSalonCount(db: Database) {
-  return db.salon.count({ where: listed });
+  return db.salon.count({ where: listed() });
 }
 // The root page asks on every signed-out visit, so the count is reused for a
 // minute instead of hitting the database each time.
@@ -66,7 +78,7 @@ export async function listDirectory(
   // counts under its standard district.
   const stored = (
     await db.branch.findMany({
-      where: { active: true, salon: listed },
+      where: { active: true, salon: listed(now) },
       distinct: ["district"],
       select: { district: true },
     })
@@ -74,7 +86,7 @@ export async function listDirectory(
   const spellings = (district: string) =>
     stored.filter((v) => normalizeDistrict(v) === district);
   const where: Prisma.SalonWhereInput = {
-    ...listed,
+    ...listed(now),
     AND: [
       input.query
         ? {
@@ -133,14 +145,18 @@ export async function listDirectory(
           },
         },
       }),
-      db.salon.count({ where: listed }),
+      db.salon.count({ where: listed(now) }),
       db.service.findMany({
-        where: { ...bookable, salon: listed },
+        where: { ...bookable, salon: listed(now) },
         select: { category: { select: { name: true } } },
         take: 2000,
       }),
       db.booking.count({
-        where: { source: "ONLINE", createdAt: { gte: today }, salon: listed },
+        where: {
+          source: "ONLINE",
+          createdAt: { gte: today },
+          salon: listed(now),
+        },
       }),
     ]);
   const services = await db.service.findMany({

@@ -1,8 +1,15 @@
 "use client";
+import { signOut } from "@/app/auth/actions";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BadgeCheck, Hourglass, Undo2 } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BadgeCheck,
+  Hourglass,
+  Undo2,
+} from "lucide-react";
 import { userFacingError } from "@/lib/ui-language";
 import {
   localizeInvalidField,
@@ -69,7 +76,16 @@ export function ApplicationReview({ initial }: { initial: Application }) {
             <span className="brand-dot">.</span>
           </span>
         </Link>
-        <Link href="/">Удирдлагын хэсэгт буцах ↗</Link>
+        {status === "APPROVED" ? (
+          <Link href="/">Удирдлагын хэсэгт буцах ↗</Link>
+        ) : (
+          // Until approval "/" only leads back here.
+          <form action={signOut}>
+            <button type="submit" className="onboarding-sign-out">
+              Гарах
+            </button>
+          </form>
+        )}
       </header>
       <main className="onboarding-container">
         <section className="onboarding-card">
@@ -94,10 +110,20 @@ export function ApplicationReview({ initial }: { initial: Application }) {
                   ? "Салон тань нийтэд харагдаж, онлайн захиалга авч байна."
                   : status === "REJECTED"
                     ? "Доорх шалтгааныг уншаад мэдээллээ засаж, дахин илгээнэ үү."
-                    : "Бид мэдээллийг тань шалгаж байна. Баталгаажмагц салон тань нийтэд харагдана."}
+                    : "Бид мэдээллийг тань шалгаж байна. Баталгаажмагц удирдлагын бүх хэсэг нээгдэж, салон тань нийтэд харагдана."}
               </p>
             </div>
           </div>
+          {status !== "APPROVED" && (
+            <a
+              className="text-link"
+              href={`/${application.slug}/book`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Захиалгын хуудсаа урьдчилан харах <ArrowUpRight size={14} />
+            </a>
+          )}
           {status === "REJECTED" && application.note && (
             <blockquote className="review-note">
               <span>Буцаасан шалтгаан</span>

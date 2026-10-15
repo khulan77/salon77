@@ -1,24 +1,24 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Feedback } from "./ui/feature-dialog";
 import type { BookingDraft, BookingOptions } from "./booking-wizard";
 import { requestJson } from "@/lib/client-request";
 import { formatMnt, userFacingError } from "@/lib/ui-language";
+import { paymentLabels } from "@/lib/booking-validation";
 import { addDays, localInstant, localStamp } from "@/lib/business-time";
 import {
   localizeInvalidField,
   clearFieldValidity,
 } from "@/lib/form-validation";
-// Fixed choices staff use most; "auto" keeps the service's own length.
-const durations = [30, 60, 90, 120, 150, 180, 240];
 export function formatDuration(minutes: number) {
   const h = Math.floor(minutes / 60),
     m = minutes % 60;
   return [h ? `${h}ц` : "", m ? `${m}м` : ""].filter(Boolean).join(" ");
 }
 type Saved = { startAt: string; branchId?: string };
+type Payment = "POS" | "TRANSFER" | "CASH";
 // Single-screen admin booking: service, staff, time and customer in one pass.
 export function QuickBooking({
   options,
@@ -85,61 +85,77 @@ function BookingForm({
 }) {
   const today = localStamp(new Date()).slice(0, 10),
     branchId = initial.branchId || options.branches[0]?.id || "";
-  const [query, setQuery] = useState(""),
-    [serviceId, setService] = useState(""),
-    [staffId, setStaff] = useState(initial.staffId ?? ""),
+  // Up to two services that start together, each with its own staff.
+  const [picked, setPicked] = useState<
+      { serviceId: string; staffId: string }[]
+    >([]),
     [date, setDate] = useState(
       initial.date && initial.date >= today ? initial.date : today,
     ),
-    [duration, setDuration] = useState(0),
     [preferred, setPreferred] = useState(initial.time ?? ""),
     [slots, setSlots] = useState<string[]>([]),
     [startAt, setStart] = useState(""),
     [loading, setLoading] = useState(false),
     [pending, setPending] = useState(false),
     [error, setError] = useState("");
-  const [search, setSearch] = useState(""),
-    [matches, setMatches] = useState<
-      { id: string; name: string; phone: string }[]
-    >([]),
-    [customerId, setCustomer] = useState(""),
-    [name, setName] = useState(""),
+  const [name, setName] = useState(""),
     [phone, setPhone] = useState(""),
-    [notes, setNotes] = useState("");
+    [notes, setNotes] = useState(""),
+    [extraOpen, setExtraOpen] = useState(false),
+    [extra, setExtra] = useState(""),
+    [payment, setPayment] = useState<Payment | "">("");
   const submission = useRef<{ payload: string; key: string } | null>(null);
   const branchServices = options.services.filter((s) =>
       s.branchIds.includes(branchId),
     ),
-    service = branchServices.find((s) => s.id === serviceId),
-    eligible = options.staff.filter(
-      (s) =>
-        s.branchIds.includes(branchId) &&
-        (!serviceId || s.serviceIds.includes(serviceId)),
-    ),
-    length = duration || service?.durationMinutes || 0,
-    staffName = options.staff.find((s) => s.id === staffId)?.name;
-  const groups = useMemo(() => {
-    const needle = query.trim().toLowerCase(),
-      visible = branchServices.filter(
-        (s) => !needle || s.name.toLowerCase().includes(needle),
+    chosen = picked.flatMap((p) => {
+      const service = branchServices.find((s) => s.id === p.serviceId);
+      return service ? [{ ...p, service }] : [];
+    }),
+    eligible = (serviceId: string) =>
+      options.staff.filter(
+        (s) =>
+          s.branchIds.includes(branchId) && s.serviceIds.includes(serviceId),
       ),
-      categories = options.categories ?? [];
-    const known = categories
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        services: visible.filter((s) => s.categoryId === c.id),
-      }))
-      .filter((g) => g.services.length);
-    const rest = visible.filter(
+    length = Math.max(0, ...chosen.map((c) => c.service.durationMinutes)),
+    extraMnt = extraOpen ? Math.max(0, Math.round(Number(extra) || 0)) : 0,
+    total = chosen.reduce((sum, c) => sum + c.service.priceMnt, 0) + extraMnt,
+    items = chosen.map((c) => ({
+      serviceId: c.serviceId,
+      ...(c.staffId ? { staffId: c.staffId } : {}),
+    })),
+    itemsKey = JSON.stringify(items);
+  function toggle(serviceId: string) {
+    setPreferred("");
+    if (picked.some((p) => p.serviceId === serviceId))
+      return setPicked(picked.filter((p) => p.serviceId !== serviceId));
+    if (picked.length >= 2) return;
+    // A slot clicked on the grid suggests that staff member for the first service.
+    const suggested =
+      !picked.length &&
+      initial.staffId &&
+      eligible(serviceId).some((s) => s.id === initial.staffId)
+        ? initial.staffId
+        : "";
+    setPicked([...picked, { serviceId, staffId: suggested }]);
+  }
+  // Services grouped by category, uncategorised ones last.
+  const categories = options.categories ?? [],
+    rest = branchServices.filter(
       (s) => !categories.some((c) => c.id === s.categoryId),
-    );
-    return rest.length
-      ? [...known, { id: "other", name: "Бусад", services: rest }]
-      : known;
-  }, [branchServices, options.categories, query]);
+    ),
+    groups = [
+      ...categories
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          services: branchServices.filter((s) => s.categoryId === c.id),
+        }))
+        .filter((g) => g.services.length),
+      ...(rest.length ? [{ id: "other", name: "Бусад", services: rest }] : []),
+    ];
   useEffect(() => {
-    if (!serviceId || !date) return;
+    if (itemsKey === "[]" || !date) return;
     const controller = new AbortController();
     Promise.resolve().then(() => {
       if (!controller.signal.aborted) {
@@ -147,14 +163,8 @@ function BookingForm({
         setStart("");
       }
     });
-    const q = new URLSearchParams({
-      branchId,
-      serviceId,
-      date,
-      ...(staffId ? { staffId } : {}),
-      ...(duration ? { durationMinutes: String(duration) } : {}),
-    });
-    fetch(`/api/availability?${q}`, { signal: controller.signal })
+    const q = new URLSearchParams({ branchId, date, items: itemsKey });
+    fetch(`/api/visits?${q}`, { signal: controller.signal })
       .then(async (r) => {
         const body = await r.json();
         if (!r.ok) throw new Error(body.error);
@@ -176,52 +186,56 @@ function BookingForm({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [branchId, serviceId, staffId, date, duration, preferred]);
+  }, [branchId, itemsKey, date, preferred]);
+  // A returning customer's name fills in from their phone number.
   useEffect(() => {
-    if (search.trim().length < 2) return;
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 8 || name.trim()) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      fetch(`/api/customers?search=${encodeURIComponent(search.trim())}`, {
+      fetch(`/api/customers?search=${encodeURIComponent(digits)}`, {
         signal: controller.signal,
       })
-        .then(async (r) => {
-          const b = await r.json();
-          if (!r.ok) throw new Error(b.error);
-          setMatches(b.customers);
+        .then((r) => (r.ok ? r.json() : null))
+        .then((b) => {
+          const found = (b?.customers ?? []).find((c: { phone: string }) =>
+            c.phone.replace(/\D/g, "").endsWith(digits),
+          );
+          if (found && !controller.signal.aborted)
+            setName((current) => current || found.name);
         })
-        .catch((e) => {
-          if (!controller.signal.aborted)
-            setError(userFacingError(e, "Хайлт амжилтгүй боллоо."));
-        });
-    }, 250);
+        .catch(() => undefined);
+    }, 300);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [search]);
+  }, [phone, name]);
   const preferredMissed =
-    !!preferred && !loading && !!serviceId && !startAt && slots.length > 0;
+    !!preferred &&
+    !loading &&
+    chosen.length > 0 &&
+    !startAt &&
+    slots.length > 0;
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (pending || !service || !startAt) return;
+    if (pending || !chosen.length || !startAt) return;
     setPending(true);
     setError("");
     const input = {
       branchId,
-      serviceId,
-      ...(staffId ? { staffId } : {}),
+      items,
       startAt,
-      ...(duration && duration !== service.durationMinutes
-        ? { durationMinutes: duration }
-        : {}),
-      ...(customerId ? { customerId } : { customer: { name, phone } }),
+      customer: { name, phone },
+      extraMnt,
+      ...(payment ? { paymentMethod: payment } : {}),
       notes,
     };
     const payload = JSON.stringify(input);
     if (submission.current?.payload !== payload)
       submission.current = { payload, key: crypto.randomUUID() };
     try {
-      const saved = await requestJson<Saved>("/api/bookings", "POST", {
+      const saved = await requestJson<Saved>("/api/visits", "POST", {
         ...input,
         idempotencyKey: submission.current.key,
       });
@@ -243,84 +257,105 @@ function BookingForm({
     >
       <div className="quick-body">
         <Feedback error={error} />
-        <label className="quick-search">
-          <Search size={15} aria-hidden />
-          <input
-            type="search"
-            aria-label="Үйлчилгээ хайх"
-            placeholder="Үйлчилгээ хайх…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
+        <div className="quick-section">
+          <h3>Үйлчлүүлэгч</h3>
+          <div className="form-grid">
+            <label className="field">
+              Нэр
+              <input
+                required
+                value={name}
+                maxLength={100}
+                autoComplete="off"
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              Утас
+              <input
+                required
+                type="tel"
+                value={phone}
+                maxLength={40}
+                placeholder="99112233"
+                autoComplete="off"
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </label>
+          </div>
+        </div>
         <fieldset className="service-groups">
-          <legend className="sr-only">Үйлчилгээ</legend>
+          <legend className="quick-legend">Үйлчилгээ</legend>
           {groups.map((g) => (
             <section className="service-group" key={g.id}>
               <h3>{g.name}</h3>
               <div className="service-options">
-                {g.services.map((s) => (
-                  <label
-                    key={s.id}
-                    className="service-option"
-                    data-checked={serviceId === s.id || undefined}
-                  >
-                    <input
-                      type="radio"
-                      name="service"
-                      value={s.id}
-                      checked={serviceId === s.id}
-                      onChange={() => {
-                        setService(s.id);
-                        setDuration(0);
-                        if (
-                          staffId &&
-                          !options.staff.some(
-                            (p) =>
-                              p.id === staffId && p.serviceIds.includes(s.id),
-                          )
-                        )
-                          setStaff("");
-                      }}
-                    />
-                    <span>
-                      <strong>{s.name}</strong>
-                      <small>
-                        {formatDuration(s.durationMinutes)} ·{" "}
-                        {formatMnt(s.priceMnt)}
-                      </small>
-                    </span>
-                  </label>
-                ))}
+                {g.services.map((s) => {
+                  const on = picked.some((p) => p.serviceId === s.id);
+                  return (
+                    <label
+                      key={s.id}
+                      className="service-option"
+                      data-checked={on || undefined}
+                    >
+                      <input
+                        type="checkbox"
+                        name="service"
+                        value={s.id}
+                        checked={on}
+                        disabled={!on && picked.length >= 2}
+                        onChange={() => toggle(s.id)}
+                      />
+                      <span>
+                        <strong>{s.name}</strong>
+                        <small>
+                          {formatDuration(s.durationMinutes)} ·{" "}
+                          {formatMnt(s.priceMnt)}
+                        </small>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </section>
           ))}
           {!groups.length && (
-            <p className="field-hint">
-              {query
-                ? "Хайлтад тохирох үйлчилгээ алга."
-                : "Энэ салбарт захиалах үйлчилгээ алга."}
-            </p>
+            <p className="field-hint">Энэ салбарт захиалах үйлчилгээ алга.</p>
           )}
+          <p className="field-hint">
+            2 хүртэл үйлчилгээ сонгож болно. Хоёр үйлчилгээг 2 ажилтан зэрэг
+            эхлүүлнэ.
+          </p>
         </fieldset>
         <div className="form-grid">
-          <label className="field">
-            Үндсэн ажилтан
-            <select
-              value={staffId}
-              onChange={(e) => {
-                setStaff(e.target.value);
-                setPreferred("");
-              }}
-            >
-              <option value="">Аль ч ажилтан</option>
-              {eligible.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {chosen.map((c, i) => (
+            <label className="field" key={c.serviceId}>
+              {chosen.length > 1 ? `${c.service.name} · ажилтан` : "Ажилтан"}
+              <select
+                value={c.staffId}
+                onChange={(e) => {
+                  setPreferred("");
+                  setPicked(
+                    picked.map((p, j) =>
+                      j === i ? { ...p, staffId: e.target.value } : p,
+                    ),
+                  );
+                }}
+              >
+                <option value="">Аль ч ажилтан</option>
+                {eligible(c.serviceId)
+                  .filter(
+                    (s) =>
+                      !chosen.some((o, j) => j !== i && o.staffId === s.id),
+                  )
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ))}
           <label className="field">
             Огноо
             <input
@@ -337,35 +372,17 @@ function BookingForm({
           </label>
         </div>
         <div className="quick-section">
-          <h3 id="duration-label">Үргэлжлэх хугацаа</h3>
-          <div
-            className="chip-row"
-            role="group"
-            aria-labelledby="duration-label"
-          >
-            {[0, ...durations].map((m) => (
-              <button
-                key={m}
-                type="button"
-                className="chip"
-                aria-pressed={duration === m}
-                onClick={() => setDuration(m)}
-              >
-                {m ? formatDuration(m) : "Автомат"}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="quick-section">
           <div className="quick-section-head">
             <h3>Эхлэх цаг</h3>
-            {service && (
+            {chosen.length > 0 && (
               <small>
-                {staffName ?? "Аль ч ажилтан"} · {formatDuration(length)}
+                {chosen.length > 1
+                  ? `Хоёр үйлчилгээ зэрэг эхэлнэ · ${formatDuration(length)}`
+                  : formatDuration(length)}
               </small>
             )}
           </div>
-          {!service ? (
+          {!chosen.length ? (
             <p className="field-hint">Эхлээд үйлчилгээ сонгоно уу.</p>
           ) : loading ? (
             <p className="field-hint" role="status">
@@ -396,99 +413,96 @@ function BookingForm({
             </p>
           )}
         </div>
-        <div className="quick-section">
-          <h3>Үйлчлүүлэгч</h3>
-          {customerId ? (
-            <div className="selected-customer">
+        <div className="quick-section quick-payment">
+          <h3>Төлбөр</h3>
+          {chosen.length ? (
+            chosen.map((c) => (
+              <div className="pay-row" key={c.serviceId}>
+                <span>{c.service.name}</span>
+                <span>{formatMnt(c.service.priceMnt)}</span>
+              </div>
+            ))
+          ) : (
+            <div className="pay-row">
+              <span>Үйлчилгээ</span>
+              <span>—</span>
+            </div>
+          )}
+          {extraOpen ? (
+            <div className="pay-row pay-extra">
+              <label htmlFor="extra-amount">Нэмэлт төлбөр</label>
               <span>
-                <strong>{name}</strong> · {phone}
+                <input
+                  id="extra-amount"
+                  type="number"
+                  min={0}
+                  max={100000000}
+                  step={1000}
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={extra}
+                  onChange={(e) => setExtra(e.target.value)}
+                />
+                <button
+                  type="button"
+                  aria-label="Нэмэлт төлбөр хасах"
+                  onClick={() => {
+                    setExtraOpen(false);
+                    setExtra("");
+                  }}
+                >
+                  <X size={14} />
+                </button>
               </span>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setCustomer("");
-                  setName("");
-                  setPhone("");
-                }}
-              >
-                Өөрчлөх
-              </Button>
             </div>
           ) : (
-            <>
-              <label className="field">
-                Үйлчлүүлэгч хайх
-                <input
-                  value={search}
-                  maxLength={100}
-                  placeholder="Нэр эсвэл утасны дугаар"
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </label>
-              {search.trim().length >= 2 && matches.length > 0 && (
-                <div className="customer-search-results">
-                  {matches.map((c) => (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      key={c.id}
-                      onClick={() => {
-                        setCustomer(c.id);
-                        setName(c.name);
-                        setPhone(c.phone);
-                        setSearch("");
-                        setMatches([]);
-                      }}
-                    >
-                      {c.name} · {c.phone}
-                    </Button>
-                  ))}
-                </div>
-              )}
-              <div className="form-grid">
-                <label className="field">
-                  Нэр
-                  <input
-                    required
-                    value={name}
-                    maxLength={100}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </label>
-                <label className="field">
-                  Утас
-                  <input
-                    required
-                    type="tel"
-                    value={phone}
-                    maxLength={40}
-                    placeholder="99112233"
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </label>
-              </div>
-            </>
+            <button
+              type="button"
+              className="add-extra"
+              onClick={() => setExtraOpen(true)}
+            >
+              <Plus size={14} /> Нэмэлт төлбөр
+            </button>
           )}
-          <label className="field">
-            Тэмдэглэл
-            <textarea
-              rows={2}
-              value={notes}
-              maxLength={2000}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </label>
+          <div className="pay-row pay-total">
+            <span>Нийт дүн</span>
+            <strong>{formatMnt(total)}</strong>
+          </div>
+          <div
+            className="chip-row pay-methods"
+            role="group"
+            aria-label="Төлбөрийн хэрэгсэл"
+          >
+            {(["POS", "TRANSFER", "CASH"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                className="chip"
+                aria-pressed={payment === m}
+                onClick={() => setPayment(payment === m ? "" : m)}
+              >
+                {paymentLabels[m]}
+              </button>
+            ))}
+          </div>
         </div>
+        <label className="field">
+          Тэмдэглэл
+          <textarea
+            rows={2}
+            value={notes}
+            maxLength={2000}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </label>
       </div>
       <div className="quick-footer">
         <p>
-          {service ? (
+          {chosen.length ? (
             <>
-              <strong>{service.name}</strong>
+              <strong>{formatMnt(total)}</strong>
               {startAt && ` · ${localStamp(startAt).slice(11)}`} ·{" "}
-              {formatMnt(service.priceMnt)}
+              {chosen.map((c) => c.service.name).join(" + ")}
             </>
           ) : (
             "Үйлчилгээ сонгоно уу"
@@ -497,7 +511,7 @@ function BookingForm({
         <Button type="button" variant="outline" onClick={onClose}>
           Болих
         </Button>
-        <Button disabled={pending || !service || !startAt || loading}>
+        <Button disabled={pending || !chosen.length || !startAt || loading}>
           {pending ? "Хадгалж байна…" : "Захиалах"}
         </Button>
       </div>

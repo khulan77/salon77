@@ -2,6 +2,14 @@ import { z } from "zod";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { HttpError } from "../errors";
 import { addDays, localStamp } from "../business-time";
+import {
+  WARN_DAYS,
+  billingState,
+  monthlyFee,
+  nextPeriod,
+  trialEnd,
+} from "../billing";
+import { pricePerBranch } from "./billing";
 type Database = Prisma.TransactionClient;
 const DAY = 86400000;
 // 404 rather than 403 so the console's existence is not revealed.
@@ -34,6 +42,42 @@ async function onlinePerDay(
   return Array.from({ length: days }, (_, i) => {
     const day = addDays(today, i - days + 1);
     return { day, count: counts.get(day) ?? 0 };
+  });
+}
+// Start of the Ulaanbaatar calendar month `back` months before `now`'s.
+function monthStart(now: Date, back = 0) {
+  const [y, m] = localStamp(now).slice(0, 7).split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 - back, 1));
+  return new Date(`${d.toISOString().slice(0, 7)}-01T00:00:00+08:00`);
+}
+// A salon's own takings (completed bookings) per Ulaanbaatar month, oldest
+// first, so the operator can see how each salon is doing.
+async function revenuePerMonth(
+  db: Database,
+  salonId: string,
+  now: Date,
+  months: number,
+) {
+  const since = monthStart(now, months - 1);
+  const rows = await db.$queryRaw<
+    { month: string; revenue: bigint; count: bigint }[]
+  >`
+    SELECT to_char((("startAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Ulaanbaatar'), 'YYYY-MM') AS month,
+           sum("priceSnapshot" + "extraMnt") AS revenue,
+           count(*) AS count
+    FROM "Booking"
+    WHERE "salonId" = ${salonId}
+      AND "status" = 'COMPLETED'
+      AND "startAt" >= (${since}::timestamptz AT TIME ZONE 'UTC')
+    GROUP BY 1`;
+  return Array.from({ length: months }, (_, i) => {
+    const month = localStamp(monthStart(now, months - 1 - i)).slice(0, 7);
+    const row = rows.find((r) => r.month === month);
+    return {
+      month,
+      revenue: Number(row?.revenue ?? 0),
+      count: Number(row?.count ?? 0),
+    };
   });
 }
 // New salons per Monday-starting Ulaanbaatar week for the last `weeks` weeks.
@@ -123,10 +167,51 @@ export const salonListQuery = z
     sort: z
       .enum(["newest", "activity", "oldest", "bookings", "name"])
       .default("newest"),
+    billing: z
+      .enum(["all", "pending", "trial", "paid", "due", "expired"])
+      .default("all"),
     page: z.coerce.number().int().min(0).max(10000).default(0),
   })
   .strict();
 const PAGE = 50;
+// Salons by where their trial or paid month stands.
+function billingWhere(
+  filter: z.infer<typeof salonListQuery>["billing"],
+  now: Date,
+): Prisma.SalonWhereInput {
+  const soon = new Date(+now + WARN_DAYS * DAY);
+  const endsBy = (at: Date): Prisma.SalonWhereInput[] => [
+    { OR: [{ trialEndsAt: null }, { trialEndsAt: { lte: at } }] },
+    { OR: [{ paidUntil: null }, { paidUntil: { lte: at } }] },
+  ];
+  const approved = { reviewStatus: "APPROVED" as const };
+  switch (filter) {
+    case "pending":
+      return { reviewStatus: { not: "APPROVED" } };
+    case "trial":
+      return {
+        ...approved,
+        trialEndsAt: { gt: now },
+        OR: [{ paidUntil: null }, { paidUntil: { lte: now } }],
+      };
+    case "paid":
+      return { ...approved, paidUntil: { gt: now } };
+    case "due":
+      return {
+        ...approved,
+        OR: [{ trialEndsAt: { gt: now } }, { paidUntil: { gt: now } }],
+        AND: endsBy(soon),
+      };
+    case "expired":
+      return {
+        ...approved,
+        OR: [{ trialEndsAt: { not: null } }, { paidUntil: { not: null } }],
+        AND: endsBy(now),
+      };
+    default:
+      return {};
+  }
+}
 export async function listPlatformSalons(
   db: Database,
   adminUserId: string,
@@ -135,14 +220,19 @@ export async function listPlatformSalons(
 ) {
   await assertPlatformAdmin(db, adminUserId);
   const input = salonListQuery.parse(raw);
-  const where: Prisma.SalonWhereInput = input.query
-    ? {
-        OR: [
-          { name: { contains: input.query, mode: "insensitive" } },
-          { slug: { contains: input.query.toLowerCase() } },
-        ],
-      }
-    : {};
+  const where: Prisma.SalonWhereInput = {
+    AND: [
+      input.query
+        ? {
+            OR: [
+              { name: { contains: input.query, mode: "insensitive" } },
+              { slug: { contains: input.query.toLowerCase() } },
+            ],
+          }
+        : {},
+      billingWhere(input.billing, now),
+    ],
+  };
   const orderBy: Prisma.SalonOrderByWithRelationInput[] =
     input.sort === "oldest"
       ? [{ createdAt: "asc" }]
@@ -154,7 +244,7 @@ export async function listPlatformSalons(
   // Latest of the newest booking and the newest member login; Prisma cannot
   // order by that, so one SQL query picks the page of IDs.
   const activityIds =
-    input.sort === "activity"
+    input.sort === "activity" && input.billing === "all"
       ? await salonIdsByActivity(db, input.query, input.page)
       : null;
   const [total, found] = await Promise.all([
@@ -169,6 +259,10 @@ export async function listPlatformSalons(
         slug: true,
         status: true,
         reviewStatus: true,
+        trialEndsAt: true,
+        paidUntil: true,
+        monthlyPriceMnt: true,
+        phone: true,
         createdAt: true,
         members: {
           where: { role: "SALON_OWNER" },
@@ -193,7 +287,7 @@ export async function listPlatformSalons(
     ? activityIds.flatMap((id) => found.filter((s) => s.id === id))
     : found;
   const ids = salons.map((s) => s.id);
-  const [online30, last] = await Promise.all([
+  const [online30, last, price, takings] = await Promise.all([
     db.booking.groupBy({
       by: ["salonId"],
       where: {
@@ -208,13 +302,26 @@ export async function listPlatformSalons(
       where: { salonId: { in: ids } },
       _max: { createdAt: true },
     }),
+    pricePerBranch(db),
+    db.booking.groupBy({
+      by: ["salonId"],
+      where: {
+        salonId: { in: ids },
+        status: "COMPLETED",
+        startAt: { gte: monthStart(now) },
+      },
+      _sum: { priceSnapshot: true, extraMnt: true },
+    }),
   ]);
   return {
     ...input,
+    pricePerBranchMnt: price,
     total,
     pageSize: PAGE,
     salons: salons.map((s) => {
       const owner = s.members[0]?.user;
+      const billing = billingState(s, now);
+      const branches = Math.max(1, s._count.branches);
       return {
         id: s.id,
         name: s.name,
@@ -224,12 +331,28 @@ export async function listPlatformSalons(
         createdAt: s.createdAt.toISOString(),
         ownerName: owner?.name ?? "",
         ownerEmail: owner?.email ?? "",
+        // Entered by the owner at onboarding; the number to call about fees.
+        phone: s.phone,
         ownerLastLoginAt: owner?.lastLoginAt?.toISOString() ?? null,
         branches: s._count.branches,
+        billing: {
+          state: billing.state,
+          until: billing.until?.toISOString() ?? null,
+          daysLeft: billing.daysLeft,
+          warn: billing.warn,
+          amountMnt: monthlyFee(s.monthlyPriceMnt, price, branches),
+          customPrice: s.monthlyPriceMnt !== null,
+          nextEnd: nextPeriod(s, now).end.toISOString(),
+        },
         services: s._count.services,
         staff: s._count.staff,
         bookings: s._count.bookings,
         online30: online30.find((r) => r.salonId === s.id)?._count._all ?? 0,
+        // Completed bookings this Ulaanbaatar month.
+        revenueMonth: (() => {
+          const t = takings.find((r) => r.salonId === s.id)?._sum;
+          return (t?.priceSnapshot ?? 0) + (t?.extraMnt ?? 0);
+        })(),
         lastBookingAt:
           last.find((r) => r.salonId === s.id)?._max.createdAt?.toISOString() ??
           null,
@@ -315,7 +438,7 @@ export async function platformSalonDetail(
   });
   if (!salon) throw new HttpError(404, platformNotFound);
   const since = new Date(+now - 30 * DAY);
-  const [byCategory, bySource, byStatus, last, daily, audit] =
+  const [byCategory, bySource, byStatus, last, daily, audit, revenue] =
     await Promise.all([
       db.service.groupBy({
         by: ["categoryId"],
@@ -347,6 +470,7 @@ export async function platformSalonDetail(
           actor: { select: { email: true } },
         },
       }),
+      revenuePerMonth(db, salonId, now, 6),
     ]);
   return {
     id: salon.id,
@@ -392,6 +516,7 @@ export async function platformSalonDetail(
       byStatus.map((r) => [r.status, r._count._all]),
     ) as Record<string, number>,
     daily,
+    revenue,
     audit: audit.map((a) => ({
       action: a.action,
       createdAt: a.createdAt.toISOString(),
@@ -509,18 +634,22 @@ export async function reviewSalon(
     await assertPlatformAdmin(tx, adminUserId);
     const salon = await tx.salon.findUnique({
       where: { id: salonId },
-      select: { reviewStatus: true },
+      select: { reviewStatus: true, trialEndsAt: true },
     });
     if (!salon) throw new HttpError(404, platformNotFound);
     const reviewStatus = input.decision === "APPROVE" ? "APPROVED" : "REJECTED";
     if (salon.reviewStatus === reviewStatus && reviewStatus === "APPROVED")
-      return { id: salonId, reviewStatus };
+      return { id: salonId, reviewStatus, approvedNow: false };
     await tx.salon.update({
       where: { id: salonId },
       data: {
         reviewStatus,
         reviewNote: input.decision === "REJECT" ? input.note : null,
         reviewedAt: now,
+        // The free trial starts on approval, once per salon.
+        ...(reviewStatus === "APPROVED" && !salon.trialEndsAt
+          ? { trialEndsAt: trialEnd(now) }
+          : {}),
       },
     });
     await tx.platformAuditLog.create({
@@ -530,6 +659,38 @@ export async function reviewSalon(
         action: input.decision === "APPROVE" ? "APPROVE_SALON" : "REJECT_SALON",
       },
     });
-    return { id: salonId, reviewStatus };
+    return {
+      id: salonId,
+      reviewStatus,
+      // Lets the caller greet the owner once, on the actual approval.
+      approvedNow: reviewStatus === "APPROVED",
+    };
   });
+}
+// Who to congratulate when a salon is approved: the address given at
+// onboarding, else the first owner's.
+export async function approvalRecipient(db: Database, salonId: string) {
+  const salon = await db.salon.findUniqueOrThrow({
+    where: { id: salonId },
+    select: {
+      name: true,
+      slug: true,
+      email: true,
+      trialEndsAt: true,
+      members: {
+        where: { role: "SALON_OWNER", active: true },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { user: { select: { email: true } } },
+      },
+    },
+  });
+  return {
+    to: salon.email || salon.members[0]?.user.email || "",
+    salon: {
+      name: salon.name,
+      slug: salon.slug,
+      trialEndsAt: salon.trialEndsAt,
+    },
+  };
 }

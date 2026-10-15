@@ -1,5 +1,6 @@
 import { Landmark } from "lucide-react";
 import { formatMnt } from "@/lib/ui-language";
+import { CopyValue } from "./copy-value";
 export type DepositDetails = {
   amountMnt: number;
   bankName: string;
@@ -17,13 +18,18 @@ export function DepositInstructions({ deposit }: { deposit: DepositDetails }) {
         <dt>Банк</dt>
         <dd>{deposit.bankName}</dd>
         <dt>Данс</dt>
-        <dd>{deposit.accountNumber}</dd>
+        <dd>
+          <CopyValue value={deposit.accountNumber} label="Дансны дугаар" />
+        </dd>
         <dt>Хүлээн авагч</dt>
         <dd>{deposit.accountHolder}</dd>
         <dt>Гүйлгээний утга</dt>
-        <dd>{deposit.reference}</dd>
+        <dd>
+          <CopyValue value={deposit.reference} label="Гүйлгээний утга" />
+        </dd>
       </dl>
       <p>
+        Дансны дугаар, гүйлгээний утгыг хуулж банкны аппдаа буулгаарай.
         Урьдчилгааг шилжүүлсний дараа салон шалгаад захиалгыг баталгаажуулна.
       </p>
     </div>

@@ -44,6 +44,7 @@ export async function readInventory(db: PrismaClient, actor: Actor) {
     costMnt: actor.role === "RECEPTIONIST" ? null : p.costMnt,
     priceMnt: p.priceMnt,
     lowStock: p.lowStock,
+    imageUrl: p.imageUrl,
     active: p.active,
     stock: Object.fromEntries(p.stock.map((s) => [s.branchId, s.quantity])),
   }));

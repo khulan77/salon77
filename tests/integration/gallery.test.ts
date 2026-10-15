@@ -15,6 +15,7 @@ import {
   setPhoto,
 } from "../../lib/services/salon-media";
 import type { MediaStore } from "../../lib/storage";
+import { updateSalonSocial } from "../../lib/services/salon-profile";
 import { HttpError } from "../../lib/errors";
 const status = (code: number) => (e: unknown) =>
   e instanceof HttpError && e.status === code;
@@ -190,7 +191,72 @@ test("salon photo gallery", { timeout: 120000 }, async (t) => {
           store,
         );
         assert.match(person.imageUrl, /\/a\/staff-.+\.jpg$/);
+        // A branch photo tops the booking page; another salon cannot set it.
+        const branchPhoto = await setPhoto(
+          db,
+          actors.owner,
+          "branch",
+          "z",
+          jpeg,
+          store,
+        );
+        assert.match(branchPhoto.imageUrl, /\/a\/branch-.+\.jpg$/);
+        await assert.rejects(
+          setPhoto(db, actors.other, "branch", "z", jpeg, store),
+          status(404),
+        );
+        await fixture.settle();
+        const product = await db.product.create({
+          data: { salonId: "a", name: "Гель лак" },
+        });
+        const productPhoto = await setPhoto(
+          db,
+          actors.owner,
+          "product",
+          product.id,
+          png,
+          store,
+        );
+        assert.match(productPhoto.imageUrl, /\/a\/product-.+\.png$/);
+        // The salon logo: only the salon's own id, shown on the booking page.
+        const logo = await setPhoto(db, actors.owner, "logo", "a", png, store);
+        assert.match(logo.imageUrl, /\/a\/logo-.+\.png$/);
+        await assert.rejects(
+          setPhoto(db, actors.owner, "logo", "b", png, store),
+          status(404),
+        );
+        await fixture.settle();
+        assert.equal(
+          (await publicCatalog(db, "salon-a")).salon.logoUrl,
+          logo.imageUrl,
+        );
+        // Instagram and Facebook: owner only, real profile links only.
+        await updateSalonSocial(db, actors.owner, {
+          instagram: "@shine.salon",
+          facebook: "https://facebook.com/shine.salon",
+        });
+        const social = (await publicCatalog(db, "salon-a")).salon;
+        assert.equal(social.instagram, "@shine.salon");
+        assert.equal(social.facebook, "https://facebook.com/shine.salon");
+        await assert.rejects(
+          updateSalonSocial(db, actors.owner, {
+            instagram: "",
+            facebook: "https://evil.example/login",
+          }),
+        );
+        await assert.rejects(
+          updateSalonSocial(db, actors.manager, {
+            instagram: "",
+            facebook: "",
+          }),
+          status(403),
+        );
+        await fixture.settle();
         const catalog = await publicCatalog(db, "salon-a");
+        assert.equal(
+          catalog.branches.find((b) => b.id === "z")?.imageUrl,
+          branchPhoto.imageUrl,
+        );
         assert.equal(
           catalog.services.find((s) => s.id === "book-service-a-60")?.imageUrl,
           service.imageUrl,

@@ -8,7 +8,7 @@ test("owner sets a service discount and guests see the sale price", async ({
     .fill("owner@example.test");
   await page.getByLabel("Нууц үг", { exact: true }).fill("TestPassword123!");
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   await page.goto("/services");
   const row = page
     .locator(".service-row")

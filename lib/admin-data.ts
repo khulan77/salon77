@@ -1,7 +1,15 @@
 import { redirect } from "next/navigation";
+import { billingState, type BillingState } from "./billing";
 import { cache } from "react";
 import { configured } from "./env";
-import { membership, HttpError } from "./auth";
+import {
+  membership,
+  HttpError,
+  noSalonAccess,
+  salonSuspended,
+  salonUnapproved,
+  salonUnpaid,
+} from "./auth";
 import { actorFromMember, branchWhere } from "./access";
 import { invitationStatus } from "./services/team";
 import { db } from "./db";
@@ -17,17 +25,20 @@ export type BranchView = {
   longitude: number | null;
   openMinute: number;
   closeMinute: number;
+  imageUrl: string | null;
 };
 export type AdminData = {
   preview: boolean;
   role: string;
   memberId: string;
   setup: { services: boolean; staff: boolean; hours: boolean };
+  // Trial or paid access; `warn` is true in the last days before it ends.
+  billing: { state: BillingState; daysLeft: number; warn: boolean };
   salonName: string;
+  salonId: string;
+  // Uploaded in Settings; the sidebar shows scissors without one.
+  logoUrl: string | null;
   slug: string;
-  // Platform review of the salon's application; `note` is the reason it was
-  // sent back.
-  review: { status: "PENDING" | "APPROVED" | "REJECTED"; note: string };
   name: string;
   email: string;
   branches: BranchView[];
@@ -56,11 +67,13 @@ export const adminData = cache(async (): Promise<AdminData> => {
     return {
       preview: true,
       setup: { services: false, staff: false, hours: false },
+      billing: { state: "FREE", daysLeft: 0, warn: false },
       role: "SALON_OWNER",
       memberId: "",
       salonName: "Таны салон",
+      salonId: "",
+      logoUrl: null,
       slug: "",
-      review: { status: "APPROVED", note: "" },
       name: "Салоны эзэн",
       email: "Танилцах горим",
       branches: [],
@@ -72,11 +85,14 @@ export const adminData = cache(async (): Promise<AdminData> => {
     member = await membership();
   } catch (e) {
     if (e instanceof HttpError && e.status === 401) redirect("/sign-in");
-    if (
-      e instanceof HttpError &&
-      e.message === "Салонд хандах идэвхтэй эрх алга."
-    )
+    if (e instanceof HttpError && e.message === noSalonAccess)
       redirect("/onboarding");
+    if (e instanceof HttpError && e.message === salonUnapproved)
+      redirect("/onboarding/review");
+    if (e instanceof HttpError && e.message === salonSuspended)
+      redirect("/suspended");
+    if (e instanceof HttpError && e.message === salonUnpaid)
+      redirect("/billing");
     throw e;
   }
   const actor = actorFromMember(member);
@@ -110,17 +126,21 @@ export const adminData = cache(async (): Promise<AdminData> => {
     actor.role === "SALON_OWNER"
       ? await setupProgress(db, actor.salonId)
       : { services: false, staff: false, hours: false };
+  const billing = billingState(member.salon);
   return {
     preview: false,
     setup,
+    billing: {
+      state: billing.state,
+      daysLeft: billing.daysLeft,
+      warn: billing.warn,
+    },
     role: member.role,
     memberId: member.id,
     salonName: member.salon.name,
+    salonId: member.salonId,
+    logoUrl: member.salon.logoUrl,
     slug: member.salon.slug,
-    review: {
-      status: member.salon.reviewStatus,
-      note: member.salon.reviewNote ?? "",
-    },
     name: member.user.name ?? "Салоны эзэн",
     email: member.user.email,
     branches,

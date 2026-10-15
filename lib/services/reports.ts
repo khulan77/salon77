@@ -121,6 +121,7 @@ export async function revenueReport(db: Database, actor: Actor, raw: unknown) {
       select: {
         startAt: true,
         priceSnapshot: true,
+        extraMnt: true,
         serviceId: true,
         serviceNameSnapshot: true,
         staffId: true,
@@ -144,8 +145,9 @@ export async function revenueReport(db: Database, actor: Actor, raw: unknown) {
     statuses.find((s) => s.status === status)?._count._all ?? 0;
   return {
     ...input,
+    // Revenue is what the customer paid: service price plus any desk extra.
     ...aggregateRevenue(
-      rows,
+      rows.map((r) => ({ ...r, priceSnapshot: r.priceSnapshot + r.extraMnt })),
       input,
       Object.fromEntries(staff.map((s) => [s.id, s.name])),
     ),

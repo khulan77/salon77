@@ -31,7 +31,9 @@ test("the platform operator sees every salon; salon owners cannot", async ({
   await expect(
     page.getByRole("heading", { name: "Туршилтын салон" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Түр зогсоох" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Төлбөр төлөөгүй · Хаах" }),
+  ).toBeVisible();
   await page.screenshot({
     path: `test-results/platform-salon-${info.project.name}.png`,
     fullPage: true,
@@ -46,4 +48,59 @@ test("the platform operator sees every salon; salon owners cannot", async ({
     data: { status: "SUSPENDED" },
   });
   expect(api.status()).toBe(404);
+});
+test("an unpaid salon is closed and reopened from the salon list", async ({
+  page,
+}) => {
+  await login(page, "platform@example.test");
+  await page.goto("/platform");
+  const row = page.locator(".pf-table tr").filter({ hasText: "Өөр салон" });
+  page.once("dialog", (dialog) => dialog.accept());
+  await row.getByRole("button", { name: "Төлбөр төлөөгүй · Хаах" }).click();
+  await expect(row.getByRole("button", { name: "Дахин нээх" })).toBeVisible();
+  await expect(row).toContainText("Хаасан");
+  // The owner of the closed salon only sees why it is closed.
+  await page.context().clearCookies();
+  await login(page, "other@example.test");
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/suspended$/);
+  await expect(page.locator("h1")).toContainText("түр хаагдсан");
+  await expect(page.getByText("Сарын төлбөр төлөгдөөгүй")).toBeVisible();
+  expect((await page.request.get("/api/services")).status()).toBe(403);
+  // Reopening restores access.
+  await page.context().clearCookies();
+  await login(page, "platform@example.test");
+  await page.goto("/platform");
+  page.once("dialog", (dialog) => dialog.accept());
+  await row.getByRole("button", { name: "Дахин нээх" }).click();
+  await expect(
+    row.getByRole("button", { name: "Төлбөр төлөөгүй · Хаах" }),
+  ).toBeVisible();
+  await page.context().clearCookies();
+  await login(page, "other@example.test");
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/calendar$/);
+});
+test("the operator sets the monthly price per branch", async ({
+  page,
+}, info) => {
+  await login(page, "platform@example.test");
+  await page.goto("/platform");
+  const panel = page.locator(".pf-price-panel");
+  if (await panel.getByRole("button", { name: "Өөрчлөх" }).isVisible())
+    await panel.getByRole("button", { name: "Өөрчлөх" }).click();
+  await panel.getByRole("spinbutton").fill("149000");
+  await panel.screenshot({
+    path: `test-results/platform-price-form-${info.project.name}.png`,
+  });
+  await panel.getByRole("button", { name: "Хадгалах" }).click();
+  await expect(panel).toContainText("149,000₮");
+  await expect(page.locator(".pf-focus")).toContainText("Хугацаа дууссан");
+  await page.locator(".pf-filters").screenshot({
+    path: `test-results/platform-filters-${info.project.name}.png`,
+  });
+  await page.screenshot({
+    path: `test-results/platform-billing-${info.project.name}.png`,
+    fullPage: true,
+  });
 });

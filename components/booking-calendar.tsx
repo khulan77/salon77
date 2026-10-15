@@ -1,7 +1,17 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
+import Image from "next/image";
+import {
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  RotateCw,
+  Check,
+  Link2,
+  Star,
+  X,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { FeatureDialog, Feedback } from "./ui/feature-dialog";
 import type { BookingOptions, BookingDraft } from "./booking-wizard";
@@ -10,6 +20,7 @@ import type { ScheduleData } from "@/lib/services/staff";
 import type { BookingView } from "@/lib/services/bookings";
 import {
   statusLabels,
+  paymentLabels,
   sourceLabels,
   transitions,
 } from "@/lib/booking-validation";
@@ -21,7 +32,7 @@ import {
   weekdayName,
 } from "@/lib/ui-language";
 import { requestJson } from "@/lib/client-request";
-import { tone, initials } from "@/lib/avatar";
+import { tone, toneAt, initials } from "@/lib/avatar";
 // Day grid geometry: the whole day is scaled to fit the viewport, but never
 // below MIN_PX_PER_MINUTE so short appointments stay readable.
 const MIN_PX_PER_MINUTE = 0.7,
@@ -38,6 +49,17 @@ function clock(minute: number) {
 }
 const billable = (b: BookingView) =>
   b.status !== "CANCELLED" && b.status !== "NO_SHOW";
+// "Цуцалсан: Сараа · 10/16 14:20", or the customer, or the pending expiry.
+function cancelledBy(b: BookingView) {
+  const when = b.cancelledAt
+    ? ` · ${formatDayLabel(localStamp(b.cancelledAt).slice(0, 10), false)} ${localStamp(b.cancelledAt).slice(11)}`
+    : "";
+  if (b.cancelSource === "CUSTOMER") return `Үйлчлүүлэгч өөрөө цуцалсан${when}`;
+  if (b.cancelSource === "EXPIRED")
+    return `Хугацаандаа баталгаажаагүй тул автоматаар цуцлагдсан${when}`;
+  if (b.cancelledByName) return `Цуцалсан: ${b.cancelledByName}${when}`;
+  return "Цуцалсан хүн бүртгэгдээгүй";
+}
 function timeRange(b: BookingView) {
   return `${localStamp(b.startAt).slice(11)} — ${localStamp(b.endAt).slice(11)}`;
 }
@@ -74,11 +96,15 @@ export function BookingCalendar({
     [branch, setBranch] = useState(options.branches[0]?.id ?? ""),
     [rows, setRows] = useState<BookingView[]>([]),
     [loading, setLoading] = useState(!preview),
+    // After the first load, refreshes keep the grid on screen (and its
+    // scroll) instead of swapping it for a loading message.
+    [ready, setReady] = useState(preview),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [refresh, setRefresh] = useState(0),
     [creating, setCreating] = useState<BookingDraft | null>(null),
     [selected, setSelected] = useState<BookingView | null>(null),
+    [showCancelled, setShowCancelled] = useState(false),
     [pending, setPending] = useState(false),
     [now, setNow] = useState(() => minuteOf(new Date().toISOString())),
     [schedule, setSchedule] = useState<ScheduleData | null>(null),
@@ -106,6 +132,7 @@ export function BookingCalendar({
         const b = await r.json();
         if (!r.ok) throw new Error(b.error);
         setRows(b);
+        setReady(true);
         setError("");
       })
       .catch((e) => {
@@ -133,7 +160,78 @@ export function BookingCalendar({
       });
     return () => controller.abort();
   }, [branch, refresh, preview]);
+  // Every booking gets its own colour, handed out in time order so
+  // neighbours differ; a visit's bookings (one customer, two services at
+  // once) share one.
+  const visitKey = (b: BookingView) => b.groupId ?? b.id;
+  const bookingTones = new Map<string, string>();
+  for (const b of [...rows].sort(
+    (x, y) => x.startAt.localeCompare(y.startAt) || x.id.localeCompare(y.id),
+  ))
+    if (!bookingTones.has(visitKey(b)))
+      bookingTones.set(visitKey(b), toneAt(bookingTones.size));
+  const bookingTone = (b: BookingView) =>
+    bookingTones.get(visitKey(b)) ?? tone(b.id);
   const gridRef = useRef<HTMLElement>(null);
+  // Where inside a booking card the pointer grabbed it, so a drop keeps the
+  // card's top under the same spot.
+  const grab = useRef(0);
+  const movable = (b: BookingView) =>
+    !preview && ["PENDING", "CONFIRMED"].includes(b.status);
+  async function quickChange(
+    b: BookingView,
+    body: Record<string, unknown>,
+    done: string,
+  ) {
+    setError("");
+    setMessage("");
+    try {
+      await requestJson(`/api/bookings?id=${b.id}`, "PATCH", {
+        ...body,
+        version: b.version,
+      });
+      setMessage(done);
+      setRefresh((r) => r + 1);
+    } catch (e) {
+      setError(userFacingError(e, "Захиалгыг өөрчилж чадсангүй."));
+    }
+  }
+  // Dropping a card on a staff column moves it to that person and time.
+  function drop(staff: { id: string; name: string }, e: React.DragEvent) {
+    e.preventDefault();
+    const b = dayRows.find(
+      (r) => r.id === e.dataTransfer.getData("text/plain"),
+    );
+    if (!b) return;
+    const top = e.clientY - e.currentTarget.getBoundingClientRect().top;
+    const minute = Math.max(
+      start,
+      Math.round((start + (top - grab.current) / ppm) / 15) * 15,
+    );
+    if (staff.id === b.staffId && minute === minuteOf(b.startAt)) return;
+    if (b.staffLocked && staff.id !== b.staffId) {
+      setMessage("");
+      setError(
+        `${b.customerName} зөвхөн ${b.staffName}-д үйлчлүүлэхийг хүссэн тул өөр ажилтан руу шилжүүлэх боломжгүй.`,
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        `${b.customerName}-ийн захиалгыг ${staff.name} · ${clock(minute)} руу шилжүүлэх үү? Үйлчлүүлэгчид мэдэгдэл очно.`,
+      )
+    )
+      return;
+    quickChange(
+      b,
+      {
+        action: "reschedule",
+        staffId: staff.id,
+        startAt: localInstant(`${date}T${clock(minute)}`).toISOString(),
+      },
+      "Захиалгыг шилжүүллээ.",
+    );
+  }
   async function transition(status: string) {
     if (!selected) return;
     if (
@@ -165,12 +263,19 @@ export function BookingCalendar({
     ),
     // Bookings may still reference staff who left the branch; keep their column.
     columns = [
-      ...branchStaff.map((s) => ({ id: s.id, name: s.name })),
+      ...branchStaff.map((s) => ({
+        id: s.id,
+        name: s.name,
+        imageUrl: s.imageUrl ?? null,
+      })),
       ...[
         ...new Map(
           dayRows
             .filter((b) => !branchStaff.some((s) => s.id === b.staffId))
-            .map((b) => [b.staffId, { id: b.staffId, name: b.staffName }]),
+            .map((b) => [
+              b.staffId,
+              { id: b.staffId, name: b.staffName, imageUrl: null },
+            ]),
         ).values(),
       ],
     ],
@@ -248,12 +353,15 @@ export function BookingCalendar({
     showNow = date === today && now >= start && now <= end,
     active = (days === 1 ? dayRows : rows).filter(billable),
     total = active.reduce((sum, b) => sum + b.priceMnt, 0),
-    completed = active
-      .filter((b) => b.status === "COMPLETED")
+    // Paid means a payment method was recorded, whatever the status.
+    paid = active
+      .filter((b) => b.paymentMethod)
       .reduce((sum, b) => sum + b.priceMnt, 0),
-    cancelled = (days === 1 ? dayRows : rows).filter(
+    // Cancelled bookings leave the grid; they are listed on demand.
+    cancelledRows = (days === 1 ? dayRows : rows).filter(
       (b) => b.status === "CANCELLED",
-    ).length;
+    ),
+    cancelled = cancelledRows.length;
   // Fit the visible hours between the grid's top edge and the bottom of the window.
   const footerRef = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
@@ -400,12 +508,21 @@ export function BookingCalendar({
             </>
           )}
           <div>
-            <dt>Дууссан</dt>
-            <dd>{formatMnt(completed)}</dd>
+            <dt>Төлсөн</dt>
+            <dd>{formatMnt(paid)}</dd>
           </div>
           <div>
             <dt>Цуцлагдсан</dt>
-            <dd>{cancelled}</dd>
+            <dd>
+              <button
+                type="button"
+                className="stat-link"
+                disabled={!cancelled}
+                onClick={() => setShowCancelled(true)}
+              >
+                {cancelled}
+              </button>
+            </dd>
           </div>
         </dl>
         <div className="view-toggle" role="group" aria-label="Харагдац">
@@ -424,12 +541,16 @@ export function BookingCalendar({
           ))}
         </div>
       </div>
-      {loading ? (
+      {loading && !ready ? (
         <section className="panel empty-page" role="status">
           Захиалгуудыг ачаалж байна…
         </section>
       ) : days === 1 ? (
-        <section className="panel day-grid-panel" ref={gridRef}>
+        <section
+          className={`panel day-grid-panel ${loading ? "is-refreshing" : ""}`}
+          ref={gridRef}
+          aria-busy={loading}
+        >
           {columns.length ? (
             <div
               className="day-grid"
@@ -446,7 +567,17 @@ export function BookingCalendar({
                 return (
                   <div className="staff-head" key={s.id}>
                     <span className={`staff-avatar tone-${tone(s.id)}`}>
-                      {initials(s.name)}
+                      {s.imageUrl ? (
+                        <Image
+                          src={s.imageUrl}
+                          alt=""
+                          fill
+                          unoptimized
+                          sizes="36px"
+                        />
+                      ) : (
+                        initials(s.name)
+                      )}
                     </span>
                     <div>
                       <strong>{s.name}</strong>
@@ -481,7 +612,12 @@ export function BookingCalendar({
                 )}
               </div>
               {columns.map((s) => (
-                <div className="staff-column" key={s.id}>
+                <div
+                  className="staff-column"
+                  key={s.id}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => drop(s, e)}
+                >
                   {schedule &&
                     shade(plans.get(s.id)!, start, end).map(([a, b]) => (
                       <div
@@ -534,7 +670,9 @@ export function BookingCalendar({
                     />
                   ))}
                   {dayRows
-                    .filter((b) => b.staffId === s.id)
+                    .filter(
+                      (b) => b.staffId === s.id && b.status !== "CANCELLED",
+                    )
                     .map((b) => {
                       const from = Math.max(minuteOf(b.startAt), start),
                         to =
@@ -550,31 +688,116 @@ export function BookingCalendar({
                               : px < 86
                                 ? "tight"
                                 : "";
+                      const confirmed = ["CONFIRMED", "COMPLETED"].includes(
+                        b.status,
+                      );
                       return (
-                        <button
+                        <div
                           key={b.id}
-                          type="button"
-                          className={`booking-card grid-booking tone-${tone(b.serviceId)} status-${b.status.toLowerCase()} ${density}`}
+                          role="button"
+                          tabIndex={0}
+                          draggable={movable(b)}
+                          onDragStart={(e) => {
+                            grab.current =
+                              e.clientY -
+                              e.currentTarget.getBoundingClientRect().top;
+                            e.dataTransfer.setData("text/plain", b.id);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          className={`booking-card grid-booking tone-${bookingTone(b)} status-${b.status.toLowerCase()} ${density}`}
                           style={{
                             top: (from - start) * ppm + 1,
                             height: Math.max(to - from, 15) * ppm - 3,
                           }}
                           onClick={() => openBooking(b)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openBooking(b);
+                            }
+                          }}
                         >
-                          <span className="grid-booking-time">
-                            {timeRange(b)}
+                          <span className="grid-booking-top">
+                            <span className="grid-booking-time">
+                              {timeRange(b)}
+                            </span>
+                            {b.groupId && (
+                              <Link2
+                                size={12}
+                                className="grid-booking-group"
+                                aria-label="Хамт захиалсан үйлчилгээ"
+                              />
+                            )}
+                            <b
+                              className={`grid-booking-price ${b.paymentMethod ? "paid" : "unpaid"}`}
+                              title={
+                                b.paymentMethod
+                                  ? `Төлсөн · ${paymentLabels[b.paymentMethod]}`
+                                  : "Төлөөгүй"
+                              }
+                            >
+                              {formatMnt(b.priceMnt)}
+                            </b>
+                            <button
+                              type="button"
+                              className={`booking-check ${confirmed ? "on" : ""}`}
+                              disabled={preview || b.status !== "PENDING"}
+                              aria-label={
+                                confirmed ? "Баталгаажсан" : "Баталгаажуулах"
+                              }
+                              title={
+                                confirmed
+                                  ? "Баталгаажсан"
+                                  : "Дарж баталгаажуулна"
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                quickChange(
+                                  b,
+                                  { action: "status", status: "CONFIRMED" },
+                                  "Захиалгыг баталгаажууллаа.",
+                                );
+                              }}
+                            >
+                              {confirmed && <Check size={11} strokeWidth={3} />}
+                            </button>
                           </span>
-                          <strong>{b.customerName}</strong>
+                          <strong>
+                            <button
+                              type="button"
+                              className={`booking-star ${b.staffLocked ? "on" : ""}`}
+                              disabled={!movable(b)}
+                              aria-pressed={b.staffLocked}
+                              aria-label="Зөвхөн энэ ажилтан"
+                              title={
+                                b.staffLocked
+                                  ? "Зөвхөн энэ ажилтан үйлчилнэ"
+                                  : "Од тавивал өөр ажилтан руу шилжихгүй"
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                quickChange(
+                                  b,
+                                  { action: "lock", locked: !b.staffLocked },
+                                  b.staffLocked
+                                    ? "Одыг авлаа."
+                                    : "Зөвхөн энэ ажилтан үйлчилнэ.",
+                                );
+                              }}
+                            >
+                              <Star size={12} />
+                            </button>
+                            {b.customerName}
+                          </strong>
                           <span className="grid-booking-service">
                             {b.serviceName}
                           </span>
-                          <span className="grid-booking-foot">
-                            {b.status !== "CONFIRMED" && (
+                          {!["PENDING", "CONFIRMED"].includes(b.status) && (
+                            <span className="grid-booking-foot">
                               <em>{statusLabels[b.status]}</em>
-                            )}
-                            <b>{formatMnt(b.priceMnt)}</b>
-                          </span>
-                        </button>
+                            </span>
+                          )}
+                        </div>
                       );
                     })}
                   {showNow && (
@@ -597,7 +820,9 @@ export function BookingCalendar({
           {Array.from({ length: days }, (_, i) => addDays(date, i)).map(
             (day) => {
               const list = rows.filter(
-                (b) => localStamp(b.startAt).slice(0, 10) === day,
+                (b) =>
+                  localStamp(b.startAt).slice(0, 10) === day &&
+                  b.status !== "CANCELLED",
               );
               return (
                 <section
@@ -618,7 +843,7 @@ export function BookingCalendar({
                   {list.length ? (
                     list.map((b) => (
                       <button
-                        className={`booking-card tone-${tone(b.serviceId)} status-${b.status.toLowerCase()}`}
+                        className={`booking-card tone-${bookingTone(b)} status-${b.status.toLowerCase()}`}
                         key={b.id}
                         type="button"
                         onClick={() => openBooking(b)}
@@ -652,9 +877,13 @@ export function BookingCalendar({
           {days === 1 ? "Өдрийн нийт" : "7 хоногийн нийт"}{" "}
           <strong>{formatMnt(total)}</strong>
         </span>
+        <span className="pay-legend" aria-hidden>
+          <i className="paid" /> Төлсөн
+          <i className="unpaid" /> Төлөөгүй
+        </span>
         <span>
-          Дууссан <b>{formatMnt(completed)}</b> · Үлдэгдэл{" "}
-          <b className="due">{formatMnt(total - completed)}</b>
+          Төлсөн <b>{formatMnt(paid)}</b> · Үлдэгдэл{" "}
+          <b className="due">{formatMnt(total - paid)}</b>
         </span>
       </footer>
       <FeatureDialog
@@ -685,38 +914,57 @@ export function BookingCalendar({
         )}
       </FeatureDialog>
       <FeatureDialog
+        open={showCancelled}
+        title="Цуцлагдсан захиалгууд"
+        onClose={() => setShowCancelled(false)}
+      >
+        <ul className="cancelled-list">
+          {cancelledRows.map((b) => (
+            <li key={b.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelled(false);
+                  openBooking(b);
+                }}
+              >
+                <span>
+                  <strong>{b.customerName}</strong>
+                  <small>
+                    {formatDayLabel(localStamp(b.startAt).slice(0, 10))} ·{" "}
+                    {timeRange(b)} · {b.serviceName} · {b.staffName}
+                  </small>
+                </span>
+                <em>{cancelledBy(b)}</em>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </FeatureDialog>
+      <FeatureDialog
         open={!!selected}
+        wide
         title="Захиалгын дэлгэрэнгүй"
         onClose={() => setSelected(null)}
       >
         {selected && (
-          <>
+          <div className="detail-body">
             <Feedback error={error} />
-            <div className="booking-summary">
-              <h3>{selected.customerName}</h3>
-              <p>{selected.customerPhone}</p>
-              <p>
-                {selected.serviceName} · {selected.durationMinutes} минут ·{" "}
-                {formatMnt(selected.priceMnt)}
-              </p>
-              <p>
-                {selected.staffName} · {selected.branchName}
-              </p>
-              <strong>
-                {localStamp(selected.startAt).replace("T", " ")} —{" "}
-                {localStamp(selected.endAt).slice(11)}
-              </strong>
-              <p>
-                {statusLabels[selected.status]} ·{" "}
-                {sourceLabels[selected.source]}
-              </p>
-              {selected.notes && <p>{selected.notes}</p>}
-              <Link
-                className="text-link"
-                href={`/customers?id=${selected.customerId}`}
-              >
-                Үйлчлүүлэгчийн түүх
-              </Link>
+            <BookingDetail
+              booking={selected}
+              visit={
+                selected.groupId
+                  ? rows.filter((r) => r.groupId === selected.groupId)
+                  : [selected]
+              }
+              onSaved={(done) => {
+                setSelected(null);
+                setMessage(done);
+                setRefresh((r) => r + 1);
+              }}
+            />
+            <div className="quick-section-head detail-actions-head">
+              <h3>Төлөв</h3>
             </div>
             <div className="category-list">
               {transitions[selected.status].map((status) => (
@@ -752,10 +1000,190 @@ export function BookingCalendar({
                 }}
               />
             )}
-          </>
+          </div>
         )}
       </FeatureDialog>
     </>
+  );
+}
+// The booking as the desk form shows it: customer, the visit's services,
+// time, and an editable payment box.
+function BookingDetail({
+  booking,
+  visit,
+  onSaved,
+}: {
+  booking: BookingView;
+  visit: BookingView[];
+  onSaved: (message: string) => void;
+}) {
+  // The visit's extra and payment live on its lead booking.
+  const lead = [...visit].sort((a, b) => b.extraMnt - a.extraMnt)[0] ?? booking;
+  const [extraOpen, setExtraOpen] = useState(lead.extraMnt > 0),
+    [extra, setExtra] = useState(lead.extraMnt ? String(lead.extraMnt) : ""),
+    [payment, setPayment] = useState(lead.paymentMethod ?? ""),
+    [pending, setPending] = useState(false),
+    [error, setError] = useState("");
+  const extraMnt = extraOpen ? Math.max(0, Math.round(Number(extra) || 0)) : 0,
+    total = visit.reduce((sum, b) => sum + b.servicePriceMnt, 0) + extraMnt,
+    changed =
+      extraMnt !== lead.extraMnt || (payment || null) !== lead.paymentMethod,
+    editable = ["PENDING", "CONFIRMED", "COMPLETED"].includes(booking.status);
+  async function save() {
+    setPending(true);
+    setError("");
+    try {
+      await requestJson(`/api/bookings?id=${lead.id}`, "PATCH", {
+        action: "payment",
+        paymentMethod: payment || null,
+        extraMnt,
+        version: lead.version,
+      });
+      onSaved(
+        payment ? "Төлбөрийг бүртгэлээ." : "Төлбөрийн мэдээллийг шинэчиллээ.",
+      );
+    } catch (e) {
+      setError(userFacingError(e, "Төлбөрийг хадгалж чадсангүй."));
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <div className="booking-detail">
+      <Feedback error={error} />
+      <div className="quick-section">
+        <h3>Үйлчлүүлэгч</h3>
+        <div className="detail-customer">
+          <strong>{booking.customerName}</strong>
+          <a href={`tel:${booking.customerPhone}`}>{booking.customerPhone}</a>
+          <Link
+            className="text-link"
+            href={`/customers?id=${booking.customerId}`}
+          >
+            Үйлчлүүлэгчийн түүх
+          </Link>
+        </div>
+      </div>
+      <div className="quick-section">
+        <div className="quick-section-head">
+          <h3>Үйлчилгээ</h3>
+          <small>
+            {statusLabels[booking.status]} · {sourceLabels[booking.source]}
+          </small>
+        </div>
+        {booking.status === "CANCELLED" && (
+          <p className="detail-cancelled" role="status">
+            {cancelledBy(booking)}
+          </p>
+        )}
+        <ul className="detail-services">
+          {visit.map((b) => (
+            <li key={b.id} data-current={b.id === booking.id || undefined}>
+              <span>
+                <strong>{b.serviceName}</strong>
+                <small>
+                  {b.staffName} · {formatDuration(b.durationMinutes)}
+                </small>
+              </span>
+              <span>{timeRange(b)}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="detail-when">
+          {formatDayLabel(localStamp(booking.startAt).slice(0, 10))} ·{" "}
+          {booking.branchName}
+          {visit.length > 1 && " · Хоёр үйлчилгээ зэрэг"}
+        </p>
+      </div>
+      <div className="quick-section quick-payment">
+        <h3>Төлбөр</h3>
+        {visit.map((b) => (
+          <div className="pay-row" key={b.id}>
+            <span>{b.serviceName}</span>
+            <span>{formatMnt(b.servicePriceMnt)}</span>
+          </div>
+        ))}
+        {extraOpen ? (
+          <div className="pay-row pay-extra">
+            <label htmlFor="detail-extra">Нэмэлт төлбөр</label>
+            <span>
+              <input
+                id="detail-extra"
+                type="number"
+                min={0}
+                max={100000000}
+                step={1000}
+                inputMode="numeric"
+                placeholder="0"
+                disabled={!editable}
+                value={extra}
+                onChange={(e) => setExtra(e.target.value)}
+              />
+              {editable && (
+                <button
+                  type="button"
+                  aria-label="Нэмэлт төлбөр хасах"
+                  onClick={() => {
+                    setExtraOpen(false);
+                    setExtra("");
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </span>
+          </div>
+        ) : (
+          editable && (
+            <button
+              type="button"
+              className="add-extra"
+              onClick={() => setExtraOpen(true)}
+            >
+              <Plus size={14} /> Нэмэлт төлбөр
+            </button>
+          )
+        )}
+        <div className="pay-row pay-total">
+          <span>Нийт дүн</span>
+          <strong>{formatMnt(total)}</strong>
+        </div>
+        <div
+          className="chip-row pay-methods"
+          role="group"
+          aria-label="Төлбөрийн хэрэгсэл"
+        >
+          {(["POS", "TRANSFER", "CASH"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              className="chip"
+              disabled={!editable}
+              aria-pressed={payment === m}
+              onClick={() => setPayment(payment === m ? "" : m)}
+            >
+              {paymentLabels[m]}
+            </button>
+          ))}
+        </div>
+        <p className="pay-state">
+          {lead.paymentMethod
+            ? `Төлсөн · ${paymentLabels[lead.paymentMethod]}`
+            : "Төлбөр хараахан ороогүй"}
+        </p>
+        {editable && changed && (
+          <Button type="button" disabled={pending} onClick={save}>
+            {pending ? "Хадгалж байна…" : "Төлбөр хадгалах"}
+          </Button>
+        )}
+      </div>
+      {booking.notes && (
+        <div className="quick-section">
+          <h3>Тэмдэглэл</h3>
+          <p className="detail-notes">{booking.notes}</p>
+        </div>
+      )}
+    </div>
   );
 }
 function Reschedule({

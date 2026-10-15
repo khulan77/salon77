@@ -5,6 +5,7 @@ import { supabase } from "./supabase";
 import { configured } from "./env";
 import { permits } from "./permissions";
 import { HttpError } from "./errors";
+import { billingState } from "./billing";
 export { HttpError } from "./errors";
 export async function identity() {
   if (!configured)
@@ -18,7 +19,15 @@ export async function identity() {
   if (!user || !user.email) throw new HttpError(401, "Нэвтэрнэ үү.");
   return user;
 }
-export async function membership() {
+export const noSalonAccess = "Салонд хандах идэвхтэй эрх алга.";
+export const salonSuspended = "Салон тань түр хаагдсан байна.";
+export const salonUnpaid = "Салоны төлбөрийн хугацаа дууссан байна.";
+export const salonUnapproved =
+  "Салон тань баталгаажсаны дараа энэ хэсэг нээгдэнэ.";
+// Until the platform approves the salon, only its application is reachable;
+// once its trial or paid month runs out, only the billing page. The options
+// open those two paths.
+export async function membership({ unapproved = false, unpaid = false } = {}) {
   const user = await identity();
   const selected = (await cookies()).get("salon77-tenant")?.value;
   const member = await db.salonMember.findFirst({
@@ -35,8 +44,13 @@ export async function membership() {
     },
     orderBy: { createdAt: "asc" },
   });
-  if (!member || member.salon.status !== "ACTIVE")
-    throw new HttpError(403, "Салонд хандах идэвхтэй эрх алга.");
+  if (!member) throw new HttpError(403, noSalonAccess);
+  if (member.salon.status !== "ACTIVE")
+    throw new HttpError(403, salonSuspended);
+  if (!unapproved && member.salon.reviewStatus !== "APPROVED")
+    throw new HttpError(403, salonUnapproved);
+  if (!unpaid && billingState(member.salon).state === "EXPIRED")
+    throw new HttpError(402, salonUnpaid);
   return member;
 }
 export async function tenant() {

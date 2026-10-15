@@ -177,6 +177,9 @@ async function main() {
       env: {
         ...process.env,
         SALON77_INTEGRATION_TEST: "1",
+        // Never email the real operator from tests, whatever .env holds.
+        RESEND_API_KEY: "",
+        PLATFORM_ALERT_EMAIL: "",
         // Every browser test books as a guest from 127.0.0.1; production
         // limits are covered by tests/integration/protection.test.ts.
         RATE_LIMIT_BOOKINGS: "1000",

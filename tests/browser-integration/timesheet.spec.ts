@@ -7,7 +7,7 @@ test("reception marks attendance on the timesheet", async ({ page }, info) => {
     .fill("reception@example.test");
   await page.getByLabel("Нууц үг", { exact: true }).fill("TestPassword123!");
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   const nav = page.getByRole("navigation", { name: "Үндсэн цэс" });
   await expect(nav.getByText("Цагийн бүртгэл")).toHaveCount(1);
   await expect(nav.getByText("Ажлын хуваарь")).toHaveCount(0);

@@ -10,6 +10,7 @@ import {
   Flame,
   MapPin,
   ChevronDown,
+  ImagePlus,
 } from "lucide-react";
 import type { AdminData } from "@/lib/admin-data";
 import type { CatalogData } from "@/lib/services/catalog";
@@ -230,6 +231,27 @@ export function ServiceCatalog({
       {owner && !catalog.services.length && !service && (
         <ServiceTemplates serviceTypes={serviceTypes} disabled={data.preview} />
       )}
+      {owner &&
+        (() => {
+          const live = catalog.services.filter((s) => s.active),
+            noPhoto = live.filter((s) => !s.imageUrl).length,
+            noText = live.filter((s) => !s.description).length;
+          return live.length && (noPhoto || noText) ? (
+            <div className="catalog-nudge" role="status">
+              <ImagePlus size={16} />
+              <span>
+                {[
+                  noPhoto && `${noPhoto} үйлчилгээ зураггүй`,
+                  noText && `${noText} нь тайлбаргүй`,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+                . Зураг, тайлбартай үйлчилгээ захиалгын хуудсанд илүү итгэл
+                төрүүлж, илүү их захиалагддаг. «Засах» дээр дарж нэмээрэй.
+              </span>
+            </div>
+          ) : null;
+        })()}
       <div className="catalog-toolbar">
         <div className="segmented" role="group" aria-label="Ангиллаар шүүх">
           <button
@@ -325,6 +347,12 @@ export function ServiceCatalog({
                     <span className="service-tag online">Онлайн</span>
                   )}
                   {!s.active && <span className="service-tag">Идэвхгүй</span>}
+                  {owner && s.active && !s.imageUrl && (
+                    <span className="service-tag todo">Зураггүй</span>
+                  )}
+                  {owner && s.active && !s.description && (
+                    <span className="service-tag todo">Тайлбаргүй</span>
+                  )}
                 </div>
                 <p>
                   {categoryName(s.categoryId)} ·{" "}

@@ -18,8 +18,8 @@ export function SalonStatusAction({
   async function change() {
     const question =
       next === "SUSPENDED"
-        ? `«${name}» салоныг түр зогсоох уу? Салоны ажилтнууд нэвтэрч чадахгүй, онлайн захиалгын хуудас нь хаагдана.`
-        : `«${name}» салоныг дахин идэвхжүүлэх үү?`;
+        ? `«${name}» салоныг сарын төлбөр төлөөгүй тул хаах уу? Эзэн, ажилтнууд удирдлагын хэсэгт орж чадахгүй, онлайн захиалгын хуудас нь хаагдана. Мэдээлэл нь устахгүй.`
+        : `«${name}» салоныг дахин нээх үү? Удирдлага болон захиалгын хуудас нь дахин ажиллана.`;
     if (!window.confirm(question)) return;
     setBusy(true);
     setError("");
@@ -52,8 +52,8 @@ export function SalonStatusAction({
         {busy
           ? "Хадгалж байна…"
           : next === "SUSPENDED"
-            ? "Түр зогсоох"
-            : "Дахин идэвхжүүлэх"}
+            ? "Төлбөр төлөөгүй · Хаах"
+            : "Дахин нээх"}
       </button>
       {error && (
         <p className="pf-error" role="alert">

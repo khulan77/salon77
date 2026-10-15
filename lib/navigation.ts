@@ -1,24 +1,16 @@
 import {
-  LayoutDashboard,
   CalendarDays,
   BookOpen,
   Users,
   Star,
   Scissors,
-  Package,
-  Tag,
   Boxes,
-  ReceiptText,
   UserRound,
   Clock3,
   ClipboardCheck,
   ShieldCheck,
   MapPin,
-  PanelTop,
-  Images,
   ChartNoAxesCombined,
-  Gem,
-  Handshake,
   MessageSquare,
   Settings,
 } from "lucide-react";
@@ -26,16 +18,14 @@ import {
 export const navigation = [
   {
     label: "ТОЙМ",
-    items: [
-      { title: "Хяналтын самбар", href: "/", icon: LayoutDashboard },
-      { title: "Тайлан", href: "/reports", icon: ChartNoAxesCombined },
-    ],
+    items: [{ title: "Тайлан", href: "/reports", icon: ChartNoAxesCombined }],
   },
   {
     label: "ЗАХИАЛГА",
     items: [
       { title: "Календарь", href: "/calendar", icon: CalendarDays },
       { title: "Үйлчлүүлэгчид", href: "/customers", icon: Users },
+      { title: "Сэтгэгдлүүд", href: "/reviews", icon: Star },
     ],
   },
   {
@@ -56,21 +46,13 @@ export const navigation = [
     ],
   },
 ];
-// Still routable from in-page links, but hidden from the sidebar until built.
+// Working pages reached from in-page links rather than the sidebar.
 export const hiddenModules = [
   // Reached through the settings tabs.
   { title: "Баг ба эрхийн тохиргоо", href: "/team", icon: ShieldCheck },
   // Weekly schedules now live in each staff profile; kept for direct links.
   { title: "Ажлын хуваарь", href: "/schedules", icon: Clock3 },
   { title: "Захиалгууд", href: "/bookings", icon: BookOpen },
-  { title: "Сэтгэгдлүүд", href: "/reviews", icon: Star },
-  { title: "Багцууд", href: "/packages", icon: Package },
-  { title: "Урамшуулал", href: "/promotions", icon: Tag },
-  { title: "Борлуулалт", href: "/sales", icon: ReceiptText },
-  { title: "Салоны хуудас", href: "/salon-page", icon: PanelTop },
-  { title: "Зургийн цомог", href: "/gallery", icon: Images },
-  { title: "Миний багц", href: "/plan", icon: Gem },
-  { title: "Хамтын ажиллагаа", href: "/partnership", icon: Handshake },
 ];
 export const modules = [
   ...navigation.flatMap((g) => g.items),

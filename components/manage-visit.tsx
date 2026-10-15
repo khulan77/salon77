@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CalendarDays, MapPin, Phone } from "lucide-react";
+import { CalendarDays, MapPin, Phone, Star } from "lucide-react";
 import type { ManagedVisit } from "@/lib/services/manage";
 import { addDays, localStamp } from "@/lib/business-time";
 import { formatMnt, userFacingError } from "@/lib/ui-language";
@@ -109,6 +109,14 @@ export function ManageVisit({
           <p className="pb-ok" role="status">
             {done}
           </p>
+        )}
+        {(visit.canReview || visit.review) && (
+          <ReviewBox
+            api={`/api/public/${encodeURIComponent(slug)}/reviews`}
+            token={token}
+            review={visit.review}
+            onSaved={setVisit}
+          />
         )}
         <div className="pb-ticket">
           <strong>{visit.salonName}</strong>
@@ -267,5 +275,99 @@ export function ManageVisit({
         )}
       </section>
     </div>
+  );
+}
+// After a finished visit the guest rates it once, with an optional note.
+function ReviewBox({
+  api,
+  token,
+  review,
+  onSaved,
+}: {
+  api: string;
+  token: string;
+  review: ManagedVisit["review"];
+  onSaved: (visit: ManagedVisit) => void;
+}) {
+  const [rating, setRating] = useState(0),
+    [comment, setComment] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  if (review)
+    return (
+      <div className="pb-review done">
+        <strong>Үнэлгээ өгсөнд баярлалаа!</strong>
+        <Stars value={review.rating} />
+        {review.comment && <p>{review.comment}</p>}
+      </div>
+    );
+  async function send() {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(api, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, rating, comment }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error);
+      onSaved(body);
+    } catch (e) {
+      setError(userFacingError(e, "Илгээж чадсангүй. Дахин оролдоно уу."));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="pb-review">
+      <strong>Үйлчилгээ таалагдсан уу?</strong>
+      <span>Од сонгож, сэтгэгдлээ үлдээгээрэй.</span>
+      <div className="pb-stars" role="radiogroup" aria-label="Үнэлгээ">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={rating === n}
+            aria-label={`${n} од`}
+            className={n <= rating ? "on" : ""}
+            onClick={() => setRating(n)}
+          >
+            <Star size={28} />
+          </button>
+        ))}
+      </div>
+      <textarea
+        rows={3}
+        maxLength={1000}
+        value={comment}
+        placeholder="Сэтгэгдэл (заавал биш)"
+        aria-label="Сэтгэгдэл"
+        onChange={(e) => setComment(e.target.value)}
+      />
+      {error && (
+        <p className="pb-error" role="alert">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        className="pb-primary"
+        disabled={!rating || busy}
+        onClick={send}
+      >
+        {busy ? "Илгээж байна…" : "Үнэлгээ илгээх"}
+      </button>
+    </div>
+  );
+}
+export function Stars({ value }: { value: number }) {
+  return (
+    <span className="pb-stars-view" aria-label={`${value} од`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} size={15} className={n <= value ? "on" : ""} />
+      ))}
+    </span>
   );
 }

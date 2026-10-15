@@ -190,7 +190,8 @@ export async function moveGalleryImage(
   });
 }
 // Photos of a single service or staff member, shown on the booking page.
-export type PhotoTarget = "service" | "staff";
+// "logo" is the salon itself; its id must be the actor's salon.
+export type PhotoTarget = "service" | "staff" | "product" | "branch" | "logo";
 async function photoRow(
   db: PrismaClient,
   target: PhotoTarget,
@@ -198,14 +199,35 @@ async function photoRow(
   id: string,
 ) {
   const where = { id, salonId };
+  const select = { imageUrl: true };
+  if (target === "logo") {
+    const salon =
+      id === salonId
+        ? await db.salon.findUnique({
+            where: { id },
+            select: { logoUrl: true },
+          })
+        : null;
+    if (!salon) throw new HttpError(404, "Салон олдсонгүй.");
+    return { imageUrl: salon.logoUrl };
+  }
   const row =
     target === "service"
-      ? await db.service.findFirst({ where, select: { imageUrl: true } })
-      : await db.staff.findFirst({ where, select: { imageUrl: true } });
+      ? await db.service.findFirst({ where, select })
+      : target === "staff"
+        ? await db.staff.findFirst({ where, select })
+        : target === "product"
+          ? await db.product.findFirst({ where, select })
+          : await db.branch.findFirst({ where, select });
   if (!row)
     throw new HttpError(
       404,
-      target === "service" ? "Үйлчилгээ олдсонгүй." : "Ажилтан олдсонгүй.",
+      {
+        service: "Үйлчилгээ олдсонгүй.",
+        staff: "Ажилтан олдсонгүй.",
+        product: "Бараа олдсонгүй.",
+        branch: "Салбар олдсонгүй.",
+      }[target as "service" | "staff" | "product" | "branch"],
     );
   return row;
 }
@@ -217,7 +239,13 @@ const savePhoto = (
 ) =>
   target === "service"
     ? db.service.update({ where: { id }, data: { imageUrl } })
-    : db.staff.update({ where: { id }, data: { imageUrl } });
+    : target === "staff"
+      ? db.staff.update({ where: { id }, data: { imageUrl } })
+      : target === "product"
+        ? db.product.update({ where: { id }, data: { imageUrl } })
+        : target === "branch"
+          ? db.branch.update({ where: { id }, data: { imageUrl } })
+          : db.salon.update({ where: { id }, data: { logoUrl: imageUrl } });
 export async function setPhoto(
   db: PrismaClient,
   actor: Actor,

@@ -463,9 +463,10 @@ function StaffForm({
         current ? "PATCH" : "POST",
         {
           name: f.get("name"),
-          title: current?.title ?? "",
+          title: f.get("title") ?? "",
           phone: f.get("phone"),
           bio: f.get("bio") ?? "",
+          about: f.get("about") ?? "",
           active,
           memberId: f.get("memberId") || null,
           branchIds,
@@ -526,6 +527,26 @@ function StaffForm({
                 maxLength={100}
                 defaultValue={current?.name}
                 placeholder="Ажилтны нэр"
+              />
+            </label>
+            <label className="field">
+              Профайлын танилцуулга
+              <textarea
+                name="about"
+                rows={2}
+                maxLength={500}
+                defaultValue={current?.about}
+                placeholder="Жишээ: 6 жилийн туршлагатай. Гел будалт, хумсны урлаг."
+              />
+              <small>Захиалгын хуудсанд мастерын профайлд харагдана.</small>
+            </label>
+            <label className="field">
+              Мэргэжил
+              <input
+                name="title"
+                maxLength={100}
+                defaultValue={current?.title}
+                placeholder="Жишээ: Хумсны мастер"
               />
             </label>
             <label className="field">
@@ -686,12 +707,13 @@ function StaffForm({
           <details className="quick-section">
             <summary>Нэмэлт мэдээлэл</summary>
             <label className="field">
-              Товч танилцуулга
+              Дотоод тэмдэглэл
               <textarea
                 name="bio"
                 maxLength={2000}
                 defaultValue={current?.bio}
               />
+              <small>Зөвхөн салоны баг харна.</small>
             </label>
             <label className="field">
               Холбох гишүүн

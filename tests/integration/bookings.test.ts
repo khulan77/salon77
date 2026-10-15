@@ -367,6 +367,8 @@ test(
             catalog.staff.every((s) => !("phone" in s) && !("bio" in s)),
           );
           assert.ok(!JSON.stringify(catalog.staff).includes("99112233"));
+          // Only the public introduction goes out, never the internal bio.
+          assert.ok(catalog.staff.every((s) => typeof s.about === "string"));
           const confirmed = await changeBooking(db, actors.owner, online.id, {
             action: "status",
             status: "CONFIRMED",

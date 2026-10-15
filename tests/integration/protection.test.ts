@@ -130,6 +130,8 @@ test("public booking protection", { timeout: 120000 }, async (t) => {
           where: { id: held.id },
         });
         assert.equal(after.status, "CANCELLED");
+        assert.equal(after.cancelSource, "EXPIRED");
+        assert.ok(after.cancelledAt);
         assert.equal(after.version, held.version + 1);
       },
     );

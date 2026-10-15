@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+import { branchWeek, weekSummary } from "../week-hours";
+import { publicReviews, staffRatings } from "./reviews";
+import { billingState } from "../billing";
 import { Prisma, type PrismaClient, type Booking } from "@prisma/client";
 import { type Actor, refreshActor, requireBranch } from "../access";
 import { HttpError } from "../errors";
@@ -64,7 +67,12 @@ export async function resolveContext(db: Database, context: BookingContext) {
     throw new HttpError(404, "Салон олдсонгүй.");
   const salon = await db.salon.findFirst({
     where: { slug: context.slug, status: "ACTIVE" },
-    select: { id: true, reviewStatus: true },
+    select: {
+      id: true,
+      reviewStatus: true,
+      trialEndsAt: true,
+      paidUntil: true,
+    },
   });
   // A salon still under review is reachable only by its own team.
   const preview =
@@ -80,6 +88,9 @@ export async function resolveContext(db: Database, context: BookingContext) {
       },
     })) > 0;
   if (!salon || (salon.reviewStatus !== "APPROVED" && !preview))
+    throw new HttpError(404, "Салон олдсонгүй.");
+  // A salon whose trial or paid month ran out stops taking bookings.
+  if (billingState(salon).state === "EXPIRED")
     throw new HttpError(404, "Салон олдсонгүй.");
   const policy = await salonBookingPolicy(db, salon.id);
   await expireStalePending(db, salon.id, policy);
@@ -482,6 +493,9 @@ export async function createBooking(
         serviceNameSnapshot: available.service.name,
         durationMinutesSnapshot: duration,
         priceSnapshot: price,
+        // Guests cannot add charges or say how they paid.
+        extraMnt: scope.online ? 0 : input.extraMnt,
+        paymentMethod: scope.online ? null : (input.paymentMethod ?? null),
         discountPercentSnapshot: available.service.discountPercent,
         depositAmountSnapshot: deposit,
         customerNameSnapshot: input.customer?.name ?? customer.name,
@@ -524,7 +538,17 @@ export async function changeBooking(
         throw new HttpError(409, "Захиалгын төлөвийг ингэж өөрчлөх боломжгүй.");
       const updated = await tx.booking.update({
         where: { id },
-        data: { status: input.status, version: { increment: 1 } },
+        data: {
+          status: input.status,
+          version: { increment: 1 },
+          ...(input.status === "CANCELLED"
+            ? {
+                cancelledAt: new Date(),
+                cancelSource: "STAFF" as const,
+                cancelledByMemberId: current.id,
+              }
+            : {}),
+        },
       });
       if (input.status === "CONFIRMED" || input.status === "CANCELLED")
         await enqueueNotice(
@@ -536,8 +560,50 @@ export async function changeBooking(
         );
       return updated;
     }
+    if (input.action === "payment") {
+      if (!["PENDING", "CONFIRMED", "COMPLETED"].includes(booking.status))
+        throw new HttpError(
+          409,
+          "Цуцлагдсан эсвэл ирээгүй захиалгын төлбөрийг өөрчлөх боломжгүй.",
+        );
+      // A visit is paid as one: its other bookings take the same method.
+      if (booking.groupId)
+        await tx.booking.updateMany({
+          where: {
+            salonId: booking.salonId,
+            groupId: booking.groupId,
+            id: { not: id },
+          },
+          data: {
+            paymentMethod: input.paymentMethod,
+            version: { increment: 1 },
+          },
+        });
+      return tx.booking.update({
+        where: { id },
+        data: {
+          paymentMethod: input.paymentMethod,
+          ...(input.extraMnt === undefined ? {} : { extraMnt: input.extraMnt }),
+          version: { increment: 1 },
+        },
+      });
+    }
     if (!["PENDING", "CONFIRMED"].includes(booking.status))
       throw new HttpError(409, "Энэ захиалгын цагийг өөрчлөх боломжгүй.");
+    if (input.action === "lock")
+      return tx.booking.update({
+        where: { id },
+        data: { staffLocked: input.locked, version: { increment: 1 } },
+      });
+    if (
+      booking.staffLocked &&
+      input.staffId &&
+      input.staffId !== booking.staffId
+    )
+      throw new HttpError(
+        409,
+        "Үйлчлүүлэгч зөвхөн энэ ажилтанд үйлчлүүлэхийг хүссэн тул өөр ажилтан руу шилжүүлэх боломжгүй.",
+      );
     const inputScope = {
       branchId: booking.branchId,
       serviceId: booking.serviceId,
@@ -565,8 +631,16 @@ export async function changeBooking(
     return moved;
   });
 }
+// Joined into calendar reads so the detail can say who cancelled.
+export const cancelledByName = {
+  cancelledBy: { select: { user: { select: { name: true, email: true } } } },
+} as const;
 export function bookingView(
-  b: Booking & { staff?: { name: string }; branch?: { name: string } },
+  b: Booking & {
+    staff?: { name: string };
+    branch?: { name: string };
+    cancelledBy?: { user: { name: string | null; email: string } } | null;
+  },
 ) {
   return {
     id: b.id,
@@ -581,11 +655,23 @@ export function bookingView(
     serviceName: b.serviceNameSnapshot,
     customerName: b.customerNameSnapshot,
     customerPhone: b.customerPhoneSnapshot,
-    priceMnt: b.priceSnapshot,
+    // The full amount: service price plus any desk extra.
+    priceMnt: b.priceSnapshot + b.extraMnt,
+    servicePriceMnt: b.priceSnapshot,
+    extraMnt: b.extraMnt,
+    paymentMethod: b.paymentMethod,
     depositMnt: b.depositAmountSnapshot,
     durationMinutes: b.durationMinutesSnapshot,
     notes: b.notes ?? "",
     version: b.version,
+    staffLocked: b.staffLocked,
+    // Bookings of one visit (two services started together) share this.
+    groupId: b.groupId,
+    cancelledAt: b.cancelledAt?.toISOString() ?? null,
+    cancelSource: b.cancelSource,
+    cancelledByName: b.cancelledBy
+      ? b.cancelledBy.user.name || b.cancelledBy.user.email
+      : "",
     staffName: b.staff?.name ?? "",
     branchName: b.branch?.name ?? "",
   };
@@ -597,6 +683,7 @@ export async function readBooking(db: Database, actor: Actor, id: string) {
     include: {
       staff: { select: { name: true } },
       branch: { select: { name: true } },
+      ...cancelledByName,
     },
   });
   if (!b) throw new HttpError(404, "Захиалга олдсонгүй.");
@@ -626,6 +713,7 @@ export async function listBookings(
     include: {
       staff: { select: { name: true } },
       branch: { select: { name: true } },
+      ...cancelledByName,
     },
     orderBy: [{ startAt: "asc" }, { id: "asc" }],
     take: 1001,
@@ -653,6 +741,7 @@ export async function publicCatalog(
       description: true,
       phone: true,
       instagram: true,
+      facebook: true,
       images: {
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         select: { url: true },
@@ -660,8 +749,10 @@ export async function publicCatalog(
       },
     },
   });
+  const reviews = await publicReviews(db, scope.salonId);
   if (!scope.policy.publicBookingEnabled)
     return {
+      reviews,
       salon,
       policy: scope.policy,
       preview: scope.preview,
@@ -681,6 +772,9 @@ export async function publicCatalog(
         phone: true,
         openMinute: true,
         closeMinute: true,
+        imageUrl: true,
+        latitude: true,
+        longitude: true,
       },
       orderBy: { name: "asc" },
     }),
@@ -722,6 +816,7 @@ export async function publicCatalog(
         id: true,
         name: true,
         title: true,
+        about: true,
         imageUrl: true,
         branches: {
           where: { branch: { active: true } },
@@ -741,11 +836,42 @@ export async function publicCatalog(
       orderBy: { name: "asc" },
     }),
   ]);
+  const ratings = await staffRatings(db, scope.salonId);
+  // Weekday hours per branch: the branch's own hours when every master
+  // follows them, otherwise the span of the masters' shifts that day.
+  const shifts =
+    scope.policy.staffHoursMode === "SALON_HOURS"
+      ? []
+      : await db.workingHours.findMany({
+          where: {
+            salonId: scope.salonId,
+            active: true,
+            assignment: { staff: { active: true }, branch: { active: true } },
+          },
+          select: {
+            branchId: true,
+            dayOfWeek: true,
+            startMinute: true,
+            endMinute: true,
+          },
+        });
+  const weekFor = (b: {
+    id: string;
+    openMinute: number;
+    closeMinute: number;
+  }) =>
+    scope.policy.staffHoursMode === "SALON_HOURS"
+      ? Array(7).fill({ open: b.openMinute, close: b.closeMinute })
+      : branchWeek(shifts.filter((x) => x.branchId === b.id));
   return {
+    reviews,
     salon,
     policy: scope.policy,
     preview: scope.preview,
-    branches,
+    branches: branches.map((b) => ({
+      ...b,
+      hours: weekSummary(weekFor(b)),
+    })),
     categories,
     services: services.map((s) => ({
       ...s,
@@ -754,11 +880,17 @@ export async function publicCatalog(
       listPriceMnt: s.priceMnt,
       branchIds: s.branches.map((b) => b.branchId),
     })),
-    staff: staff.map((s) => ({
-      ...s,
-      branchIds: s.branches.map((b) => b.branchId),
-      serviceIds: s.services.map((v) => v.serviceId),
-    })),
+    staff: staff.map((s) => {
+      const r = ratings.find((x) => x.staffId === s.id);
+      return {
+        ...s,
+        about: s.about ?? "",
+        branchIds: s.branches.map((b) => b.branchId),
+        serviceIds: s.services.map((v) => v.serviceId),
+        rating: r?.average ?? null,
+        reviews: r?.count ?? 0,
+      };
+    }),
   };
 }
 export type PublicCatalog = Awaited<ReturnType<typeof publicCatalog>>;

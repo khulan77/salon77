@@ -77,6 +77,7 @@ export async function readStaff(
         ? (s.phone ?? "")
         : "",
     bio: s.bio ?? "",
+    about: s.about ?? "",
     imageUrl: s.imageUrl,
     active: s.active,
     memberId: owner ? s.memberId : null,

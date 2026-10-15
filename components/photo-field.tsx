@@ -13,7 +13,7 @@ export function PhotoField({
   round = false,
   onChange,
 }: {
-  target: "service" | "staff";
+  target: "service" | "staff" | "product" | "branch" | "logo";
   id: string | null;
   url: string | null;
   round?: boolean;
@@ -58,10 +58,18 @@ export function PhotoField({
         )}
       </span>
       <div>
-        <strong>Зураг</strong>
+        <strong>{target === "logo" ? "Салоны лого" : "Зураг"}</strong>
         {id ? (
           <>
-            <p>Захиалгын хуудсанд харагдана. 4 МБ хүртэл.</p>
+            <p>
+              {target === "product"
+                ? "Жагсаалтад барааг хурдан таньна. 4 МБ хүртэл."
+                : target === "logo"
+                  ? "Удирдлагын хэсгийн цэс болон захиалгын хуудсанд харагдана. Дөрвөлжин зураг сайхан харагдана. 4 МБ хүртэл."
+                  : target === "branch"
+                    ? "Энэ салбарыг сонгоход захиалгын хуудасны дээд хэсэгт харагдана. Хэвтээ зураг сайхан харагдана. 4 МБ хүртэл."
+                    : "Захиалгын хуудсанд харагдана. 4 МБ хүртэл."}
+            </p>
             <div className="photo-field-actions">
               <input
                 ref={input}
@@ -75,7 +83,15 @@ export function PhotoField({
                 disabled={busy}
                 onClick={() => input.current?.click()}
               >
-                {busy ? "Хадгалж байна…" : url ? "Зураг солих" : "Зураг сонгох"}
+                {busy
+                  ? "Хадгалж байна…"
+                  : target === "logo"
+                    ? url
+                      ? "Лого солих"
+                      : "Лого оруулах"
+                    : url
+                      ? "Зураг солих"
+                      : "Зураг сонгох"}
               </button>
               {url && (
                 <button

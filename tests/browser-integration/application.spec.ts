@@ -47,16 +47,24 @@ test("a new salon applies, is sent back, corrects itself and is approved", async
   await expect(
     page.getByRole("heading", { name: "Таны хүсэлтийг хүлээн авлаа." }),
   ).toBeVisible();
-  // The owner can set the salon up, but the public cannot reach it yet.
+  // Until approval every admin page leads to the application status.
   await page.goto("/");
-  const banner = page.locator(".review-banner");
-  await expect(banner).toContainText("Хүсэлт хянагдаж байна");
+  await expect(page).toHaveURL(/\/onboarding\/review$/);
+  const state = page.locator(".review-state");
+  await expect(state).toContainText("Хүсэлт хянагдаж байна");
+  await page.goto("/services");
+  await expect(page).toHaveURL(/\/onboarding\/review$/);
+  const blocked = await page.request.get("/api/services");
+  expect(blocked.status()).toBe(403);
+  await expect(page.getByRole("button", { name: "Гарах" })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
     ),
   ).toBe(true);
   await shot("pending");
+  // The owner may preview the page; the public still gets 404.
+  await page.context().clearCookies();
   const closed = await page.goto(`/${slug}/book`);
   expect(closed?.status()).toBe(404);
   // The operator sees the request and sends it back with a reason.
@@ -85,8 +93,7 @@ test("a new salon applies, is sent back, corrects itself and is approved", async
   // The owner reads the reason, fixes the details and sends them again.
   await login(page, applicant);
   await page.goto("/");
-  await expect(banner).toContainText("Инстаграм хуудас олдсонгүй.");
-  await banner.getByRole("link", { name: "Засаад дахин илгээх" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/review$/);
   await expect(page.locator(".review-note")).toContainText(
     "Инстаграм хуудас олдсонгүй.",
   );
@@ -95,10 +102,8 @@ test("a new salon applies, is sent back, corrects itself and is approved", async
     .getByRole("textbox", { name: "Инстаграм хаяг" })
     .fill("@shine.salon.ub");
   await page.getByRole("button", { name: "Дахин илгээх" }).click();
-  await expect(page.locator(".review-state")).toContainText(
-    "Хүсэлт хянагдаж байна",
-  );
-  // Approval removes the banner and opens the public side.
+  await expect(state).toContainText("Хүсэлт хянагдаж байна");
+  // Approval opens the admin area and the public side.
   await login(page, "platform@example.test");
   await page.goto("/platform");
   const again = page.locator(".pf-queue li").filter({ hasText: name });
@@ -109,10 +114,21 @@ test("a new salon applies, is sent back, corrects itself and is approved", async
   await expect(page.getByRole("button", { name: "Зөвшөөрөх" })).toHaveCount(0);
   await login(page, applicant);
   await page.goto("/");
+  await expect(page).toHaveURL(/\/calendar$/);
   await expect(page.locator("main h1").first()).toBeVisible();
-  await expect(banner).toHaveCount(0);
+  expect((await page.request.get("/api/services")).status()).toBe(200);
   const open = await page.goto(`/${slug}/book`);
   expect(open?.status()).toBe(200);
+  // The trial runs from approval; the billing page says where to pay.
+  await page.goto("/billing");
+  await expect(page.locator(".billing-status")).toContainText(
+    "Үнэгүй туршилт · 14 хоног үлдсэн",
+  );
+  const bank = page.locator(".billing-bank");
+  await expect(bank).toContainText("Голомт банк");
+  await expect(bank).toContainText("3665164068");
+  await expect(bank).toContainText(slug);
+  await shot("billing");
 });
 test("salon owners cannot approve themselves", async ({ page }) => {
   await login(page, "owner@example.test");

@@ -8,7 +8,7 @@ test("settings tabs show team access and the most recent sign-in", async ({
     .fill("owner@example.test");
   await page.getByLabel("Нууц үг", { exact: true }).fill("TestPassword123!");
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   const nav = page.getByRole("navigation", { name: "Үндсэн цэс" });
   await expect(nav.getByText("Баг ба эрхийн тохиргоо")).toHaveCount(0);
   await page.goto("/settings");

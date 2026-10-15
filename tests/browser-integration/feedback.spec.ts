@@ -18,12 +18,15 @@ test("a salon sends a request and reads the operator's answer", async ({
   await expect(
     page.getByRole("heading", { name: "Санал хүсэлт", level: 1 }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Санал", exact: true }).click();
+  await page.getByRole("button", { name: /^Санал/ }).click();
   await page.getByRole("textbox", { name: "Хүсэлт" }).fill(message);
   await page.getByRole("button", { name: "Илгээх" }).click();
-  await expect(page.getByRole("status")).toContainText("хүлээн авлаа");
+  // A clear confirmation that the team will answer.
+  const done = page.locator(".support-sent");
+  await expect(done).toContainText("Амжилттай илгээгдлээ!");
+  await expect(done).toContainText("заавал хариу илгээнэ");
   const mine = page.locator(".support-list li").filter({ hasText: message });
-  await expect(mine).toContainText("Хүлээгдэж байна");
+  await expect(mine).toContainText("Хариу хүлээж байна");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -49,7 +52,7 @@ test("a salon sends a request and reads the operator's answer", async ({
   await expect(item.locator(".pf-badge.ok")).toBeVisible();
   await login(page, "owner@example.test");
   await page.goto("/support");
-  await expect(mine).toContainText("Шийдвэрлэсэн");
+  await expect(mine).toContainText("Хариу өгсөн");
   await expect(mine).toContainText(reply);
   // Another salon never sees it.
   await login(page, "other@example.test");

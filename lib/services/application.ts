@@ -15,6 +15,7 @@ const fields = {
   reviewNote: true,
   submittedAt: true,
   reviewedAt: true,
+  slug: true,
 } as const;
 // The salon's own view of its application and the platform's answer.
 export async function readApplication(db: Database, actor: Actor) {
@@ -36,6 +37,7 @@ export async function readApplication(db: Database, actor: Actor) {
     note: salon.reviewNote ?? "",
     submittedAt: salon.submittedAt?.toISOString() ?? null,
     reviewedAt: salon.reviewedAt?.toISOString() ?? null,
+    slug: salon.slug,
   };
 }
 export type Application = Awaited<ReturnType<typeof readApplication>>;

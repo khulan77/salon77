@@ -28,7 +28,11 @@ export const manageAction = z.discriminatedUnion("action", [
     })
     .strict(),
 ]);
-async function load(db: Database, slug: string, rawToken: unknown) {
+export async function loadManaged(
+  db: Database,
+  slug: string,
+  rawToken: unknown,
+) {
   const token = tokenSchema.safeParse(rawToken);
   if (!token.success) throw new HttpError(404, notFound);
   const scope = await resolveContext(db, { slug });
@@ -61,6 +65,13 @@ function state(bookings: Booking[], noticeMinutes: number, now: Date) {
     deadline,
   };
 }
+export function canReview(bookings: Booking[], now: Date) {
+  return (
+    bookings.some((b) => b.status === "COMPLETED") &&
+    bookings.every((b) => b.status !== "CANCELLED") &&
+    +bookings[0].startAt <= +now
+  );
+}
 async function contact(db: Database, b: Booking) {
   const [salon, branch] = await Promise.all([
     db.salon.findUniqueOrThrow({
@@ -81,7 +92,7 @@ export async function readManagedVisit(
   clock: Clock = {},
 ) {
   const now = clock.now?.() ?? new Date();
-  const { scope, bookings } = await load(db, slug, token);
+  const { scope, bookings } = await loadManaged(db, slug, token);
   const { salon, branch, phone } = await contact(db, bookings[0]);
   const staff = await db.staff.findMany({
     where: {
@@ -91,7 +102,14 @@ export async function readManagedVisit(
     select: { id: true, name: true },
   });
   const s = state(bookings, scope.policy.cancellationNoticeMinutes, now);
+  const review = await db.review.findUnique({
+    where: { bookingId: bookings[0].id },
+    select: { rating: true, comment: true },
+  });
   return {
+    // A finished visit can be rated once.
+    canReview: canReview(bookings, now) && !review,
+    review,
     salonName: salon.name,
     phone,
     branchName: branch.name,
@@ -151,7 +169,7 @@ export async function managedAvailability(
 ) {
   const date = dateSchema.parse(raw.date);
   const now = clock.now?.() ?? new Date();
-  const { scope, bookings } = await load(db, slug, raw.token);
+  const { scope, bookings } = await loadManaged(db, slug, raw.token);
   if (!state(bookings, scope.policy.cancellationNoticeMinutes, now).canChange)
     return { slots: [] };
   const times = await openTimes(db, scope, bookings, date, now);
@@ -172,7 +190,7 @@ export async function changeManagedVisit(
   const input = manageAction.parse(raw);
   return transaction(db, async (tx) => {
     const now = clock.now?.() ?? new Date();
-    const { scope, bookings } = await load(tx, slug, input.token);
+    const { scope, bookings } = await loadManaged(tx, slug, input.token);
     const s = state(bookings, scope.policy.cancellationNoticeMinutes, now);
     if (!s.canChange) {
       if (s.status === "CANCELLED")
@@ -189,7 +207,12 @@ export async function changeManagedVisit(
         cancelled.push(
           await tx.booking.update({
             where: { id: b.id },
-            data: { status: "CANCELLED", version: { increment: 1 } },
+            data: {
+              status: "CANCELLED",
+              version: { increment: 1 },
+              cancelledAt: now,
+              cancelSource: "CUSTOMER",
+            },
           }),
         );
       await recordActivity(tx, cancelled[0], "CUSTOMER_CANCELLED");

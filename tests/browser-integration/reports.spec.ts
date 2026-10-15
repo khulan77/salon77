@@ -16,7 +16,7 @@ test("owner revenue report shows completed bookings by day, service and staff", 
     .fill("owner@example.test");
   await page.getByLabel("Нууц үг", { exact: true }).fill("TestPassword123!");
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   const headers = { Origin: new URL(baseURL!).origin };
   for (const [day, time, service, staff] of [
     [0, "10:00", "book-service-a-90", "book-staff-a-1"],
@@ -66,12 +66,6 @@ test("owner revenue report shows completed bookings by day, service and staff", 
   });
   await page.getByRole("button", { name: "Өнөөдөр" }).click();
   await expect(page).toHaveURL(new RegExp(`from=${today}&to=${today}`));
-  await page.goto("/");
-  await expect(page.locator(".insight-revenue")).toBeVisible();
-  await page.screenshot({
-    path: `test-results/dashboard-revenue-${info.project.name}.png`,
-    fullPage: true,
-  });
 });
 test("reception cannot open the revenue report", async ({ page }) => {
   await page.goto("/sign-in");
@@ -80,7 +74,7 @@ test("reception cannot open the revenue report", async ({ page }) => {
     .fill("reception@example.test");
   await page.getByLabel("Нууц үг", { exact: true }).fill("TestPassword123!");
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   await expect(
     page.getByRole("navigation", { name: "Үндсэн цэс" }).getByText("Тайлан"),
   ).toHaveCount(0);

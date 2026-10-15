@@ -190,6 +190,11 @@ export const staffSchema = z
   .object({
     name: text(100),
     title: z.string().trim().max(100).default(""),
+    about: z
+      .string()
+      .trim()
+      .max(500, "Профайлын танилцуулга 500 тэмдэгтээс ихгүй байна.")
+      .default(""),
     phone: z.string().trim().max(30),
     bio: z.string().trim().max(2000),
     active: z.boolean(),

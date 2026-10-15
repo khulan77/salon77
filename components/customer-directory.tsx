@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import type { customerDetail, listCustomers } from "@/lib/services/customers";
 import { localStamp } from "@/lib/business-time";
 import { statusLabels } from "@/lib/booking-validation";
-import { userFacingError } from "@/lib/ui-language";
+import { Trash2 } from "lucide-react";
+import { formatMnt, formatDayLabel, userFacingError } from "@/lib/ui-language";
+import { tone } from "@/lib/avatar";
 import { requestJson } from "@/lib/client-request";
 import { Button } from "./ui/button";
 import { FeatureDialog, Feedback } from "./ui/feature-dialog";
@@ -12,6 +14,26 @@ import {
   clearFieldValidity,
 } from "@/lib/form-validation";
 type CustomerList = Awaited<ReturnType<typeof listCustomers>>;
+// "9918 6455" for local numbers; others as stored.
+function formatPhone(phone: string) {
+  const local = phone.replace(/^\+976/, "");
+  return /^\d{8}$/.test(local)
+    ? `${local.slice(0, 4)} ${local.slice(4)}`
+    : phone;
+}
+// "өнөөдөр", "өчигдөр", "3 өдрийн өмнө", "маргааш" or the date.
+function relativeDay(iso: string) {
+  const day = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86400000;
+  const diff =
+    day(localStamp(iso).slice(0, 10)) -
+    day(localStamp(new Date()).slice(0, 10));
+  if (diff === 0) return "өнөөдөр";
+  if (diff === -1) return "өчигдөр";
+  if (diff === 1) return "маргааш";
+  if (diff < 0 && diff > -7) return `${-diff} өдрийн өмнө`;
+  if (diff > 0 && diff < 7) return `${diff} өдрийн дараа`;
+  return formatDayLabel(localStamp(iso).slice(0, 10), false);
+}
 type Detail = Awaited<ReturnType<typeof customerDetail>>;
 export function CustomerDirectory({
   preview,
@@ -78,6 +100,26 @@ export function CustomerDirectory({
       });
     return () => controller.abort();
   }, [selected, historyPage, preview, refresh]);
+  async function remove(c: CustomerList["customers"][number]) {
+    if (
+      !window.confirm(
+        `«${c.name}»-г устгах уу? Түүний ${c.visits} захиалгын түүх хамт устана. Буцаах боломжгүй.`,
+      )
+    )
+      return;
+    setError("");
+    setMessage("");
+    try {
+      await requestJson(
+        `/api/customers?id=${encodeURIComponent(c.id)}`,
+        "DELETE",
+      );
+      setMessage(`«${c.name}»-г устгалаа.`);
+      setRefresh((r) => r + 1);
+    } catch (e) {
+      setError(userFacingError(e, "Үйлчлүүлэгчийг устгаж чадсангүй."));
+    }
+  }
   return (
     <>
       <div className="page-heading">
@@ -107,39 +149,68 @@ export function CustomerDirectory({
           }}
         />
       </label>
-      {loading ? (
+      {!loading && result.total > 0 && (
+        <p className="customer-count">Нийт {result.total} бүртгэлтэй</p>
+      )}
+      {loading && !result.total && !result.customers.length ? (
         <p role="status">Ачаалж байна…</p>
       ) : result.customers.length ? (
-        <div className="branch-grid">
+        <ul
+          className={`panel customer-list ${loading ? "is-refreshing" : ""}`}
+          aria-busy={loading}
+        >
           {result.customers.map((c) => (
-            <button
-              className="panel customer-card"
-              key={c.id}
-              onClick={() => {
-                setDetail(null);
-                setError("");
-                setHistoryPage(0);
-                setSelected(c.id);
-              }}
-            >
-              <h2>{c.name}</h2>
-              <p>{c.phone}</p>
-              <p>Нийт захиалга: {c.totalBookings}</p>
-              <p>
-                Сүүлд үйлчлүүлсэн:{" "}
-                {c.lastVisit
-                  ? localStamp(c.lastVisit).replace("T", " ")
-                  : "Одоогоор алга"}
-              </p>
-              <p>
-                Дараагийн захиалга:{" "}
-                {c.upcoming
-                  ? localStamp(c.upcoming).replace("T", " ")
-                  : "Одоогоор алга"}
-              </p>
-            </button>
+            <li key={c.id}>
+              <button
+                type="button"
+                className="customer-row"
+                onClick={() => {
+                  setDetail(null);
+                  setError("");
+                  setHistoryPage(0);
+                  setSelected(c.id);
+                }}
+              >
+                <span className={`customer-avatar tone-${tone(c.id)}`}>
+                  {(c.name.trim()[0] ?? "?").toUpperCase()}
+                </span>
+                <span className="customer-main">
+                  <strong>{c.name}</strong>
+                  <span>
+                    {formatPhone(c.phone)}
+                    {c.lastAt && (
+                      <>
+                        <i aria-hidden>·</i>
+                        {relativeDay(c.lastAt)}
+                      </>
+                    )}
+                  </span>
+                  {c.lastService && (
+                    <em className={`customer-tag tone-${tone(c.lastService)}`}>
+                      {c.lastService}
+                    </em>
+                  )}
+                </span>
+                <span className="customer-stats">
+                  <b>{c.visits} удаа</b>
+                  <small>{formatMnt(c.spentMnt)}</small>
+                </span>
+              </button>
+              {owner && (
+                <button
+                  type="button"
+                  className="customer-delete"
+                  aria-label={`${c.name} устгах`}
+                  title="Устгах"
+                  disabled={preview}
+                  onClick={() => remove(c)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </li>
           ))}
-        </div>
+        </ul>
       ) : (
         <section className="panel empty-page">
           <h2>Үйлчлүүлэгч олдсонгүй.</h2>

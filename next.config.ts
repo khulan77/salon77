@@ -17,7 +17,29 @@ const securityHeaders = [
   },
 ];
 
+// Lets next/image resize public photos from the Supabase Storage bucket.
+const storageHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname;
+  } catch {
+    return "";
+  }
+})();
+
 const nextConfig: NextConfig = {
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 2678400,
+    remotePatterns: storageHost
+      ? [
+          {
+            protocol: "https",
+            hostname: storageHost,
+            pathname: "/storage/v1/object/public/**",
+          },
+        ]
+      : [],
+  },
   // Keep browser integration builds separate from the developer server.
   distDir:
     process.env.SALON77_INTEGRATION_TEST === "1"

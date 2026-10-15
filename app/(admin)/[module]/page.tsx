@@ -12,6 +12,9 @@ import {
   revenueReport,
 } from "@/lib/services/reports";
 import { BookingCalendar } from "@/components/booking-calendar";
+import { SetupSteps } from "@/components/setup-steps";
+import { ReviewsBoard } from "@/components/reviews-board";
+import { listReviews } from "@/lib/services/reviews";
 import { CustomerDirectory } from "@/components/customer-directory";
 import { StaffDirectory } from "@/components/staff-directory";
 import { StaffSchedules } from "@/components/staff-schedules";
@@ -29,16 +32,18 @@ import { actorFromMember } from "@/lib/access";
 import { readCatalog } from "@/lib/services/catalog";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { headers } from "next/headers";
 import { adminData } from "@/lib/admin-data";
 import { modules } from "@/lib/navigation";
 import { Branches } from "@/components/branches";
 import { Team } from "@/components/team";
-import { Button } from "@/components/ui/button";
-const descriptions: Record<string, string> = {
-  "salon-page":
-    "Салоноо цахимаар танилцуулах хуудас дараагийн шатанд нэмэгдэнэ.",
-};
+// The address visitors use, so the share link works on any domain.
+async function requestOrigin() {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  return host ? `${h.get("x-forwarded-proto") ?? "https"}://${host}` : "";
+}
 export default async function Page({
   params,
   searchParams,
@@ -61,7 +66,7 @@ export default async function Page({
       <section className="panel empty-page">
         <h1>Хандах эрхгүй</h1>
         <p>Энэ хэсэгт хандах эрхгүй байна.</p>
-        <Link href="/">Хяналтын самбарт буцах</Link>
+        <Link href="/">Нүүр хуудас руу буцах</Link>
       </section>
     );
   if (module === "settings") {
@@ -70,7 +75,7 @@ export default async function Page({
       ? await Promise.all([
           db.salon.findUnique({
             where: { id: salonId },
-            select: { coverUrl: true },
+            select: { coverUrl: true, instagram: true, facebook: true },
           }),
           db.service.findMany({
             where: {
@@ -97,6 +102,11 @@ export default async function Page({
           preview={data.preview}
           salonName={data.salonName}
           slug={data.slug}
+          salonId={data.salonId}
+          logoUrl={data.logoUrl}
+          instagram={salon?.instagram ?? ""}
+          facebook={salon?.facebook ?? ""}
+          origin={await requestOrigin()}
           coverUrl={salon?.coverUrl ?? null}
           branches={data.branches.filter((b) => b.active)}
           smsReady={smsDelivers()}
@@ -165,22 +175,38 @@ export default async function Page({
       ? await Promise.all([readStaff(db, actor), readCatalog(db, actor)])
       : [[], { services: [], categories: [] }];
     return (
-      <BookingCalendar
-        mode={module}
-        preview={data.preview}
-        options={{
-          branches: data.branches.filter((b) => b.active),
-          categories: catalog.categories.filter((c) => c.active),
-          services: catalog.services.filter(
-            (s) =>
-              s.active &&
-              catalog.categories.some((c) => c.id === s.categoryId && c.active),
-          ),
-          staff: staff.filter((s) => s.active),
-        }}
-      />
+      <>
+        {module === "calendar" && <SetupSteps data={data} />}
+        <BookingCalendar
+          mode={module}
+          preview={data.preview}
+          options={{
+            branches: data.branches.filter((b) => b.active),
+            categories: catalog.categories.filter((c) => c.active),
+            services: catalog.services.filter(
+              (s) =>
+                s.active &&
+                catalog.categories.some(
+                  (c) => c.id === s.categoryId && c.active,
+                ),
+            ),
+            staff: staff.filter((s) => s.active),
+          }}
+        />
+      </>
     );
   }
+  if (module === "reviews")
+    return (
+      <ReviewsBoard
+        owner={data.role === "SALON_OWNER"}
+        initial={
+          configured && !data.preview
+            ? await listReviews(db, actorFromMember(await membership()))
+            : []
+        }
+      />
+    );
   if (module === "branches") return <Branches data={data} />;
   if (module === "team")
     return (
@@ -262,40 +288,5 @@ export default async function Page({
         initialStaff={(await searchParams).staffId}
       />
     );
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">ТАНЫ УДИРДЛАГЫН ХЭСЭГ</div>
-          <h1>
-            {item.title}
-            <span className="heading-dot">.</span>
-          </h1>
-          <p>Бизнесээ хөгжүүлэх шинэ боломжууд.</p>
-        </div>
-      </div>
-      <section className="panel empty-page">
-        <div className="empty-page-icon">
-          <item.icon size={28} strokeWidth={1.3} />
-        </div>
-        <span className="subtle-pill">ДАРААГИЙН ШАТАНД НЭМЭГДЭНЭ</span>
-        <h2>Шинэ боломж бэлдэж байна</h2>
-        <p>
-          {descriptions[module] ??
-            `«${item.title}» хэсэг дараагийн шатанд нэмэгдэнэ. Салоны өдөр тутмын ажлыг хялбарчлах боломжуудыг үе шаттайгаар хөгжүүлж байна.`}
-        </p>
-        {module === "salon-page" && data.slug && (
-          <div className="url-preview">
-            Таны сонгосон хаяг: <strong>salon77.mn/{data.slug}</strong>{" "}
-            <ArrowUpRight size={13} style={{ display: "inline" }} />
-          </div>
-        )}
-        <Button variant="outline" asChild>
-          <Link href="/">
-            <ArrowLeft size={14} /> Хяналтын самбарт буцах
-          </Link>
-        </Button>
-      </section>
-    </>
-  );
+  notFound();
 }

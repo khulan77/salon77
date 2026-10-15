@@ -69,3 +69,13 @@ test("signed-in owners go to their salon; users without a salon to onboarding", 
     "/onboarding",
   );
 });
+test("owners see guest reviews in their own page", async ({ page }) => {
+  await login(page, "owner@example.test");
+  // The sidebar links here; on phones it sits behind the menu button.
+  await expect(page.locator('a[href="/reviews"]').first()).toHaveCount(1);
+  await page.goto("/reviews");
+  await expect(
+    page.getByRole("heading", { name: "Сэтгэгдлүүд.", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText("Одоогоор сэтгэгдэл алга")).toBeVisible();
+});

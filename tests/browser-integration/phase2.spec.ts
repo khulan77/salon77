@@ -222,7 +222,7 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
     reception.getByRole("heading", { name: "Багт нэгдэх урилга" }),
   ).toBeVisible();
   await reception.getByRole("button", { name: "Урилга хүлээн авах" }).click();
-  await expect(reception).toHaveURL(`${baseURL}/`);
+  await expect(reception).toHaveURL(/\/(calendar|schedules)$/);
   expect(
     (await context.cookies()).find((c) => c.name === "salon77-tenant")?.value,
   ).toBe("a");

@@ -11,8 +11,25 @@ test("settings preview and deposit instructions for guests", async ({
     .fill("owner@example.test");
   await page.getByLabel("Нууц үг", { exact: true }).fill("TestPassword123!");
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   await page.goto("/settings");
+  // The shareable link opens this salon's own booking page.
+  const share = page.getByRole("textbox", { name: "Захиалгын линк" });
+  await expect(share).toHaveValue(/^https?:\/\/[^/]+\/salon-a\/book$/);
+  await expect(page.getByRole("button", { name: "Хуулах" })).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Захиалгын линкийн QR код" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "QR татах" })).toBeEnabled();
+  await expect(page.getByRole("region", { name: "Салоны лого" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Лого оруулах" }),
+  ).toBeVisible();
+  // Instagram goes onto the booking page as a real profile link.
+  const social = page.getByRole("region", { name: "Инстаграм, Фэйсбүүк" });
+  await social.getByLabel("Инстаграм", { exact: true }).fill("@test.salon");
+  await social.getByRole("button", { name: "Хаяг хадгалах" }).click();
+  await expect(social).toContainText("Хадгаллаа.");
   const preview = page.getByRole("complementary", {
     name: "Үйлчлүүлэгчид харагдах байдал",
   });
@@ -67,6 +84,76 @@ test("settings preview and deposit instructions for guests", async ({
     bankName: "Хаан банк",
     reference: "88990011",
   });
+  // The guest sees the account and reference, each with a copy button.
+  const guestDay = addDays(
+    localStamp(new Date()).slice(0, 10),
+    info.project.name === "mobile" ? 28 : 27,
+  );
+  const guest = await page.context().newPage();
+  await guest.goto("/salon-a/book");
+  await expect(guest.getByRole("link", { name: "Инстаграм" })).toHaveAttribute(
+    "href",
+    "https://instagram.com/test.salon",
+  );
+  await expect(guest.getByRole("link", { name: "Чиглэл" })).toHaveAttribute(
+    "href",
+    /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/,
+  );
+  await guest.getByRole("button", { name: "Зайсан" }).click();
+  await guest
+    .locator(".pb-service")
+    .filter({ hasText: "Хумс арчилгаа" })
+    .first()
+    .click();
+  await guest.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
+  await guest.getByRole("button", { name: guestDay, exact: true }).click();
+  await guest.getByRole("button", { name: "11:00", exact: true }).click();
+  await guest.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
+  await guest.getByLabel("Нэр", { exact: true }).fill("Хуулах Зочин");
+  await guest
+    .getByLabel("Утасны дугаар", { exact: true })
+    .fill(info.project.name === "mobile" ? "88990013" : "88990012");
+  await guest.getByRole("button", { name: "Захиалах", exact: true }).click();
+  const box = guest.locator(".deposit-instructions");
+  await expect(box).toContainText("5000123456");
+  await expect(
+    box.getByRole("button", { name: "Дансны дугаар хуулах" }),
+  ).toBeVisible();
+  await expect(
+    box.getByRole("button", { name: "Гүйлгээний утга хуулах" }),
+  ).toBeVisible();
+  await box.screenshot({
+    path: `test-results/deposit-copy-${info.project.name}.png`,
+  });
+  // The guest can check whether the salon has confirmed it yet.
+  const check = guest.getByRole("button", {
+    name: "Баталгаажсан эсэхийг шалгах",
+  });
+  await check.click();
+  await expect(guest.locator(".pb-status")).toContainText(
+    "Хараахан баталгаажаагүй",
+  );
+  const listed = await (
+    await page.request.get(`/api/bookings?date=${guestDay}`)
+  ).json();
+  const pendingVisit = listed.find(
+    (b: { customerName: string }) => b.customerName === "Хуулах Зочин",
+  );
+  const confirm = await page.request.patch(
+    `/api/bookings?id=${pendingVisit.id}`,
+    {
+      headers: { Origin: new URL(baseURL!).origin },
+      data: {
+        action: "status",
+        status: "CONFIRMED",
+        version: pendingVisit.version,
+      },
+    },
+  );
+  expect(confirm.status()).toBe(200);
+  await check.click();
+  await expect(guest.locator(".pb-status")).toContainText("Баталгаажсан.");
+  await guest.close();
   // Restore defaults so later suites keep their expectations.
   await page.getByRole("checkbox", { name: "Урьдчилгаа авах" }).uncheck();
   await page.getByRole("button", { name: "Хадгалах", exact: true }).click();
