@@ -99,7 +99,10 @@ test("settings preview and deposit instructions for guests", async ({
     "href",
     /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/,
   );
-  await guest.getByRole("button", { name: "Зайсан" }).click();
+  await guest
+    .getByRole("group", { name: "Салбар сонгох" })
+    .getByRole("button", { name: /Зайсан/ })
+    .click();
   await guest
     .locator(".pb-service")
     .filter({ hasText: "Хумс арчилгаа" })

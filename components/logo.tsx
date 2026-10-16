@@ -1,6 +1,6 @@
 import Link from "next/link";
-// The Salon77 mark: a rounded rose tile with a white "s" and a gold sparkle.
-// Colours are literal so the same drawing works in favicons and images.
+import Image from "next/image";
+// The earlier vector mark, kept for generated icons and images.
 export const MARK_PATHS = {
   tile: "#b12d62",
   letter:
@@ -9,26 +9,17 @@ export const MARK_PATHS = {
     "M37.5 6.8l1.35 3.1 3.1 1.35-3.1 1.35-1.35 3.1-1.35-3.1-3.1-1.35 3.1-1.35z",
   sparkleFill: "#f4dcae",
 };
+// The current brand mark: champagne "77" on an obsidian tile.
 export function LogoMark({ size = 32 }: { size?: number }) {
   return (
-    <svg
+    <Image
       className="logo-mark"
-      viewBox="0 0 48 48"
+      src="/salon77-mark.png"
+      alt=""
       width={size}
       height={size}
       aria-hidden="true"
-      focusable="false"
-    >
-      <rect width="48" height="48" rx="13" fill={MARK_PATHS.tile} />
-      <path
-        d={MARK_PATHS.letter}
-        fill="none"
-        stroke="#fff"
-        strokeWidth="4.4"
-        strokeLinecap="round"
-      />
-      <path d={MARK_PATHS.sparkle} fill={MARK_PATHS.sparkleFill} />
-    </svg>
+    />
   );
 }
 // Mark plus "salon77" wordmark; every screen uses this one component.
@@ -52,7 +43,7 @@ export function Logo({
     >
       <LogoMark size={px} />
       <span className="logo-word" aria-hidden="true">
-        salon<b>77</b>
+        salon<b>77.mn</b>
       </span>
     </Link>
   );

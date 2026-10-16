@@ -22,7 +22,7 @@ test("business page explains the product and leads to sign-up", async ({
     await expect(page.getByRole("heading", { name: pain })).toBeVisible();
   await expect(page.locator(".lp-fix")).toHaveCount(4);
   await expect(
-    page.getByText("14 хоног үнэгүй", { exact: true }),
+    page.getByRole("heading", { name: "Бизнес туршилт" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Бүртгүүлэхэд бэлдэх зүйлс" }),
@@ -36,7 +36,7 @@ test("business page explains the product and leads to sign-up", async ({
   await expect(start).toHaveCount(4);
   await expect(start.first()).toHaveAttribute("href", "/sign-up");
   await expect(
-    page.getByRole("link", { name: "Нэвтрэх / Бүртгүүлэх" }),
+    page.locator("header").getByRole("link", { name: "Нэвтрэх", exact: true }),
   ).toHaveAttribute("href", "/sign-in");
   // FAQ opens without JavaScript-only widgets.
   await page.getByText("Төлбөр хэд вэ?").click();
@@ -53,7 +53,7 @@ test("business page explains the product and leads to sign-up", async ({
   ).toHaveAttribute("href", "tel:85563793");
   await expect(page.locator('a[href^="https://instagram.com"]')).toHaveCount(0);
   // The shared footer: e-mail, and no social icons while none is configured.
-  const footer = page.locator("footer.site-footer");
+  const footer = page.locator("footer.hx-footer");
   await expect(
     footer.getByRole("link", { name: "salon77.mn@gmail.com" }),
   ).toHaveAttribute("href", "mailto:salon77.mn@gmail.com");

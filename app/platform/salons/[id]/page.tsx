@@ -12,6 +12,7 @@ import { SalonPrice } from "@/components/platform/salon-price";
 import { BILLING_LABELS, renewalLabels } from "@/lib/billing";
 import { CountChart } from "@/components/platform/count-chart";
 import { SalonStatusAction } from "@/components/platform/status-action";
+import { DeleteSalon } from "@/components/platform/delete-salon";
 import { ReviewAction } from "@/components/platform/review-action";
 import {
   REVIEW_LABELS,
@@ -408,6 +409,7 @@ export default async function PlatformSalon({
           </ul>
         </section>
       )}
+      <DeleteSalon id={salon.id} name={salon.name} />
     </>
   );
 }

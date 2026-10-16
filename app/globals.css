@@ -10328,8 +10328,8 @@ div.pf-price > * {
   line-height: 1;
 }
 .logo-word b {
-  font-weight: inherit;
-  color: var(--brand-600);
+  font-weight: 500;
+  color: #9a7d52;
 }
 .logo-sm .logo-word {
   font-size: 19px;
@@ -10341,7 +10341,7 @@ div.pf-price > * {
   color: #fff;
 }
 .logo-light .logo-word b {
-  color: var(--brand-200);
+  color: #c5a880;
 }
 
 /* Public footer shared by every public page. */

@@ -10,6 +10,8 @@ test("the platform operator sees every salon; salon owners cannot", async ({
   page,
 }, info) => {
   await login(page, "platform@example.test");
+  // The platform operator lands on the console straight after signing in.
+  await expect(page).toHaveURL(/\/platform$/);
   await page.goto("/platform");
   await expect(
     page.getByRole("heading", { name: "Платформын тойм" }),
@@ -32,7 +34,7 @@ test("the platform operator sees every salon; salon owners cannot", async ({
     page.getByRole("heading", { name: "Туршилтын салон" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Төлбөр төлөөгүй · Хаах" }),
+    page.getByRole("button", { name: "Идэвхгүй болгох" }),
   ).toBeVisible();
   await page.screenshot({
     path: `test-results/platform-salon-${info.project.name}.png`,
@@ -56,8 +58,8 @@ test("an unpaid salon is closed and reopened from the salon list", async ({
   await page.goto("/platform");
   const row = page.locator(".pf-table tr").filter({ hasText: "Өөр салон" });
   page.once("dialog", (dialog) => dialog.accept());
-  await row.getByRole("button", { name: "Төлбөр төлөөгүй · Хаах" }).click();
-  await expect(row.getByRole("button", { name: "Дахин нээх" })).toBeVisible();
+  await row.getByRole("button", { name: "Идэвхгүй болгох" }).click();
+  await expect(row.getByRole("button", { name: "Идэвхжүүлэх" })).toBeVisible();
   await expect(row).toContainText("Хаасан");
   // The owner of the closed salon only sees why it is closed.
   await page.context().clearCookies();
@@ -72,9 +74,9 @@ test("an unpaid salon is closed and reopened from the salon list", async ({
   await login(page, "platform@example.test");
   await page.goto("/platform");
   page.once("dialog", (dialog) => dialog.accept());
-  await row.getByRole("button", { name: "Дахин нээх" }).click();
+  await row.getByRole("button", { name: "Идэвхжүүлэх" }).click();
   await expect(
-    row.getByRole("button", { name: "Төлбөр төлөөгүй · Хаах" }),
+    row.getByRole("button", { name: "Идэвхгүй болгох" }),
   ).toBeVisible();
   await page.context().clearCookies();
   await login(page, "other@example.test");

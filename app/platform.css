@@ -1,0 +1,135 @@
+/* Platform console in the Salon77 brand: an obsidian bar with champagne
+   light, black actions, champagne charts, serif titles. Only the brand tokens
+   change inside .pf, so the console's own rules follow. */
+.pf {
+  --brand-50: #faf6ef;
+  --brand-100: #f3ead9;
+  --brand-200: #e6d3b3;
+  --brand-300: #d4b98f;
+  --brand-400: #c5a880;
+  --brand-500: #b0925f;
+  --brand-600: #121316;
+  --brand-700: #26292e;
+  --brand-800: #1b1b1f;
+  --brand-900: #121316;
+  --accent: #121316;
+  --accent-strong: #26292e;
+  --accent-soft: #faf6ef;
+  --pf-serif:
+    "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman",
+    serif;
+  background: #f9f9f8;
+}
+.pf .pf-header {
+  padding-block: 12px;
+  background:
+    radial-gradient(
+      ellipse 45% 140% at 100% 0%,
+      rgb(197 168 128 / 0.22),
+      transparent 70%
+    ),
+    linear-gradient(160deg, #1b1b1e, #0d0d0e);
+  border-bottom: 1px solid rgb(197 168 128 / 0.2);
+}
+.pf .pf-logo {
+  gap: 10px;
+  min-height: 44px;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.pf .pf-logo img {
+  width: 34px;
+  height: 34px;
+}
+/* The old "s" tile rule targets this span; reset it for the wordmark. */
+.pf .pf-logo span {
+  display: inline;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  font-size: inherit;
+  white-space: nowrap;
+}
+.pf .pf-logo b {
+  font-weight: 500;
+  color: #c5a880;
+}
+.pf .pf-logo small {
+  margin-left: 4px;
+  padding: 3px 9px;
+  border: 1px solid rgb(197 168 128 / 0.4);
+  border-radius: 999px;
+  background: rgb(197 168 128 / 0.12);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e3cfae;
+}
+.pf .pf-header nav a {
+  color: #cfcac4;
+  font-weight: 500;
+}
+.pf .pf-header nav a:hover {
+  color: #fff;
+}
+.pf .pf-count {
+  background: #c5a880;
+  color: #121316;
+}
+.pf .pf-heading h1 {
+  font-family: var(--pf-serif);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.pf .pf-bars i {
+  background: #c5a880;
+}
+.pf .pf-bars span:hover i {
+  background: #9a7d52;
+}
+/* Danger zone on a salon's page. */
+.pf .pf-delete {
+  margin-top: 24px;
+  border-color: var(--danger-200);
+}
+.pf .pf-delete h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: var(--danger-700);
+}
+.pf .pf-delete p {
+  max-width: 640px;
+  margin: 0 0 14px;
+  color: var(--gray-600);
+  line-height: 1.6;
+}
+.pf-delete-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 420px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.pf-delete-field input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font: inherit;
+}
+.pf .pf-delete .pf-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.pf .pf-delete .pf-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

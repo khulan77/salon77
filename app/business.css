@@ -1,0 +1,694 @@
+/* /business in the "Modern Atelier Luxury" look of /home. The page keeps its
+   lp-* markup; inside .bx the brand tokens become obsidian and champagne, so
+   every rule built on them follows. */
+.lp.bx {
+  --brand-50: #faf6ef;
+  --brand-100: #f3ead9;
+  --brand-200: #e6d3b3;
+  --brand-300: #d4b98f;
+  --brand-400: #c5a880;
+  --brand-500: #9a7d52;
+  --brand-600: #121316;
+  --brand-700: #26292e;
+  --brand-800: #1b1b1f;
+  --brand-900: #121316;
+  --gold-50: #fbf6ee;
+  --gold-100: #f6ead8;
+  --gold-200: #ecd8b8;
+  --gold-300: #ddc29b;
+  --gold-500: #c5a880;
+  --gold-600: #9a7d52;
+  --gold-700: #725b38;
+  --gold-800: #4f3f26;
+  --background: #f9f9f8;
+  --accent: #121316;
+  --accent-strong: #26292e;
+  --accent-soft: #faf6ef;
+  --bx-serif:
+    "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman",
+    serif;
+  background: #f9f9f8;
+}
+.lp.bx :is(h1, h2) {
+  font-family: var(--bx-serif);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.lp.bx .lp-dot {
+  color: var(--gold-500);
+}
+.lp.bx .lp-eyebrow {
+  color: var(--gold-700);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.lp.bx .lp-pill {
+  border: 1px solid #e7e5e4;
+  background: #fff;
+  color: #5b5c61;
+  letter-spacing: 0.04em;
+}
+.lp.bx .lp-pill svg {
+  color: var(--gold-500);
+}
+/* Buttons: obsidian pills without the coloured glow. */
+.lp.bx .lp-btn {
+  border-radius: 999px;
+  box-shadow: none;
+}
+.lp.bx .lp-btn:hover {
+  background: var(--brand-700);
+}
+.lp.bx .lp-btn.outline,
+.lp.bx .lp-btn.light {
+  background: #fff;
+  color: #121316;
+}
+/* Header: dark, evenly spaced links; a plain sign-in link and an obsidian
+   call to action. */
+.lp.bx .lp-nav {
+  background: #fff;
+  border-bottom: 1px solid #e9e7e4;
+}
+.lp.bx .hx-logo img {
+  width: auto;
+  height: 34px;
+}
+.lp.bx .lp-nav nav {
+  gap: 34px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #3d3936;
+}
+.lp.bx .lp-nav nav a:hover {
+  color: #121316;
+}
+.lp.bx .lp-nav-actions {
+  gap: 28px;
+}
+.bx-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #3d3936 !important;
+}
+.bx-nav-link:hover {
+  color: #121316 !important;
+}
+/* The person icon is for phones, where the text does not fit. */
+.bx-nav-link svg {
+  display: none;
+}
+.bx-nav-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  background: #1b1b1d;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff !important;
+  transition: background 0.15s;
+}
+.bx-nav-cta:hover {
+  background: #2c2c30;
+}
+/* Hero: the same warm golden glow as /home. */
+.lp.bx .lp-hero {
+  position: relative;
+  isolation: isolate;
+}
+.lp.bx .lp-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -10%;
+  left: 18%;
+  width: min(820px, 100vw);
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgb(249 205 140 / 0.7),
+    rgb(250 220 176 / 0.4) 40%,
+    rgb(250 228 196 / 0.14) 70%,
+    transparent 100%
+  );
+  filter: blur(70px);
+  pointer-events: none;
+}
+/* Dark panels: obsidian with a champagne light instead of rose. */
+.lp.bx :is(.lp-final, .lp-price-trial) {
+  background:
+    radial-gradient(
+      ellipse 55% 90% at 100% 0%,
+      rgb(197 168 128 / 0.26),
+      transparent 70%
+    ),
+    #121316;
+}
+.lp.bx .lp-final .lp-btn,
+.lp.bx .lp-price-trial .lp-btn {
+  background: #c5a880;
+  color: #121316;
+}
+.lp.bx .lp-final .lp-btn:hover,
+.lp.bx .lp-price-trial .lp-btn:hover {
+  background: #d3b994;
+}
+/* Industries */
+.bx-industry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bx-industry-grid li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 20px;
+  border: 1px solid #e7e5e4;
+  border-radius: 8px;
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.bx-industry-grid li:hover {
+  border-color: #121316;
+  transform: translateY(-2px);
+}
+.bx-industry-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: #f6ead8;
+  color: #725b38;
+}
+.bx-industry-grid h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: #121316;
+}
+.bx-industry-grid p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #5b5c61;
+}
+@media (max-width: 1000px) {
+  .bx-industry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .lp.bx .hx-logo img {
+    height: 28px;
+  }
+  /* Phone: the sign-in link becomes an icon; its name stays for readers. */
+  .lp.bx .lp-nav-actions {
+    gap: 8px;
+  }
+  .bx-nav-link {
+    padding: 0;
+    border-radius: 12px;
+    background: #efeeec;
+  }
+  .bx-nav-link svg {
+    display: block;
+  }
+  .bx-nav-link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .bx-nav-cta {
+    min-height: 44px;
+    padding: 0 14px;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+}
+@media (max-width: 400px) {
+  .bx-industry-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Showcase details in the same palette: warm panels, champagne bars. */
+.lp.bx .lp-pain-art {
+  background: #f5f3ef;
+}
+.lp.bx .lp-breakdown-track > span {
+  background: #c5a880;
+}
+.lp.bx .lp-breakdown li:first-child .lp-breakdown-track > span {
+  background: #121316;
+}
+@media (max-width: 1240px) {
+  .lp.bx .lp-nav nav {
+    gap: 20px;
+    font-size: 14px;
+  }
+  .lp.bx .lp-nav-actions {
+    gap: 16px;
+  }
+}
+
+/* Full-width white header; its content stays on the page grid. */
+.lp.bx .lp-nav {
+  max-width: none;
+  padding-inline: max(24px, calc((100% - 1132px) / 2));
+}
+/* Booking link: copy and URL on the left, the guest's phone on the right. */
+.bx-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: clamp(32px, 6vw, 80px);
+}
+.bx-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 14px;
+  border: 1px solid #e6d9c4;
+  border-radius: 999px;
+  background: #f7f1e8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #2c2826;
+}
+.lp.bx .bx-link h2 {
+  margin: 18px 0 16px;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.12;
+  text-align: left;
+}
+.bx-link-copy > p {
+  margin: 0 0 26px;
+  max-width: 560px;
+  font-size: 16px;
+  line-height: 1.75;
+  color: #5b5c61;
+}
+.bx-url {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 560px;
+  min-height: 64px;
+  padding: 8px 8px 8px 20px;
+  border: 1px solid #e7e5e4;
+  border-radius: 18px;
+  background: #f5f4f2;
+}
+.bx-url > svg {
+  flex-shrink: 0;
+  color: #8a8580;
+}
+.bx-url > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 15px;
+  font-weight: 650;
+  color: #121316;
+}
+.bx-url-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: #121316;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+  color: #fff !important;
+}
+.bx-url-btn:hover {
+  background: #26292e;
+}
+.bx-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  color: #3d3936;
+}
+.bx-checks li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.bx-checks li > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #e5f4ea;
+  color: #2f7a4a;
+}
+.bx-checks .lp-soon {
+  font-style: normal;
+}
+.bx-phone {
+  justify-self: center;
+  width: min(330px, 100%);
+  padding: 18px;
+  border-radius: 40px;
+  background: #1d1b1a;
+  box-shadow: 0 30px 60px -20px rgb(18 19 22 / 0.35);
+}
+.bx-phone-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 18px 18px;
+  border-radius: 26px;
+  background: #fff;
+}
+.bx-phone-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #efedea;
+}
+.bx-phone-head > i {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #121316;
+  font-family: var(--bx-serif);
+  font-size: 16px;
+  color: #c5a880;
+}
+.bx-phone-head div {
+  display: flex;
+  flex-direction: column;
+}
+.bx-phone-head strong {
+  font-size: 14px;
+  color: #121316;
+}
+.bx-phone-head small {
+  font-size: 11px;
+  color: #8a8580;
+}
+.bx-phone-step {
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9a7d52;
+}
+.bx-phone-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #ebe9e6;
+  border-radius: 12px;
+  background: #fafaf9;
+  font-size: 13px;
+}
+.bx-phone-row > div {
+  display: flex;
+  flex-direction: column;
+}
+.bx-phone-row strong {
+  font-size: 13px;
+  color: #121316;
+}
+.bx-phone-row small {
+  font-size: 11px;
+  color: #8a8580;
+}
+.bx-phone-row > span {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-weight: 700;
+  color: #121316;
+}
+.bx-phone-master {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+}
+.bx-phone-master i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #3fb27f;
+}
+.bx-phone-cta {
+  margin-top: 8px;
+  padding: 13px;
+  border-radius: 12px;
+  background: #121316;
+  font-size: 12px;
+  font-weight: 650;
+  text-align: center;
+  color: #fff;
+}
+@media (max-width: 900px) {
+  .bx-link {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .bx-url {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+  .bx-url > span {
+    font-size: 13px;
+  }
+  .bx-url-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+/* Pricing: the trial plan on obsidian beside the terms on white. */
+.bx-pricing-head {
+  margin-bottom: 36px;
+}
+.lp.bx .bx-pricing-head h2 {
+  margin: 10px 0 8px;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.1;
+  text-align: left;
+}
+.bx-pricing-head p {
+  margin: 0;
+  font-size: 16px;
+  color: #6b6863;
+}
+.bx-plans {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+}
+.bx-plan {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(28px, 3.4vw, 40px);
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 85% 0%,
+      rgb(197 168 128 / 0.16),
+      transparent 70%
+    ),
+    #0d0d0e;
+  color: #fff;
+}
+.bx-plan-chip {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border: 1px solid rgb(197 168 128 / 0.45);
+  border-radius: 999px;
+  background: rgb(197 168 128 / 0.12);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #d9c19c;
+}
+.lp.bx .bx-plan h3 {
+  margin: 26px 0 10px;
+  font-family: var(--bx-serif);
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 600;
+  color: #fff;
+}
+.bx-plan > p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #b9b5b0;
+}
+.bx-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 28px 0 0;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+}
+.bx-plan-price strong {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1;
+}
+.bx-plan-price span {
+  font-size: 14px;
+  color: #a39f9a;
+}
+.bx-plan ul {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 24px 0 32px;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  color: #e9e6e2;
+}
+.bx-plan li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bx-plan li svg {
+  flex-shrink: 0;
+  color: #c5a880;
+}
+.bx-plan-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 58px;
+  margin-top: auto;
+  border-radius: 14px;
+  background: #c1a986;
+  font-size: 16px;
+  font-weight: 700;
+  color: #121316 !important;
+  transition: background 0.15s;
+}
+.bx-plan-cta:hover {
+  background: #cfb894;
+}
+.bx-terms {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(28px, 3.4vw, 40px);
+  border: 1px solid #e9e7e4;
+  border-radius: 24px;
+  background: #fff;
+}
+.bx-terms ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 36px 40px;
+  margin: 0 0 32px;
+  padding: 0;
+  list-style: none;
+}
+.bx-term-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #f4f3f1;
+  color: #121316;
+}
+.lp.bx .bx-terms h3 {
+  margin: 18px 0 8px;
+  font-size: 18px;
+  font-weight: 650;
+  color: #121316;
+}
+.bx-terms p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #6b6863;
+}
+.bx-terms-help {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: auto;
+  padding: 18px 22px;
+  border: 1px solid #efedea;
+  border-radius: 14px;
+  background: #fafaf9;
+  font-size: 14px;
+  color: #4a4642;
+}
+.bx-terms-help a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #121316 !important;
+}
+@media (max-width: 1000px) {
+  .bx-plans {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .bx-terms ul {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .bx-plan-price strong {
+    font-size: 46px;
+  }
+}

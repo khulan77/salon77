@@ -1,0 +1,59 @@
+/* Salon admin in the Salon77 brand of /home, /business and sign-in:
+   obsidian actions, champagne highlights, serif page titles. Only the brand
+   tokens change inside .app-shell, so every rule built on them follows. */
+.app-shell {
+  --brand-50: #faf6ef;
+  --brand-100: #f3ead9;
+  --brand-200: #e6d3b3;
+  --brand-300: #d4b98f;
+  --brand-400: #c5a880;
+  --brand-500: #b0925f;
+  --brand-600: #121316;
+  --brand-700: #26292e;
+  --brand-800: #1b1b1f;
+  --brand-900: #121316;
+  --gold-50: #fbf6ee;
+  --gold-100: #f6ead8;
+  --gold-200: #ecd8b8;
+  --gold-300: #ddc29b;
+  --gold-500: #c5a880;
+  --gold-600: #9a7d52;
+  --gold-700: #725b38;
+  --gold-800: #4f3f26;
+  --accent: #121316;
+  --accent-strong: #26292e;
+  --accent-soft: #faf6ef;
+  --admin-serif:
+    "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman",
+    serif;
+}
+/* Sidebar: the active page sits on champagne with a gold marker. */
+.app-shell .nav-item:hover {
+  color: #121316;
+}
+.app-shell .nav-item.active {
+  background: #f3ead9;
+  color: #121316;
+}
+.app-shell .nav-item.active svg {
+  color: #725b38;
+}
+.app-shell .active-dot {
+  background: #b0925f;
+}
+/* Page titles speak in the editorial serif; the closing dot is gold. */
+.app-shell :is(.page-heading h1, .calendar-date-title > span:first-child) {
+  font-family: var(--admin-serif);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.app-shell .heading-dot {
+  color: #c5a880;
+}
+.app-shell .eyebrow {
+  color: #725b38;
+}
+/* Primary buttons: obsidian without the rose glow. */
+.app-shell .button-primary {
+  box-shadow: none;
+}

@@ -1,4 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
+import "@fontsource-variable/source-serif-4";
+import "../platform.css";
 import type { Metadata } from "next";
 import { platformAdminId } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -21,8 +24,15 @@ export default async function PlatformLayout({
   return (
     <div className="pf">
       <header className="pf-header">
-        <Link href="/platform" className="pf-logo">
-          <span>s</span>salon77<em>.</em>
+        <Link
+          href="/platform"
+          className="pf-logo"
+          aria-label="Salon77 платформ"
+        >
+          <Image src="/salon77-mark.png" alt="" width={34} height={34} />
+          <span>
+            salon<b>77.mn</b>
+          </span>
           <small>Платформ</small>
         </Link>
         <nav aria-label="Платформын цэс">

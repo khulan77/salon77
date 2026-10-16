@@ -142,7 +142,10 @@ test("guest any-staff booking and public-safe responses", async ({
   await expect(
     page.getByRole("heading", { name: "Туршилтын салон", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Зайсан" }).click();
+  await page
+    .getByRole("group", { name: "Салбар сонгох" })
+    .getByRole("button", { name: /Зайсан/ })
+    .click();
   await page
     .locator(".pb-service")
     .filter({ hasText: "Гел маникюр" })
@@ -213,7 +216,10 @@ test("guest any-staff booking and public-safe responses", async ({
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
   await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   await page.goto("/calendar");
-  await page.getByLabel("Өдөр", { exact: true }).fill(date);
+  await page
+    .locator(".calendar-date-nav")
+    .getByLabel("Өдөр", { exact: true })
+    .fill(date);
   const card = page
     .locator(".booking-card")
     .filter({ hasText: "Онлайн үйлчлүүлэгч" });
@@ -314,7 +320,10 @@ test("one customer, two services started together by two staff", async ({
   );
   await dialog.getByRole("button", { name: "Захиалах", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await page.getByLabel("Өдөр", { exact: true }).fill(date);
+  await page
+    .locator(".calendar-date-nav")
+    .getByLabel("Өдөр", { exact: true })
+    .fill(date);
   const cards = page.locator(".booking-card").filter({ hasText: name });
   await expect(cards).toHaveCount(2);
   await expect(cards.filter({ hasText: "Гел маникюр" })).toContainText("11:00");
@@ -344,7 +353,10 @@ test("one customer, two services started together by two staff", async ({
   await dialog.getByRole("button", { name: "14:00", exact: true }).click();
   await dialog.getByRole("button", { name: "Захиалах", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await page.getByLabel("Өдөр", { exact: true }).fill(date);
+  await page
+    .locator(".calendar-date-nav")
+    .getByLabel("Өдөр", { exact: true })
+    .fill(date);
   const single = page.locator(".booking-card").filter({ hasText: other });
   await expect(single).toHaveCount(1);
   const own = await single.evaluate((el) =>

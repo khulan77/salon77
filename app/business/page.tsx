@@ -1,5 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
+import "@fontsource-variable/source-serif-4";
+import "../home.css";
+import "../business.css";
 import {
   ArrowRight,
   BellRing,
@@ -10,11 +14,16 @@ import {
   ChartNoAxesCombined,
   Check,
   ClipboardCheck,
+  Droplets,
+  Eye,
+  Flower2,
+  Hand,
+  Paintbrush,
+  Palette,
   History,
   Landmark,
   Link2,
   MessageCircle,
-  MessageSquare,
   NotebookPen,
   Receipt,
   ShieldCheck,
@@ -32,8 +41,9 @@ import { db } from "@/lib/db";
 import { configured } from "@/lib/env";
 import { sessionUser } from "@/lib/auth";
 import { site } from "@/lib/site";
-import { Logo } from "@/components/logo";
-import { SiteFooter } from "@/components/site-footer";
+import { HomeFooter } from "@/components/home-footer";
+import { SERVICE_TYPES, type ServiceType } from "@/lib/salon-application";
+import { templatesFor } from "@/lib/service-templates";
 import { formatMnt } from "@/lib/ui-language";
 import { smsDelivers } from "@/lib/notifications/provider";
 import { PERIOD_DAYS, TRIAL_DAYS, monthlyAmount } from "@/lib/billing";
@@ -334,6 +344,18 @@ async function branchPrice() {
   if (!configured) return null;
   return pricePerBranch(db).catch(() => null);
 }
+// The service types a salon can pick at onboarding, each with its starter
+// services (lib/service-templates.ts).
+const industries: { type: ServiceType; icon: typeof Scissors }[] = [
+  { type: "HAIR", icon: Scissors },
+  { type: "NAILS", icon: Paintbrush },
+  { type: "LASHES", icon: Eye },
+  { type: "BROWS", icon: Sparkles },
+  { type: "MAKEUP", icon: Palette },
+  { type: "SKIN", icon: Droplets },
+  { type: "MASSAGE", icon: Hand },
+  { type: "WAXING", icon: Flower2 },
+];
 export default async function BusinessPage() {
   // Messages are promised only once a real SMS gateway delivers them.
   const sms = smsDelivers();
@@ -341,24 +363,33 @@ export default async function BusinessPage() {
   const signedIn = start !== "/sign-up";
   const cta = "Бизнесээ бүртгүүлэх";
   return (
-    <div className="lp">
+    <div className="lp bx" id="top">
       <header className="lp-nav">
-        <Logo href="/business" />
+        <Link href="/business" className="hx-logo" aria-label="Salon77">
+          <Image
+            src="/salon77-mn-logo.png"
+            alt="Salon77.mn"
+            width={792}
+            height={198}
+            priority
+          />
+        </Link>
         <nav aria-label="Хуудасны хэсгүүд">
-          <a href="#problems">Шийдэл</a>
+          <a href="#industries">Шийдэл</a>
           <a href="#features">Боломжууд</a>
           <a href="#pricing">Үнэ</a>
           <a href="#how">Хэрхэн ажилладаг</a>
           <a href="#faq">Асуулт</a>
-          <a href="#about">Бидний тухай</a>
         </nav>
         <div className="lp-nav-actions">
           {/* Signed-in owners keep a way back to their salon admin. */}
-          <Link
-            href={signedIn ? start : "/sign-in"}
-            className="lp-btn small outline"
-          >
-            {signedIn ? "Миний салон" : "Нэвтрэх / Бүртгүүлэх"}
+          {/* Signed-in owners keep a way back to their salon admin. */}
+          <Link href={signedIn ? start : "/sign-in"} className="bx-nav-link">
+            <UserRound size={17} aria-hidden="true" />
+            <span>{signedIn ? "Миний салон" : "Нэвтрэх"}</span>
+          </Link>
+          <Link href={signedIn ? "#pricing" : start} className="bx-nav-cta">
+            {TRIAL_DAYS} хоног үнэгүй <ArrowRight size={16} />
           </Link>
         </div>
       </header>
@@ -454,6 +485,36 @@ export default async function BusinessPage() {
               <em>Цаг захиалах</em>
             </div>
           </div>
+        </section>
+        <section
+          id="industries"
+          className="lp-section bx-industries"
+          aria-labelledby="bx-industries-title"
+        >
+          <div className="lp-heading">
+            <span className="lp-eyebrow">Салбар бүрт</span>
+            <h2 id="bx-industries-title">Таны салбарт зориулсан шийдэл</h2>
+            <p>
+              Үйлчилгээний төрлөө сонгоход бэлэн үйлчилгээний жагсаалт нэмэгдэж,
+              та зөвхөн үнээ оруулна.
+            </p>
+          </div>
+          <ul className="bx-industry-grid">
+            {industries.map(({ type, icon: Icon }) => (
+              <li key={type}>
+                <span className="bx-industry-icon">
+                  <Icon size={20} strokeWidth={1.6} />
+                </span>
+                <h3>{SERVICE_TYPES[type]}</h3>
+                <p>
+                  {templatesFor([type])
+                    .slice(0, 3)
+                    .map((t) => t.name)
+                    .join(" · ")}
+                </p>
+              </li>
+            ))}
+          </ul>
         </section>
         <section id="problems" className="lp-section">
           <div className="lp-heading">
@@ -776,93 +837,153 @@ export default async function BusinessPage() {
             ))}
           </div>
         </section>
-        <section className="lp-section">
-          <div className="lp-linkband">
-            <div>
-              <span className="lp-eyebrow">САЛОН БҮРД ӨӨРИЙН ЛИНК</span>
-              <h2>Нэг линкээр захиалга авна</h2>
-              <p>
-                Салон тань баталгаажмагц бүртгүүлэхдээ сонгосон хаягаар
-                захиалгын хуудас тань нээгдэнэ. Түүнийг Инстаграм хуудас,
-                мессеж, нэрийн хуудсандаа тавиад л болно.
-              </p>
+        <section className="lp-section bx-link" aria-labelledby="bx-link-title">
+          <div className="bx-link-copy">
+            <span className="bx-chip">Шууд захиалга</span>
+            <h2 id="bx-link-title">Нэг линкээр 24/7 цаг захиалга авна</h2>
+            <p>
+              Салон тань баталгаажмагц өөрийн захиалгын хуудастай болно.
+              Инстаграм bio, фэйсбүүк хуудас, чатдаа байршуулаарай. Үйлчлүүлэгч
+              апп татахгүйгээр үйлчилгээ, мастер, цагаа сонгож, захиалга шууд
+              календарьт тань бүртгэгдэнэ.
+            </p>
+            <div className="bx-url">
+              <Link2 size={18} aria-hidden="true" />
+              <span>{site.domain}/tanii-salon/book</span>
+              <Link href={start} className="bx-url-btn">
+                Линкээ авах
+              </Link>
             </div>
-            <div className="lp-url">
-              <span className="lp-url-bar">{site.domain}/tanii-salon/book</span>
-              <ul>
-                <li>
-                  <MessageSquare size={15} /> Захиалга бүрд үйлчлүүлэгчид мессеж
-                  мэдэгдэл
-                  {!sms && <span className="lp-soon">Удахгүй</span>}
-                </li>
-                <li>
-                  <CalendarCheck size={15} /> Захиалга шууд таны календарьт орно
-                </li>
-              </ul>
+            <ul className="bx-checks">
+              <li>
+                <span>
+                  <Check size={14} strokeWidth={2.5} />
+                </span>
+                Захиалга бүрд үйлчлүүлэгчид мессеж мэдэгдэл очно
+                {!sms && <em className="lp-soon">Удахгүй</em>}
+              </li>
+              <li>
+                <span>
+                  <Check size={14} strokeWidth={2.5} />
+                </span>
+                Захиалга шууд таны календарьт орно
+              </li>
+            </ul>
+          </div>
+          <div className="bx-phone" aria-hidden="true">
+            <div className="bx-phone-screen">
+              <div className="bx-phone-head">
+                <i>S</i>
+                <div>
+                  <strong>Таны салон</strong>
+                  <small>Улаанбаатар хот</small>
+                </div>
+              </div>
+              <b className="bx-phone-step">1. Үйлчилгээ сонгох</b>
+              <div className="bx-phone-row">
+                <div>
+                  <strong>Гел будалт</strong>
+                  <small>60 мин</small>
+                </div>
+                <span>{formatMnt(65000)}</span>
+              </div>
+              <b className="bx-phone-step">2. Мастер сонгох</b>
+              <div className="bx-phone-row">
+                <div className="bx-phone-master">
+                  <i />
+                  <strong>Ану · Мастер</strong>
+                </div>
+                <small>★ 4.9</small>
+              </div>
+              <span className="bx-phone-cta">Цаг товлох (Маргааш 10:00)</span>
             </div>
           </div>
         </section>
-        <section id="pricing" className="lp-section">
-          <div className="lp-heading">
-            <span className="lp-eyebrow">ҮНЭ</span>
-            <h2>Эхлээд үнэгүй туршаад үзээрэй</h2>
+        <section
+          id="pricing"
+          className="lp-section bx-pricing"
+          aria-labelledby="bx-pricing-title"
+        >
+          <div className="bx-pricing-head">
+            <span className="lp-eyebrow">Үнэ тариф</span>
+            <h2 id="bx-pricing-title">Ил тод, уян хатан нөхцөл</h2>
             <p>Нуугдмал төлбөр, урт хугацааны гэрээ байхгүй.</p>
           </div>
-          <div className="lp-pricing">
-            <div className="lp-price-trial">
-              <span className="lp-pill">
-                <Sparkles size={13} /> Эхлэх
+          <div className="bx-plans">
+            <article className="bx-plan">
+              <span className="bx-plan-chip">
+                Эхний {TRIAL_DAYS} хоног 100% үнэгүй
               </span>
-              <strong>{TRIAL_DAYS} хоног үнэгүй</strong>
+              <h3>Бизнес туршилт</h3>
               <p>
-                Салон тань баталгаажсан өдрөөс эхлэн бүх боломжийг үнэгүй
+                Салон тань баталгаажсан өдрөөс эхлэн бүх боломжийг хязгааргүй
                 ашиглана. Карт холбох шаардлагагүй.
               </p>
-              <Link href={start} className="lp-btn light">
-                {cta} <ArrowRight size={16} />
-              </Link>
-            </div>
-            <div className="lp-price-after">
-              <h3>Дараа нь юунаас хамаарч бодогдох вэ?</h3>
+              <div className="bx-plan-price">
+                <strong>0₮</strong>
+                <span>/ эхний {TRIAL_DAYS} хоногт</span>
+              </div>
               <ul>
                 <li>
-                  <Store size={18} />
-                  <div>
-                    <strong>Идэвхтэй салбарын тоо</strong>
-                    <span>
-                      {price
-                        ? `Салбар бүрд ${PERIOD_DAYS} хоног тутам ${formatMnt(price)}. Жишээ нь 2 салбартай бол ${formatMnt(monthlyAmount(price, 2))}.`
-                        : `Төлбөр салбар бүрээр ${PERIOD_DAYS} хоног тутам бодогдоно. Үнийг үнэгүй хугацаа дуусахаас өмнө мэдэгдэнэ.`}
-                    </span>
-                  </div>
+                  <Check size={16} /> Бүх ажилтан, үйлчилгээгээ бүрэн тохируулах
                 </li>
                 <li>
-                  <Users size={18} />
-                  <div>
-                    <strong>Ажилтан, захиалгын тоо хамаарахгүй</strong>
-                    <span>
-                      Ажилтан нэмэх, олон захиалга авахад төлбөр өсөхгүй.
-                    </span>
-                  </div>
+                  <Check size={16} /> Өөрийн захиалгын линк
                 </li>
                 <li>
-                  <Wallet size={18} />
-                  <div>
-                    <strong>Үргэлжлүүлэх эсэхээ өөрөө шийднэ</strong>
-                    <span>
-                      Үнэгүй хугацаа дуусахаас өмнө сануулна. Автоматаар мөнгө
-                      татахгүй, төлөөгүй ч мэдээлэл тань устахгүй.
-                    </span>
-                  </div>
-                </li>
-                <li>
-                  <Landmark size={18} />
-                  <div>
-                    <strong>Банкны шилжүүлгээр төлнө</strong>
-                    <span>Дансны мэдээлэл удирдлагын хэсэгт харагдана.</span>
-                  </div>
+                  <Check size={16} /> Хязгааргүй захиалга хүлээн авах
                 </li>
               </ul>
+              <Link href={start} className="bx-plan-cta">
+                {cta} <ArrowRight size={17} />
+              </Link>
+            </article>
+            <div className="bx-terms">
+              <ul>
+                <li>
+                  <span className="bx-term-icon">
+                    <Store size={20} />
+                  </span>
+                  <h3>Идэвхтэй салбарын тоогоор</h3>
+                  <p>
+                    {price
+                      ? `Салбар бүрд ${PERIOD_DAYS} хоног тутам ${formatMnt(price)}. Жишээ нь 2 салбартай бол ${formatMnt(monthlyAmount(price, 2))}.`
+                      : `Төлбөр салбар бүрээр ${PERIOD_DAYS} хоног тутам бодогдоно. Үнийг үнэгүй хугацаа дуусахаас өмнө мэдэгдэнэ.`}
+                  </p>
+                </li>
+                <li>
+                  <span className="bx-term-icon">
+                    <Users size={20} />
+                  </span>
+                  <h3>Хязгааргүй ажилтан, захиалга</h3>
+                  <p>Ажилтан нэмэх, олон захиалга авахад төлбөр өсөхгүй.</p>
+                </li>
+                <li>
+                  <span className="bx-term-icon">
+                    <Wallet size={20} />
+                  </span>
+                  <h3>Үргэлжлүүлэх эсэхээ өөрөө шийднэ</h3>
+                  <p>
+                    Үнэгүй хугацаа дуусахаас өмнө сануулна. Автоматаар мөнгө
+                    татахгүй, төлөөгүй ч мэдээлэл тань устахгүй.
+                  </p>
+                </li>
+                <li>
+                  <span className="bx-term-icon">
+                    <Landmark size={20} />
+                  </span>
+                  <h3>Банкны шилжүүлгээр төлнө</h3>
+                  <p>Дансны мэдээлэл удирдлагын хэсэгт харагдана.</p>
+                </li>
+              </ul>
+              <div className="bx-terms-help">
+                <span>
+                  Нэмэлт тусламж хэрэгтэй юу? Бидэнтэй шууд холбогдоорой.
+                </span>
+                <a href={`tel:${site.phone}`}>
+                  Утас: {site.phone.replace(/^(\d{4})(\d{4})$/, "$1 $2")}
+                </a>
+              </div>
             </div>
           </div>
         </section>
@@ -921,7 +1042,9 @@ export default async function BusinessPage() {
           </Link>
         </section>
       </main>
-      <SiteFooter />
+      <HomeFooter
+        categories={industries.slice(0, 5).map((i) => SERVICE_TYPES[i.type])}
+      />
     </div>
   );
 }

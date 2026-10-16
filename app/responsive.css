@@ -166,6 +166,7 @@
   align-items: center;
   min-height: 44px;
   min-width: 44px;
+  justify-content: center;
 }
 .onboarding-sign-out {
   min-width: 44px;

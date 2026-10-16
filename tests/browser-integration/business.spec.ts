@@ -11,7 +11,7 @@ test("with few salons the root shows the business page", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("h1")).toContainText("салоноо онлайн болгоё");
-  await expect(page.locator(".hp-card")).toHaveCount(0);
+  await expect(page.locator(".hx-card")).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: /Бизнесээ бүртгүүлэх/ }).first(),
   ).toHaveAttribute("href", "/sign-up");
@@ -19,9 +19,10 @@ test("with few salons the root shows the business page", async ({ page }) => {
 test("the salon directory stays at /home", async ({ page }, info) => {
   await page.goto("/home");
   await expect(page.locator("h1")).toContainText("хэдхэн товшилтоор");
-  const card = page.locator(".hp-card").filter({ hasText: "Туршилтын салон" });
-  await expect(card).toContainText("үйлчилгээ");
-  await expect(card).toHaveAttribute("href", "/salon-a/book");
+  const card = page.locator(".hx-card").filter({ hasText: "Туршилтын салон" });
+  await expect(
+    card.getByRole("link", { name: /Цаг захиалах/ }),
+  ).toHaveAttribute("href", "/salon-a/book");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -31,12 +32,16 @@ test("the salon directory stays at /home", async ({ page }, info) => {
     path: `test-results/home-${info.project.name}.png`,
     fullPage: true,
   });
-  await page.getByPlaceholder("Салон эсвэл үйлчилгээ").fill("Өөр салон");
-  await page.getByRole("button", { name: "Хайх" }).click();
-  await expect(page.locator(".hp-card")).toHaveCount(1);
-  await expect(page.locator(".hp-card")).toContainText("Өөр салон");
+  await page.getByPlaceholder("Хумс, үс засалт, салоны нэр…").fill("Өөр салон");
+  await page.getByRole("button", { name: "Хайх", exact: true }).click();
+  await expect(page.locator(".hx-card")).toHaveCount(1);
+  await expect(page.locator(".hx-card")).toContainText("Өөр салон");
   await page.goto("/home");
-  await page.locator(".hp-card").filter({ hasText: "Туршилтын салон" }).click();
+  await page
+    .locator(".hx-card")
+    .filter({ hasText: "Туршилтын салон" })
+    .getByRole("link", { name: /Цаг захиалах/ })
+    .click();
   await expect(page).toHaveURL(/\/salon-a\/book$/);
   await page.goto("/home");
   await page.getByRole("link", { name: "Бизнесээ бүртгүүлэх" }).first().click();
@@ -59,7 +64,7 @@ test("signed-in owners go to their salon; users without a salon to onboarding", 
     "/",
   );
   await expect(
-    page.getByRole("link", { name: "Нэвтрэх / Бүртгүүлэх" }),
+    page.locator("header").getByRole("link", { name: "Нэвтрэх", exact: true }),
   ).toHaveCount(0);
   await page.context().clearCookies();
   await login(page, "platform@example.test");

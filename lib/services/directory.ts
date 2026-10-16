@@ -5,12 +5,15 @@ import { localStamp } from "../business-time";
 import { DISTRICTS, normalizeDistrict } from "../districts";
 import { paidUp } from "../billing";
 import { profileReady } from "./publish";
+import { clockTime } from "../schedule-time";
 type Database = Prisma.TransactionClient;
 export const directoryQuery = z
   .object({
     query: z.string().trim().max(100).default(""),
     district: z.union([z.enum(DISTRICTS), z.literal("")]).default(""),
     page: z.coerce.number().int().min(0).max(1000).default(0),
+    // Quick filters above the salon grid.
+    filter: z.enum(["", "discount", "new"]).default(""),
   })
   .strict();
 const PAGE = 24;
@@ -78,13 +81,12 @@ export async function listDirectory(
   const text = { contains: input.query, mode: "insensitive" as const };
   // Older branches may still hold a free-text spelling ("СБД"); each one
   // counts under its standard district.
-  const stored = (
-    await db.branch.findMany({
-      where: { active: true, salon: listed(now) },
-      distinct: ["district"],
-      select: { district: true },
-    })
-  ).map((b) => b.district);
+  const listedBranches = await db.branch.findMany({
+    where: { active: true, salon: listed(now) },
+    select: { district: true, salonId: true },
+    take: 5000,
+  });
+  const stored = [...new Set(listedBranches.map((b) => b.district))];
   const spellings = (district: string) =>
     stored.filter((v) => normalizeDistrict(v) === district);
   const where: Prisma.SalonWhereInput = {
@@ -117,6 +119,11 @@ export async function listDirectory(
             },
           }
         : {},
+      input.filter === "discount"
+        ? { services: { some: { ...bookable, discountPercent: { gt: 0 } } } }
+        : input.filter === "new"
+          ? { createdAt: { gte: new Date(+now - NEW_DAYS * 86400000) } }
+          : {},
     ],
   };
   const today = new Date(`${localStamp(now).slice(0, 10)}T00:00:00+08:00`);
@@ -143,7 +150,13 @@ export async function listDirectory(
           },
           branches: {
             where: { active: true },
-            select: { district: true, address: true, imageUrl: true },
+            select: {
+              district: true,
+              address: true,
+              imageUrl: true,
+              openMinute: true,
+              closeMinute: true,
+            },
             orderBy: { createdAt: "asc" },
           },
         },
@@ -151,7 +164,7 @@ export async function listDirectory(
       db.salon.count({ where: listed(now) }),
       db.service.findMany({
         where: { ...bookable, salon: listed(now) },
-        select: { category: { select: { name: true } } },
+        select: { salonId: true, category: { select: { name: true } } },
         take: 2000,
       }),
       db.booking.count({
@@ -162,15 +175,37 @@ export async function listDirectory(
         },
       }),
     ]);
-  const services = await db.service.findMany({
-    where: { ...bookable, salonId: { in: salons.map((s) => s.id) } },
-    select: {
-      salonId: true,
-      priceMnt: true,
-      discountPercent: true,
-      category: { select: { name: true } },
-    },
-  });
+  const ids = salons.map((s) => s.id);
+  const [services, ratings] = await Promise.all([
+    db.service.findMany({
+      where: { ...bookable, salonId: { in: ids } },
+      select: {
+        salonId: true,
+        name: true,
+        priceMnt: true,
+        discountPercent: true,
+        durationMinutes: true,
+        category: { select: { name: true } },
+      },
+      orderBy: [{ priceMnt: "asc" }, { name: "asc" }],
+    }),
+    // Published reviews only, as on the booking page.
+    db.review.groupBy({
+      by: ["salonId"],
+      where: { salonId: { in: ids }, hidden: false },
+      _avg: { rating: true },
+      _count: { _all: true },
+    }),
+  ]);
+  // How many listed salons offer each category, and sit in each district.
+  const salonsPer = (pairs: [string, string][]) => {
+    const sets = new Map<string, Set<string>>();
+    for (const [key, salon] of pairs)
+      (sets.get(key) ?? sets.set(key, new Set()).get(key)!).add(salon);
+    return [...sets.entries()]
+      .map(([name, set]) => ({ name, salons: set.size }))
+      .sort((a, b) => b.salons - a.salons || a.name.localeCompare(b.name));
+  };
   // Category names repeat across salons; rank them for the quick filters.
   const byCategory = new Map<string, number>();
   for (const s of allServices)
@@ -185,6 +220,15 @@ export async function listDirectory(
       services: allServices.length,
       bookingsToday,
     },
+    categories: salonsPer(
+      allServices.map((s) => [s.category.name, s.salonId]),
+    ).slice(0, 8),
+    areas: salonsPer(
+      listedBranches.map((b) => [
+        normalizeDistrict(b.district) ?? b.district,
+        b.salonId,
+      ]),
+    ),
     popular: [...byCategory.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .slice(0, 8)
@@ -216,6 +260,22 @@ export async function listDirectory(
         categories: [...new Set(own.map((v) => v.category.name))].slice(0, 3),
         fromMnt: prices.length ? Math.min(...prices) : 0,
         hasDiscount: own.some((v) => v.discountPercent > 0),
+        rating: (() => {
+          const r = ratings.find((x) => x.salonId === s.id);
+          return r && r._count._all > 0
+            ? { average: r._avg.rating ?? 0, count: r._count._all }
+            : null;
+        })(),
+        // The two lowest-priced services, as a taste of the menu.
+        top: own.slice(0, 2).map((v) => ({
+          name: v.name,
+          durationMinutes: v.durationMinutes,
+          priceMnt: discountedPrice(v.priceMnt, v.discountPercent),
+          listPriceMnt: v.priceMnt,
+        })),
+        hours: s.branches[0]
+          ? `${clockTime(s.branches[0].openMinute)}–${clockTime(s.branches[0].closeMinute)}`
+          : "",
         isNew: +now - +s.createdAt < NEW_DAYS * 86400000,
       };
     }),

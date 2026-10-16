@@ -95,11 +95,14 @@ test("public salon directory", { timeout: 120000 }, async (t) => {
         "district",
         "fromMnt",
         "hasDiscount",
+        "hours",
         "isNew",
         "name",
         "photos",
+        "rating",
         "services",
         "slug",
+        "top",
       ]);
       assert.deepEqual(a.categories, ["Захиалгын ангилал"]);
       assert.equal(a.isNew, true);

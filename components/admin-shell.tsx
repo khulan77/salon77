@@ -1,4 +1,6 @@
 "use client";
+import "@fontsource-variable/source-serif-4";
+import "@/app/admin-theme.css";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";

@@ -4,15 +4,18 @@ import { hoursSchema, timeOffSchema, serviceSchema } from "../lib/validation";
 import { safeAuthNext } from "../lib/auth-navigation";
 import { localToISO, nextDate } from "../lib/schedule-time";
 import { actorFromMember, requireBranch } from "../lib/access";
-test("authentication continuation only permits an exact invitation URL", () => {
+test("authentication continuation only permits an exact invitation URL or password reset", () => {
   const path = `/invite?token=${"a".repeat(64)}`;
   assert.equal(safeAuthNext(path), path);
+  assert.equal(safeAuthNext("/reset-password"), "/reset-password");
   for (const unsafe of [
     "https://evil.test",
     "//evil.test",
     "/team",
     "/invite?token=abc",
     `${path}&next=https://evil.test`,
+    "/reset-password?next=https://evil.test",
+    "/reset-password/../platform",
   ])
     assert.equal(safeAuthNext(unsafe), "/");
 });

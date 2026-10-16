@@ -10,6 +10,11 @@ async function main() {
   const fixture = await testDatabase(dbPort);
   await seed(fixture.db);
   await bookingSeed(fixture.db);
+  // A complete profile needs a picture before the directory lists a salon
+  // (lib/services/publish.ts).
+  await fixture.db.salon.updateMany({
+    data: { coverUrl: "https://example.test/cover.webp" },
+  });
   const mobileId = "00000000-0000-0000-0000-000000000007";
   await fixture.db.user.create({
     data: { id: mobileId, email: "invite-mobile@example.test", name: "Сараа" },

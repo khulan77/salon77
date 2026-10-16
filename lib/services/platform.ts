@@ -570,6 +570,55 @@ export async function setSalonStatus(
     return { id: salonId, status };
   });
 }
+export const salonDeleteInput = z
+  .object({ confirmName: z.string().trim().min(1).max(200) })
+  .strict();
+// Removes a salon and everything it owns, for good. Bookings, customers and
+// schedules are protected from a plain cascade, so they go first, in order;
+// the audit log keeps the salon's name after it is gone.
+export async function deleteSalon(
+  db: PrismaClient,
+  adminUserId: string,
+  salonId: string,
+  raw: unknown,
+) {
+  const { confirmName } = salonDeleteInput.parse(raw);
+  return db.$transaction(
+    async (tx) => {
+      await assertPlatformAdmin(tx, adminUserId);
+      const salon = await tx.salon.findUnique({
+        where: { id: salonId },
+        select: { name: true },
+      });
+      if (!salon) throw new HttpError(404, platformNotFound);
+      if (salon.name.trim() !== confirmName)
+        throw new HttpError(
+          400,
+          "Устгахын тулд салоны нэрийг яг таг бичнэ үү.",
+        );
+      const where = { salonId };
+      await tx.review.deleteMany({ where });
+      await tx.notification.deleteMany({ where });
+      await tx.bookingActivity.deleteMany({ where });
+      await tx.booking.deleteMany({ where });
+      await tx.staffAttendance.deleteMany({ where });
+      await tx.timeOff.deleteMany({ where });
+      await tx.workingHours.deleteMany({ where });
+      await tx.customer.deleteMany({ where });
+      await tx.platformAuditLog.create({
+        data: {
+          actorUserId: adminUserId,
+          salonId,
+          salonName: salon.name,
+          action: "DELETE_SALON",
+        },
+      });
+      await tx.salon.delete({ where: { id: salonId } });
+      return { id: salonId, deleted: true };
+    },
+    { timeout: 30000 },
+  );
+}
 // Salons waiting for a decision, longest wait first.
 export async function listApplications(
   db: Database,

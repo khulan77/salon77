@@ -16,7 +16,10 @@ test("guest books two services done in parallel by two staff", async ({
   );
   await page.goto("/salon-a/book");
   await expect(page.locator("h1")).toHaveText("Туршилтын салон");
-  await page.getByRole("button", { name: "Зайсан" }).click();
+  await page
+    .getByRole("group", { name: "Салбар сонгох" })
+    .getByRole("button", { name: /Зайсан/ })
+    .click();
   const services = page.locator(".pb-service");
   await services.filter({ hasText: "Гел маникюр" }).first().click();
   await services.filter({ hasText: "Хумс арчилгаа" }).first().click();

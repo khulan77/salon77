@@ -1,0 +1,330 @@
+/* Sign-in and sign-up: an obsidian panel with the logo and headline beside a
+   calm white form, in the /home look (Source Serif, champagne accents). */
+.ax {
+  --ax-ink: #121316;
+  --ax-gold: #c5a880;
+  --ax-gold-ink: #9a7d52;
+  --ax-muted: #6b6863;
+  --ax-line: #e7e5e4;
+  --ax-serif:
+    "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman",
+    serif;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100vh;
+  background: #fff;
+  color: var(--ax-ink);
+}
+/* Story panel: the headline rests at its foot over a soft golden light. */
+.ax-aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+  padding: clamp(28px, 4vw, 64px) clamp(24px, 4.5vw, 72px);
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 10% 100%,
+      rgb(197 168 128 / 0.3),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 90% 0%,
+      rgb(255 255 255 / 0.06),
+      transparent 70%
+    ),
+    linear-gradient(165deg, #1b1b1e, #0d0d0e 75%);
+  color: #fff;
+}
+.ax-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  align-self: flex-start;
+  min-height: 44px;
+  color: #fff;
+  text-decoration: none;
+}
+.ax-brand img {
+  width: 60px;
+  height: 60px;
+}
+.ax-brand span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ax-brand strong {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.ax-brand em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--ax-gold);
+}
+.ax-brand small {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #a29d97;
+}
+.ax-copy {
+  max-width: 560px;
+  margin-top: auto;
+  padding-top: 32px;
+  border-top: 1px solid rgb(197 168 128 / 0.28);
+}
+.ax-aside h1 {
+  margin: 0;
+  font-family: var(--ax-serif);
+  font-size: clamp(30px, 3.1vw, 48px);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.ax-aside h1 em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ax-gold);
+}
+.ax-aside h1 u {
+  text-decoration: underline;
+  text-decoration-color: rgb(197 168 128 / 0.7);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 8px;
+}
+/* Form side */
+.ax-main {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(24px, 3.4vw, 56px) clamp(20px, 5vw, 96px) 28px;
+}
+.ax-help {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ax-muted);
+}
+.ax-help a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-weight: 700;
+  color: var(--ax-ink);
+  text-decoration: none;
+}
+.ax-form {
+  width: min(470px, 100%);
+  margin: auto;
+  padding-block: 40px;
+}
+.ax-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ax-gold-ink);
+}
+.ax-form h2 {
+  margin: 14px 0 0;
+  font-family: var(--ax-serif);
+  font-size: clamp(30px, 2.6vw, 40px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ax-ink);
+}
+.ax-form h2 span {
+  color: var(--ax-gold);
+}
+.ax-lead {
+  margin: 12px 0 30px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ax-muted);
+}
+.ax-form :is(.notice, .error-message, .success-message) {
+  margin-bottom: 18px;
+}
+.ax-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ax-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ax-field > label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2c2826;
+}
+.ax-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.ax-input > svg {
+  position: absolute;
+  left: 18px;
+  color: #8a8580;
+  pointer-events: none;
+}
+.ax-input input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 52px 0 50px;
+  border: 1px solid var(--ax-line);
+  border-radius: 12px;
+  background: #f7f6f4;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ax-ink);
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.ax-input input::placeholder {
+  color: #9a958f;
+}
+.ax-input input:focus {
+  outline: none;
+  border-color: var(--ax-ink);
+  background: #fff;
+}
+.ax-eye {
+  position: absolute;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #8a8580;
+  cursor: pointer;
+}
+.ax-eye:hover {
+  color: var(--ax-ink);
+}
+.ax-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ax-ink);
+  box-shadow: 0 10px 24px -12px rgb(18 19 22 / 0.6);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ax-submit:hover:not(:disabled) {
+  background: #26292e;
+}
+.ax-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.ax :focus-visible {
+  outline: 2px solid var(--ax-gold-ink);
+  outline-offset: 3px;
+}
+.ax-switch {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--ax-muted);
+}
+.ax-switch a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 700;
+  color: var(--ax-ink);
+  text-decoration: none;
+}
+.ax-legal {
+  padding-top: 20px;
+  border-top: 1px solid var(--ax-line);
+  font-size: 13px;
+  color: #9a958f;
+}
+/* Tablet and phone: the panel becomes a dark band above the form. */
+@media (max-width: 960px) {
+  .ax {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ax-aside {
+    gap: 28px;
+  }
+  .ax-copy {
+    margin-top: 8px;
+    padding-top: 22px;
+  }
+  .ax-help {
+    align-self: center;
+  }
+  .ax-form {
+    padding-block: 28px;
+  }
+}
+@media (max-width: 560px) {
+  .ax-brand img {
+    width: 48px;
+    height: 48px;
+  }
+  .ax-brand strong {
+    font-size: 24px;
+  }
+}
+/* Password label with the "forgot" link on the same line. */
+.ax-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.ax-label-row > label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2c2826;
+}
+.ax-forgot {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ax-ink);
+  text-decoration: none;
+}
+.ax-forgot:hover {
+  text-decoration: underline;
+}
+a.ax-submit {
+  text-decoration: none;
+}
