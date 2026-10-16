@@ -94,6 +94,7 @@ export async function listFeedback(db: Database, adminUserId: string) {
   ]);
   return [...open, ...done].map((f) => ({
     ...view(f),
+    unread: f.readAt === null,
     salonId: f.salon.id,
     salonName: f.salon.name,
     salonPhone: f.salon.phone,
@@ -102,6 +103,27 @@ export async function listFeedback(db: Database, adminUserId: string) {
   }));
 }
 export type PlatformFeedback = Awaited<ReturnType<typeof listFeedback>>;
+export async function unreadFeedbackCount(db: Database, adminUserId: string) {
+  await assertPlatformAdmin(db, adminUserId);
+  return db.feedback.count({ where: { readAt: null } });
+}
+// Opening the inbox marks what was shown as read; the page still flags them
+// as new for this visit.
+export async function markFeedbackRead(
+  db: Database,
+  adminUserId: string,
+  ids: string[],
+  now = new Date(),
+) {
+  await assertPlatformAdmin(db, adminUserId);
+  if (!ids.length) return 0;
+  return (
+    await db.feedback.updateMany({
+      where: { id: { in: ids }, readAt: null },
+      data: { readAt: now },
+    })
+  ).count;
+}
 export async function answerFeedback(
   db: PrismaClient,
   adminUserId: string,

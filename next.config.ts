@@ -26,6 +26,12 @@ const storageHost = (() => {
   }
 })();
 
+// Read at build time: on Vercel the variable must be set before deploying.
+if (!storageHost)
+  console.warn(
+    "Salon77: NEXT_PUBLIC_SUPABASE_URL is missing at build time; photos will skip image optimization.",
+  );
+
 const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],

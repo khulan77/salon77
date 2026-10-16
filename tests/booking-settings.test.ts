@@ -8,6 +8,7 @@ test("booking policy validation bounds, enums and tenant injection", () => {
   assert.ok(bookingSettingsSchema.safeParse(defaultBookingSettings).success);
   for (const extra of [
     { salonId: "foreign" },
+    { bookingTheme: "invalid" },
     { advanceBookingDays: -1 },
     { advanceBookingDays: 366 },
     { advanceBookingDays: 1.5 },

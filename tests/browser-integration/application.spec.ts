@@ -79,7 +79,7 @@ test("a new salon applies, is sent back, corrects itself and is approved", async
   await shot("queue");
   await row.getByRole("link", { name: "Шалгах" }).click();
   await expect(
-    page.getByRole("heading", { name: "Бүртгэлийн хүсэлт" }),
+    page.getByRole("heading", { name: "Баталгаажуулалт" }),
   ).toBeVisible();
   await shot("detail");
   await page.getByRole("button", { name: "Буцаах", exact: true }).click();
@@ -110,19 +110,24 @@ test("a new salon applies, is sent back, corrects itself and is approved", async
   await expect(again).toContainText("Дахин илгээсэн");
   await again.getByRole("link", { name: "Шалгах" }).click();
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Зөвшөөрөх" }).click();
-  await expect(page.getByRole("button", { name: "Зөвшөөрөх" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Баталгаажуулах" }).click();
+  await expect(
+    page.getByRole("button", { name: "Баталгаажуулах" }),
+  ).toHaveCount(0);
   await login(page, applicant);
   await page.goto("/");
   await expect(page).toHaveURL(/\/calendar$/);
   await expect(page.locator("main h1").first()).toBeVisible();
+  await expect(page.locator(".billing-banner")).toContainText(
+    "Үнэгүй хугацаа: 14 хоног үлдлээ.",
+  );
   expect((await page.request.get("/api/services")).status()).toBe(200);
   const open = await page.goto(`/${slug}/book`);
   expect(open?.status()).toBe(200);
   // The trial runs from approval; the billing page says where to pay.
   await page.goto("/billing");
   await expect(page.locator(".billing-status")).toContainText(
-    "Үнэгүй туршилт · 14 хоног үлдсэн",
+    "Үнэгүй хугацаа: 14 хоног үлдлээ",
   );
   const bank = page.locator(".billing-bank");
   await expect(bank).toContainText("Голомт банк");

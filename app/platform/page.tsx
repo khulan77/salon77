@@ -8,13 +8,13 @@ import {
   salonListQuery,
 } from "@/lib/services/platform";
 import { billingOverview } from "@/lib/services/billing";
+import { unreadFeedbackCount } from "@/lib/services/feedback";
 import { CountChart } from "@/components/platform/count-chart";
 import { SalonStatusAction } from "@/components/platform/status-action";
 import { PaymentAction } from "@/components/platform/payment-action";
-import { PriceForm } from "@/components/platform/price-form";
 import { SalonPrice } from "@/components/platform/salon-price";
 import { formatMnt, formatTimeAgo } from "@/lib/ui-language";
-import { BILLING_LABELS } from "@/lib/billing";
+import { BILLING_LABELS, renewalLabels } from "@/lib/billing";
 import { formatSitePhone } from "@/lib/site";
 import { localStamp } from "@/lib/business-time";
 import { serviceTypeLabel, socialUrl } from "@/lib/salon-application";
@@ -55,44 +55,42 @@ export default async function PlatformHome({
     page: q.page ?? "0",
   });
   const query = parsed.success ? parsed.data : salonListQuery.parse({});
-  const [overview, applications, list, money] = await Promise.all([
+  const [overview, applications, list, money, unread] = await Promise.all([
     platformOverview(db, adminId),
     listApplications(db, adminId),
     listPlatformSalons(db, adminId, query),
     billingOverview(db, adminId),
+    unreadFeedbackCount(db, adminId),
   ]);
+  // Oldest first, so the first one has waited longest.
+  const longest = applications[0]?.waitedDays ?? 0;
+  const filtered = list.query !== "" || list.billing !== "all";
   const pages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const link = (page: number, billing: string = list.billing) =>
     `/platform?${new URLSearchParams({ query: list.query, sort: list.sort, billing, page: String(page) })}#pf-salons`;
   const focus = [
     {
-      title: "Шинэ хүсэлт",
+      title: "Хүлээгдэж буй салон",
       value: String(applications.length),
-      note: "Таны зөвшөөрлийг хүлээж байна",
+      note: applications.length
+        ? longest
+          ? `Хамгийн удаан нь ${longest} хоног хүлээж байна`
+          : "Өнөөдөр ирсэн"
+        : "Хянах хүсэлт алга",
       href: "#pf-applications",
-      tone: applications.length ? "wait" : "",
+      tone: applications.length ? (longest >= 2 ? "off" : "wait") : "",
     },
     {
-      title: "Төлбөр дуусах дөхсөн",
-      value: String(money.due),
-      note: "3 хоногийн дотор дуусна",
-      href: link(0, "due"),
-      tone: money.due ? "wait" : "",
+      title: "Шинэ санал хүсэлт",
+      value: String(unread),
+      note: unread ? "Уншаагүй байна" : "Бүгдийг уншсан",
+      href: "/platform/feedback?show=new",
+      tone: unread ? "wait" : "",
     },
     {
-      title: "Хугацаа дууссан",
-      value: String(money.expired),
-      note: "Удирдлага, захиалга нь хаалттай",
-      href: link(0, "expired"),
-      tone: money.expired ? "off" : "",
-    },
-    {
-      title: "Сүүлийн 30 хоногийн орлого",
-      value: formatMnt(money.received30Mnt),
-      note:
-        money.monthlyMnt === null
-          ? "Сарын үнээ тохируулна уу"
-          : `Бүгд төлбөл сард ${formatMnt(money.monthlyMnt)}`,
+      title: "Энэ сарын төлбөр",
+      value: formatMnt(money.receivedMonthMnt),
+      note: `${money.paymentsMonth} төлбөр бүртгэгдсэн · ${money.due} салон дуусах дөхсөн`,
       href: link(0, "paid"),
       tone: "",
     },
@@ -135,16 +133,6 @@ export default async function PlatformHome({
             <small>{f.note}</small>
           </Link>
         ))}
-      </section>
-      <section className="pf-panel pf-price-panel" aria-labelledby="pf-price">
-        <div>
-          <h2 id="pf-price">Сарын үнэ</h2>
-          <p className="pf-note">
-            Туршилт баталгаажуулснаас хойш 14 хоног. Дараа нь салбар бүрээр 30
-            хоног тутам төлнө.
-          </p>
-        </div>
-        <PriceForm price={money.pricePerBranchMnt} />
       </section>
       <section className="pf-panel" aria-labelledby="pf-applications">
         <div className="pf-panel-head">
@@ -191,6 +179,13 @@ export default async function PlatformHome({
                       </a>
                     )}
                     <small>Илгээсэн {formatTimeAgo(a.submittedAt)}</small>
+                    <em
+                      className={`pf-badge ${a.waitedDays >= 2 ? "off" : "wait"}`}
+                    >
+                      {a.waitedDays
+                        ? `${a.waitedDays} хоног хүлээсэн`
+                        : "Өнөөдөр ирсэн"}
+                    </em>
                   </div>
                   <Link
                     href={`/platform/salons/${a.id}`}
@@ -203,7 +198,10 @@ export default async function PlatformHome({
             })}
           </ul>
         ) : (
-          <p className="pf-note">Хянах хүсэлт алга.</p>
+          <p className="pf-empty">
+            Хянах хүсэлт алга. Шинэ салон бүртгүүлэхэд энд гарч, имэйлээр
+            мэдэгдэнэ.
+          </p>
         )}
       </section>
       <section className="pf-panel" aria-labelledby="pf-salons">
@@ -232,6 +230,11 @@ export default async function PlatformHome({
               ))}
             </select>
             <button type="submit">Хайх</button>
+            {filtered && (
+              <Link href="/platform#pf-salons" className="pf-plain">
+                Цэвэрлэх
+              </Link>
+            )}
           </form>
         </div>
         <nav className="pf-chips" aria-label="Төлбөрийн төлөвөөр шүүх">
@@ -246,7 +249,11 @@ export default async function PlatformHome({
           ))}
         </nav>
         {list.salons.length ? (
-          <div className="pf-table-wrap">
+          <div
+            className="pf-table-wrap"
+            tabIndex={0}
+            aria-label="Салонуудын хүснэгт. Бусад баганыг харахын тулд хажуу тийш гүйлгэнэ үү."
+          >
             <table className="pf-table">
               <thead>
                 <tr>
@@ -288,6 +295,13 @@ export default async function PlatformHome({
                       {s.status === "SUSPENDED" && (
                         <em className="pf-badge off">Хаасан</em>
                       )}
+                      {s.renewalChoice && (
+                        <em
+                          className={`pf-badge ${s.renewalChoice === "STOP" ? "off" : ""}`}
+                        >
+                          {renewalLabels[s.renewalChoice]}
+                        </em>
+                      )}
                       <small>
                         {s.billing.until
                           ? s.billing.state === "EXPIRED"
@@ -313,7 +327,12 @@ export default async function PlatformHome({
                       <b>{formatMnt(s.revenueMonth)}</b>
                       <small>Энэ сарын орлого</small>
                       <small>
-                        {s.online30} онлайн · {s.bookings} нийт захиалга
+                        {s.branches} салбар · {s.services} үйлчилгээ · {s.staff}{" "}
+                        ажилтан
+                      </small>
+                      <small>
+                        Энэ сард {s.onlineMonth} онлайн · {s.bookings} нийт
+                        захиалга
                       </small>
                       <small>
                         {s.ownerLastLoginAt
@@ -345,11 +364,18 @@ export default async function PlatformHome({
             </table>
           </div>
         ) : (
-          <p className="pf-empty">
-            {list.query || list.billing !== "all"
-              ? "Шүүлтүүрт тохирох салон алга."
-              : "Одоогоор бүртгэлтэй салон алга."}
-          </p>
+          <div className="pf-empty">
+            <p>
+              {filtered
+                ? list.query
+                  ? `«${list.query}» гэсэн хайлтад тохирох салон алга.`
+                  : "Энэ шүүлтүүрт тохирох салон алга."
+                : "Одоогоор бүртгэлтэй салон алга."}
+            </p>
+            {filtered && (
+              <Link href="/platform#pf-salons">Бүх салоныг харах</Link>
+            )}
+          </div>
         )}
         {pages > 1 && (
           <nav className="pf-pager" aria-label="Хуудаслалт">

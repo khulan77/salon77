@@ -19,6 +19,23 @@ export function canAccessBranch(actor: Actor, branchId: string) {
       actor.branchIds.includes(branchId))
   );
 }
+// The front desk manages staff and services that belong only to its own
+// branches; anything shared with another branch stays with the admin.
+export function ownsBranches(actor: Actor, branchIds: string[]) {
+  return (
+    actor.role === "SALON_OWNER" ||
+    (actor.role === "RECEPTIONIST" &&
+      branchIds.length > 0 &&
+      branchIds.every((id) => actor.branchIds.includes(id)))
+  );
+}
+export function requireOwnBranches(actor: Actor, branchIds: string[]) {
+  if (!ownsBranches(actor, branchIds))
+    throw new HttpError(
+      403,
+      "Зөвхөн өөрийн салбарын ажилтан, үйлчилгээг удирдах боломжтой.",
+    );
+}
 export function requireBranch(actor: Actor, branchId: string, write = false) {
   if (
     !canAccessBranch(actor, branchId) ||
@@ -95,7 +112,17 @@ export async function refreshActor(
   if (!member) throw new HttpError(403, "Салонд хандах идэвхтэй эрх алга.");
   return actorFromMember(member);
 }
-export function moduleAllowed(role: string, module: string) {
+// Before the platform approves a salon its team can only set it up.
+export const setupModules = [
+  "/services",
+  "/employees",
+  "/schedules",
+  "/branches",
+  "/settings",
+  "/support",
+];
+export function moduleAllowed(role: string, module: string, approved = true) {
+  if (!approved && !setupModules.includes(module)) return false;
   if (role === "SALON_OWNER") return true;
   const permitted: Record<string, string[]> = {
     MANAGER: [
@@ -113,16 +140,17 @@ export function moduleAllowed(role: string, module: string) {
       "/inventory",
       "/support",
     ],
+    // Front desk: bookings, customers, staff and services of their own
+    // branch. Reports, settings, team and billing stay with the admin.
     RECEPTIONIST: [
       "/",
-      "/branches",
+      "/calendar",
+      "/bookings",
+      "/customers",
       "/services",
       "/employees",
       "/schedules",
       "/timesheet",
-      "/calendar",
-      "/bookings",
-      "/customers",
       "/inventory",
       "/support",
     ],

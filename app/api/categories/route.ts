@@ -1,4 +1,4 @@
-import { membership, tenant } from "@/lib/auth";
+import { membership, tenant, setupAccess } from "@/lib/auth";
 import { actorFromMember } from "@/lib/access";
 import { db } from "@/lib/db";
 import { failure, sameOrigin } from "@/lib/http";
@@ -6,7 +6,7 @@ import { readCatalog, saveCategory } from "@/lib/services/catalog";
 import { recordId } from "@/lib/services/team";
 export async function GET(request: Request) {
   try {
-    const actor = actorFromMember(await membership());
+    const actor = actorFromMember(await membership(setupAccess));
     return Response.json(
       (
         await readCatalog(
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 async function save(request: Request, editing: boolean) {
   try {
     sameOrigin(request);
-    const actor = actorFromMember(await tenant());
+    const actor = actorFromMember(await tenant(setupAccess));
     const id = editing
       ? recordId.parse(new URL(request.url).searchParams.get("id"))
       : undefined;

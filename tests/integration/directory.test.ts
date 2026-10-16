@@ -9,14 +9,76 @@ import {
   listedSalonSlugs,
   showDirectory,
 } from "../../lib/services/directory";
+import { profileChecklist } from "../../lib/services/publish";
 test("public salon directory", { timeout: 120000 }, async (t) => {
   const fixture = await testDatabase(55491),
     { db } = fixture;
   try {
     await seed(db);
     await bookingSeed(db);
+    // A complete profile also needs a picture (see lib/services/publish.ts).
+    await db.salon.updateMany({
+      data: { coverUrl: "https://example.test/cover.webp" },
+    });
     const slugs = async (q = {}) =>
       (await listDirectory(db, q)).salons.map((s) => s.slug).sort();
+    await t.test(
+      "an incomplete profile stays out of the directory",
+      async () => {
+        assert.deepEqual(await slugs(), ["salon-a", "salon-b"]);
+        await db.salon.update({ where: { id: "a" }, data: { coverUrl: null } });
+        assert.deepEqual(await slugs(), ["salon-b"]);
+        await db.salon.update({
+          where: { id: "a" },
+          data: { logoUrl: "https://example.test/logo.webp" },
+        });
+        assert.deepEqual(await slugs(), ["salon-a", "salon-b"]);
+        await db.service.updateMany({
+          where: { salonId: "a" },
+          data: { priceMnt: 0 },
+        });
+        assert.deepEqual(await slugs(), ["salon-b"]);
+        await db.service.updateMany({
+          where: { salonId: "a" },
+          data: { priceMnt: 65000 },
+        });
+        // No active staff (and so no working hours) hides the salon too.
+        await db.staff.updateMany({
+          where: { salonId: "a" },
+          data: { active: false },
+        });
+        assert.deepEqual(await slugs(), ["salon-b"]);
+        await db.staff.updateMany({
+          where: { salonId: "a" },
+          data: { active: true },
+        });
+        await db.branch.updateMany({
+          where: { salonId: "a" },
+          data: { address: "" },
+        });
+        assert.deepEqual(await slugs(), ["salon-b"]);
+        await db.branch.updateMany({
+          where: { salonId: "a" },
+          data: { address: "Туршилтын хаяг" },
+        });
+        const items = await profileChecklist(db, "a");
+        assert.ok(items.every((i) => i.done));
+        await db.salon.update({
+          where: { id: "a" },
+          data: { logoUrl: null },
+        });
+        assert.deepEqual(
+          (await profileChecklist(db, "a"))
+            .filter((i) => !i.done)
+            .map((i) => i.key),
+          ["picture"],
+        );
+        await db.salon.update({
+          where: { id: "a" },
+          data: { coverUrl: "https://example.test/cover.webp" },
+        });
+      },
+    );
     await t.test("lists bookable salons with public fields only", async () => {
       assert.deepEqual(await slugs(), ["salon-a", "salon-b"]);
       const d = await listDirectory(db, {});

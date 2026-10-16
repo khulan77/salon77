@@ -1,4 +1,10 @@
 "use client";
+import {
+  bookingThemeKeys,
+  bookingThemes,
+  bookingThemeStyle,
+  recommendedBookingTheme,
+} from "@/lib/booking-themes";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,8 +20,10 @@ import {
   Copy,
   Download,
   Link2,
+  Palette,
   Share2,
   MessageSquare,
+  Store,
   ImagePlus,
   Landmark,
   Trash2,
@@ -54,6 +62,9 @@ export function BookingSettings({
   logoUrl = null,
   instagram = "",
   facebook = "",
+  phone = "",
+  description = "",
+  serviceTypes = [],
   origin = "",
   coverUrl: initialCover,
   services,
@@ -67,6 +78,9 @@ export function BookingSettings({
   logoUrl?: string | null;
   instagram?: string;
   facebook?: string;
+  phone?: string;
+  description?: string;
+  serviceTypes?: string[];
   origin?: string;
   coverUrl: string | null;
   services: SampleService[];
@@ -149,6 +163,15 @@ export function BookingSettings({
       )}
       <div className="settings-layout">
         <div className="settings-main">
+          {salonId && !preview && (
+            <SalonDetailsCard
+              name={salonName}
+              phone={phone}
+              description={description}
+              slug={slug}
+              origin={origin}
+            />
+          )}
           {slug && <ShareLinkCard url={`${origin}/${slug}/book`} />}
           {salonId && !preview && (
             <section className="panel settings-card" aria-label="Салоны лого">
@@ -207,6 +230,74 @@ export function BookingSettings({
                 className="settings-fieldset"
                 disabled={saving || !loaded}
               >
+                <section
+                  className="panel settings-card"
+                  aria-labelledby="theme-title"
+                >
+                  <div className="settings-card-heading">
+                    <span className="settings-icon">
+                      <Palette size={17} />
+                    </span>
+                    <div>
+                      <h2 id="theme-title">Захиалгын хуудасны загвар</h2>
+                      <p>
+                        Үйлчлүүлэгчдийн цаг захиалах болон захиалгаа удирдах
+                        хуудсанд л үйлчилнэ. Хадгалсны дараа шууд солигдоно.
+                      </p>
+                    </div>
+                    {slug && !preview && (
+                      <a
+                        className="booking-theme-open"
+                        href={`/${slug}/book`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Хуудсаа харах <ArrowUpRight size={14} />
+                      </a>
+                    )}
+                  </div>
+                  <div
+                    className="booking-theme-options"
+                    role="radiogroup"
+                    aria-label="Өнгөний загвар"
+                  >
+                    {bookingThemeKeys.map((theme) => {
+                      const t = bookingThemes[theme];
+                      const suggested =
+                        serviceTypes.length > 0 &&
+                        recommendedBookingTheme(serviceTypes) === theme;
+                      return (
+                        <label className="booking-theme-option" key={theme}>
+                          <input
+                            type="radio"
+                            name="bookingTheme"
+                            value={theme}
+                            aria-label={t.label}
+                            aria-describedby={`theme-hint-${theme}`}
+                            checked={policy.bookingTheme === theme}
+                            onChange={() => update({ bookingTheme: theme })}
+                          />
+                          <BookingThemePreview theme={theme} name={salonName} />
+                          <span className="booking-theme-name">
+                            <strong>{t.label}</strong>
+                            {suggested && (
+                              <em className="booking-theme-suggested">
+                                Санал болгож буй
+                              </em>
+                            )}
+                          </span>
+                          <small id={`theme-hint-${theme}`}>{t.hint}</small>
+                          <span
+                            className="booking-theme-check"
+                            aria-hidden="true"
+                          >
+                            <Check size={13} />
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
                 <section
                   className="panel settings-card"
                   aria-labelledby="online-title"
@@ -310,6 +401,21 @@ export function BookingSettings({
                       захиалгаар цаг дүүргэхээс хамгаална.
                     </small>
                   </label>
+                  <label className="check-field">
+                    <input
+                      type="checkbox"
+                      checked={policy.autoCompletePast}
+                      onChange={(e) =>
+                        update({ autoCompletePast: e.target.checked })
+                      }
+                    />
+                    Цаг нь өнгөрсөн захиалгыг автоматаар дууссанд тооцох
+                  </label>
+                  <p className="field-hint">
+                    Баталгаажсан захиалгын цаг дуусмагц «Дууссан» болж тайланд
+                    орлогоор орно. Ирээгүй үйлчлүүлэгчийг календараас «Ирээгүй»
+                    гэж засна.
+                  </p>
                   <div className="form-grid">
                     <label className="field">
                       Урьдчилж захиалах хугацаа · хоног
@@ -870,6 +976,219 @@ function SocialCard({
     </section>
   );
 }
+// The salon's own name, phone and introduction. The booking link is moved
+// separately because the old one stops working.
+function SalonDetailsCard({
+  name: initialName,
+  phone: initialPhone,
+  description: initialDescription,
+  slug,
+  origin,
+}: {
+  name: string;
+  phone: string;
+  description: string;
+  slug: string;
+  origin: string;
+}) {
+  const router = useRouter();
+  const [name, setName] = useState(initialName),
+    [phone, setPhone] = useState(initialPhone),
+    [description, setDescription] = useState(initialDescription),
+    [saving, setSaving] = useState(false),
+    [error, setError] = useState(""),
+    [saved, setSaved] = useState(false);
+  const [moving, setMoving] = useState(false),
+    [nextSlug, setNextSlug] = useState(slug),
+    [agreed, setAgreed] = useState(false),
+    [slugError, setSlugError] = useState(""),
+    [slugSaving, setSlugSaving] = useState(false),
+    [slugSaved, setSlugSaved] = useState(false);
+  const edit =
+    (set: (v: string) => void) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      set(e.target.value);
+      setSaved(false);
+    };
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setSaved(false);
+    try {
+      await requestJson("/api/salon-profile?part=details", "PATCH", {
+        name: name.trim(),
+        phone: phone.trim(),
+        description: description.trim(),
+      });
+      setSaved(true);
+      router.refresh();
+    } catch (e) {
+      setError(userFacingError(e, "Хадгалж чадсангүй. Дахин оролдоно уу."));
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function moveLink(e: React.FormEvent) {
+    e.preventDefault();
+    setSlugSaving(true);
+    setSlugError("");
+    try {
+      await requestJson("/api/salon-profile?part=slug", "PATCH", {
+        slug: nextSlug,
+        confirm: agreed,
+      });
+      setMoving(false);
+      setAgreed(false);
+      setSlugSaved(true);
+      router.refresh();
+    } catch (e) {
+      setSlugError(userFacingError(e, "Линкийг сольж чадсангүй."));
+    } finally {
+      setSlugSaving(false);
+    }
+  }
+  return (
+    <section className="panel settings-card" aria-labelledby="salon-title">
+      <div className="settings-card-heading">
+        <span className="settings-icon">
+          <Store size={17} />
+        </span>
+        <div>
+          <h2 id="salon-title">Салоны мэдээлэл</h2>
+          <p>Захиалгын хуудсанд харагдах нэр, утас, танилцуулга.</p>
+        </div>
+      </div>
+      <form className="form-grid" onSubmit={save}>
+        <label className="field">
+          Салоны нэр
+          <input
+            required
+            value={name}
+            maxLength={100}
+            onChange={edit(setName)}
+          />
+        </label>
+        <label className="field">
+          Утас
+          <input
+            required
+            type="tel"
+            value={phone}
+            maxLength={30}
+            onChange={edit(setPhone)}
+          />
+        </label>
+        <label className="field field-full">
+          Танилцуулга
+          <textarea
+            rows={3}
+            value={description}
+            maxLength={1000}
+            placeholder="Салоныхоо онцлог, үйлчилгээг товч бичээрэй."
+            onChange={edit(setDescription)}
+          />
+        </label>
+        <div className="social-actions">
+          {error && (
+            <span role="alert" className="field-error">
+              {error}
+            </span>
+          )}
+          {saved && <span role="status">Хадгаллаа.</span>}
+          <Button type="submit" disabled={saving}>
+            {saving ? "Хадгалж байна…" : "Мэдээлэл хадгалах"}
+          </Button>
+        </div>
+      </form>
+      <div className="slug-row">
+        <div>
+          <span>Захиалгын линк</span>
+          <strong>
+            {origin.replace(/^https?:\/\//, "")}/{slug}/book
+          </strong>
+          <small>Нэр солиход линк өөрчлөгдөхгүй.</small>
+        </div>
+        {!moving && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setMoving(true);
+              setSlugSaved(false);
+              setNextSlug(slug);
+            }}
+          >
+            Линк солих
+          </Button>
+        )}
+      </div>
+      {slugSaved && (
+        <p className="field-hint" role="status">
+          Линкийг солилоо. Шинэ линкээ үйлчлүүлэгчиддээ дахин хуваалцаарай.
+        </p>
+      )}
+      {moving && (
+        <form className="slug-move" onSubmit={moveLink}>
+          <p className="slug-warning" role="note">
+            Анхааруулга: хуучин линк ажиллахаа болино. Хуваалцсан линк, QR код,
+            Инстаграм дээрх холбоосоо шинэчлэх шаардлагатай.
+          </p>
+          <label className="field">
+            Шинэ линк
+            <span className="slug-input">
+              <span aria-hidden="true">/</span>
+              <input
+                required
+                value={nextSlug}
+                minLength={3}
+                maxLength={63}
+                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                autoCapitalize="none"
+                spellCheck={false}
+                onChange={(e) => setNextSlug(e.target.value.toLowerCase())}
+              />
+              <span aria-hidden="true">/book</span>
+            </span>
+            <small>Латин жижиг үсэг, тоо, дан зураас ашиглана.</small>
+          </label>
+          <label className="check-field">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+            />
+            Хуучин линк ажиллахаа болихыг ойлгосон
+          </label>
+          <div className="social-actions">
+            {slugError && (
+              <span role="alert" className="field-error">
+                {slugError}
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setMoving(false);
+                setSlugError("");
+              }}
+            >
+              Болих
+            </Button>
+            <Button
+              type="submit"
+              disabled={slugSaving || !agreed || nextSlug === slug}
+            >
+              {slugSaving ? "Сольж байна…" : "Линкийг солих"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
 function CoverCard({
   cover,
   disabled,
@@ -911,11 +1230,13 @@ function CoverCard({
           <ImagePlus size={17} />
         </span>
         <div>
-          <h2 id="cover-title">Салоны нүүр зураг</h2>
+          <h2 id="cover-title">
+            Салоны нүүр зураг <span className="muted-text">· заавал биш</span>
+          </h2>
           <p>
-            Нүүр хуудасны жагсаалтад салоны зураг болж харагдана. Салбарын зураг
-            оруулаагүй бол захиалгын хуудасны дээд хэсэгт ч гарна. Салбар бүрийн
-            зургийг «Салбарууд» хэсгээс оруулна.
+            Салбар бүрийн зургийг «Салбарууд» хэсгээс оруулна. Салбарт зураг
+            байхгүй үед л энэ зураг нүүр хуудасны жагсаалт болон захиалгын
+            хуудасны дээд хэсэгт харагдана.
           </p>
         </div>
       </div>
@@ -1090,5 +1411,36 @@ function BookingPreview({
         </div>
       </div>
     </aside>
+  );
+}
+// A miniature of the booking page in one theme: cover, salon card, a service
+// and the booking button.
+function BookingThemePreview({
+  theme,
+  name,
+}: {
+  theme: (typeof bookingThemeKeys)[number];
+  name: string;
+}) {
+  return (
+    <span
+      className="booking-theme-preview"
+      style={bookingThemeStyle(theme)}
+      aria-hidden="true"
+    >
+      <span className="btp-cover" />
+      <span className="btp-card">
+        <span className="btp-title">{name || "Таны салон"}</span>
+        <span className="btp-chip">2 салбар</span>
+      </span>
+      <span className="btp-service">
+        <span>
+          Гел маникюр
+          <small>1 цаг</small>
+        </span>
+        <b>65,000₮</b>
+      </span>
+      <span className="btp-button">Цаг захиалах</span>
+    </span>
   );
 }

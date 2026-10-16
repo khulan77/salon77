@@ -92,7 +92,9 @@ test("lifecycle has no terminal-state restoration", () => {
     "CANCELLED",
     "NO_SHOW",
   ]);
-  for (const status of ["CANCELLED", "COMPLETED", "NO_SHOW"])
+  // An auto-completed visit may only be corrected to a no-show.
+  assert.deepEqual(transitions.COMPLETED, ["NO_SHOW"]);
+  for (const status of ["CANCELLED", "NO_SHOW"])
     assert.deepEqual(transitions[status], []);
 });
 test("staff duration override is bounded and coerced from query strings", () => {

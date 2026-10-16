@@ -45,7 +45,7 @@ async function onlinePerDay(
   });
 }
 // Start of the Ulaanbaatar calendar month `back` months before `now`'s.
-function monthStart(now: Date, back = 0) {
+export function monthStart(now: Date, back = 0) {
   const [y, m] = localStamp(now).slice(0, 7).split("-").map(Number);
   const d = new Date(Date.UTC(y, m - 1 - back, 1));
   return new Date(`${d.toISOString().slice(0, 7)}-01T00:00:00+08:00`);
@@ -262,6 +262,7 @@ export async function listPlatformSalons(
         trialEndsAt: true,
         paidUntil: true,
         monthlyPriceMnt: true,
+        renewalChoice: true,
         phone: true,
         createdAt: true,
         members: {
@@ -287,13 +288,22 @@ export async function listPlatformSalons(
     ? activityIds.flatMap((id) => found.filter((s) => s.id === id))
     : found;
   const ids = salons.map((s) => s.id);
-  const [online30, last, price, takings] = await Promise.all([
+  const [online30, onlineMonth, last, price, takings] = await Promise.all([
     db.booking.groupBy({
       by: ["salonId"],
       where: {
         salonId: { in: ids },
         source: "ONLINE",
         createdAt: { gte: new Date(+now - 30 * DAY) },
+      },
+      _count: { _all: true },
+    }),
+    db.booking.groupBy({
+      by: ["salonId"],
+      where: {
+        salonId: { in: ids },
+        source: "ONLINE",
+        createdAt: { gte: monthStart(now) },
       },
       _count: { _all: true },
     }),
@@ -348,6 +358,10 @@ export async function listPlatformSalons(
         staff: s._count.staff,
         bookings: s._count.bookings,
         online30: online30.find((r) => r.salonId === s.id)?._count._all ?? 0,
+        // Online bookings made this Ulaanbaatar month: the basis for a fee.
+        onlineMonth:
+          onlineMonth.find((r) => r.salonId === s.id)?._count._all ?? 0,
+        renewalChoice: s.renewalChoice,
         // Completed bookings this Ulaanbaatar month.
         revenueMonth: (() => {
           const t = takings.find((r) => r.salonId === s.id)?._sum;
@@ -557,7 +571,11 @@ export async function setSalonStatus(
   });
 }
 // Salons waiting for a decision, longest wait first.
-export async function listApplications(db: Database, adminUserId: string) {
+export async function listApplications(
+  db: Database,
+  adminUserId: string,
+  now = new Date(),
+) {
   await assertPlatformAdmin(db, adminUserId);
   const salons = await db.salon.findMany({
     where: { reviewStatus: "PENDING" },
@@ -596,6 +614,8 @@ export async function listApplications(db: Database, adminUserId: string) {
     serviceTypes: s.serviceTypes,
     staffCount: s.staffCount,
     submittedAt: (s.submittedAt ?? s.createdAt).toISOString(),
+    // Whole days since it was sent, for the operator's queue.
+    waitedDays: Math.floor((+now - +(s.submittedAt ?? s.createdAt)) / DAY),
     // Reviewed before: the owner corrected the details and sent them again.
     resubmitted: s.reviewedAt !== null,
     district: s.branches[0]?.district ?? "",

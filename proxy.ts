@@ -17,9 +17,10 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  const {
-    data: { user },
-  } = await client.auth.getUser();
+  // Verifies the session JWT locally (asymmetric signing keys) and refreshes
+  // it when it has expired; no Auth server round trip on every request.
+  const { data } = await client.auth.getClaims();
+  const user = data?.claims.sub;
   // Signed-out visitors to the root see a public page, not a login wall.
   // /landing picks the directory or the business page; the salon count it
   // needs is a database read, which does not belong in the proxy.

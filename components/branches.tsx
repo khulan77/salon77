@@ -12,16 +12,20 @@ import { MapPin, Plus, Pencil, Power, X, ArrowRight } from "lucide-react";
 import type { AdminData, BranchView } from "@/lib/admin-data";
 import { Button } from "./ui/button";
 import { DistrictSelect } from "./district-select";
-import { PhotoField } from "./photo-field";
+import { BranchGallery } from "./branch-gallery";
 import { normalizeDistrict } from "@/lib/districts";
-export function Branches({ data }: { data: AdminData }) {
+export function Branches({
+  data,
+  photos,
+}: {
+  data: AdminData;
+  photos: Record<string, { id: string; url: string }[]>;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<BranchView | "new" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  // Photos changed in this session, shown before the refreshed list arrives.
-  const [photos, setPhotos] = useState<Record<string, string | null>>({});
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (editing) dialog.current?.showModal();
@@ -150,6 +154,12 @@ export function Branches({ data }: { data: AdminData }) {
         <div className="branch-grid">
           {data.branches.map((branch) => (
             <article className="panel branch-card" key={branch.id}>
+              <BranchGallery
+                branchId={branch.id}
+                branchName={branch.name}
+                initial={photos[branch.id] ?? []}
+                editable={data.role === "SALON_OWNER" && !data.preview}
+              />
               <div className="branch-card-heading">
                 <MapPin size={20} />
                 <h2>{branch.name}</h2>
@@ -239,24 +249,9 @@ export function Branches({ data }: { data: AdminData }) {
               {error}
             </div>
           )}
-          {data.role === "SALON_OWNER" && !data.preview && (
-            <PhotoField
-              key={`photo-${values?.id ?? "new"}`}
-              target="branch"
-              id={values?.id ?? null}
-              url={
-                values
-                  ? values.id in photos
-                    ? photos[values.id]
-                    : values.imageUrl
-                  : null
-              }
-              onChange={(url) => {
-                if (values) setPhotos({ ...photos, [values.id]: url });
-                router.refresh();
-              }}
-            />
-          )}
+          <p className="field-hint">
+            Салбарын зургийг салбарын карт дээрээс нэмж, үндсэн зургаа сонгоно.
+          </p>
           <form
             onInvalidCapture={localizeInvalidField}
             onInputCapture={clearFieldValidity}

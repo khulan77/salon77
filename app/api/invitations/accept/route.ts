@@ -49,6 +49,10 @@ export async function POST(request: Request) {
         emailConfirmed: Boolean(user.email_confirmed_at),
       },
       token,
+      // Set when they created the account on the invitation page.
+      typeof user.user_metadata?.name === "string"
+        ? user.user_metadata.name
+        : undefined,
     );
     (await cookies()).set("salon77-tenant", result.salonId, {
       httpOnly: true,

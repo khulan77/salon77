@@ -7,7 +7,10 @@ import {
   reviewSalon,
   setSalonStatus,
 } from "@/lib/services/platform";
-import { notifySalonApproved } from "@/lib/notifications/platform-email";
+import {
+  notifySalonApproved,
+  notifySalonRejected,
+} from "@/lib/notifications/platform-email";
 import { setSalonPrice } from "@/lib/services/billing";
 export async function PATCH(request: Request) {
   try {
@@ -25,6 +28,9 @@ export async function PATCH(request: Request) {
       if (result.approvedNow) {
         const { to, salon } = await approvalRecipient(db, id);
         notifySalonApproved(to, salon);
+      } else if (result.reviewStatus === "REJECTED" && body.note) {
+        const { to, salon } = await approvalRecipient(db, id);
+        notifySalonRejected(to, { name: salon.name, note: String(body.note) });
       }
       return Response.json(result);
     }

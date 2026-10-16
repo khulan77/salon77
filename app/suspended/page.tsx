@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Lock, Phone } from "lucide-react";
-import { identity } from "@/lib/auth";
+import { sessionUser } from "@/lib/auth";
 import { configured } from "@/lib/env";
 import { db } from "@/lib/db";
 import { site, formatSitePhone } from "@/lib/site";
@@ -10,7 +10,7 @@ export const metadata = { title: "Салон түр хаагдсан · Salon77"
 // Members of a salon the platform closed (usually an unpaid monthly fee).
 export default async function Page() {
   if (!configured) redirect("/");
-  const user = await identity().catch(() => null);
+  const user = await sessionUser().catch(() => null);
   if (!user) redirect("/sign-in");
   const member = await db.salonMember.findFirst({
     where: { userId: user.id, active: true, salon: { status: "SUSPENDED" } },

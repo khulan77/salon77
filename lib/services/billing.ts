@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { HttpError } from "../errors";
-import { assertPlatformAdmin, platformNotFound } from "./platform";
+import { type Actor, refreshActor, requireOwner } from "../access";
+import { assertPlatformAdmin, monthStart, platformNotFound } from "./platform";
 import { billingState, monthlyFee, nextPeriod } from "../billing";
 type Database = Prisma.TransactionClient;
 export async function pricePerBranch(db: Database) {
@@ -123,7 +124,11 @@ export async function recordPayment(
       });
       await tx.salon.update({
         where: { id: salonId },
-        data: { paidUntil: period.end },
+        data: {
+          paidUntil: period.end,
+          renewalChoice: "CONTINUE",
+          renewalChosenAt: now,
+        },
       });
       return {
         amountMnt,
@@ -140,7 +145,7 @@ export async function salonBilling(
   salonId: string,
   now = new Date(),
 ) {
-  const [salon, price, payments] = await Promise.all([
+  const [salon, price, payments, onlineMonth] = await Promise.all([
     db.salon.findUniqueOrThrow({
       where: { id: salonId },
       select: {
@@ -149,7 +154,14 @@ export async function salonBilling(
         trialEndsAt: true,
         paidUntil: true,
         monthlyPriceMnt: true,
-        _count: { select: { branches: { where: { active: true } } } },
+        renewalChoice: true,
+        _count: {
+          select: {
+            branches: { where: { active: true } },
+            services: { where: { active: true } },
+            staff: { where: { active: true } },
+          },
+        },
       },
     }),
     pricePerBranch(db),
@@ -167,19 +179,35 @@ export async function salonBilling(
         createdAt: true,
       },
     }),
+    db.booking.count({
+      where: { salonId, source: "ONLINE", createdAt: { gte: monthStart(now) } },
+    }),
   ]);
   const state = billingState(salon, now);
   const branches = Math.max(1, salon._count.branches);
+  const trial = salon.trialEndsAt !== null && salon.paidUntil === null;
   return {
     name: salon.name,
     state: state.state,
     until: state.until?.toISOString() ?? null,
     daysLeft: state.daysLeft,
     warn: state.warn,
-    trial: salon.trialEndsAt !== null && salon.paidUntil === null,
+    trial,
+    choice: salon.renewalChoice,
+    // The owner is asked to continue or stop near and after the trial's end.
+    askChoice:
+      trial &&
+      (state.state === "EXPIRED" || (state.state === "TRIAL" && state.warn)),
     // Where access would end if a payment were recorded now.
     nextEnd: nextPeriod(salon, now).end.toISOString(),
     branches,
+    // What the operator looks at when setting a salon's own fee.
+    usage: {
+      branches: salon._count.branches,
+      services: salon._count.services,
+      staff: salon._count.staff,
+      onlineMonth,
+    },
     pricePerBranchMnt: price,
     // Set by hand for this salon, rather than per branch.
     customPrice: salon.monthlyPriceMnt !== null,
@@ -203,7 +231,9 @@ export async function billingOverview(
   now = new Date(),
 ) {
   await assertPlatformAdmin(db, adminUserId);
-  const [salons, price, received] = await Promise.all([
+  // Start of this Ulaanbaatar calendar month.
+  const month = monthStart(now);
+  const [salons, price, received, thisMonth] = await Promise.all([
     db.salon.findMany({
       where: { reviewStatus: "APPROVED", status: "ACTIVE" },
       select: {
@@ -218,6 +248,11 @@ export async function billingOverview(
     db.salonPayment.aggregate({
       where: { createdAt: { gte: new Date(+now - 30 * 86400000) } },
       _sum: { amountMnt: true },
+    }),
+    db.salonPayment.aggregate({
+      where: { createdAt: { gte: month } },
+      _sum: { amountMnt: true },
+      _count: { _all: true },
     }),
   ]);
   const counts = { TRIAL: 0, PAID: 0, EXPIRED: 0, due: 0 };
@@ -239,7 +274,38 @@ export async function billingOverview(
     due: counts.due,
     expired: counts.EXPIRED,
     received30Mnt: received._sum.amountMnt ?? 0,
+    receivedMonthMnt: thisMonth._sum.amountMnt ?? 0,
+    paymentsMonth: thisMonth._count._all,
     // What a month brings if every active salon keeps paying.
     monthlyMnt: monthly,
   };
+}
+export const renewalInput = z
+  .object({ choice: z.enum(["CONTINUE", "STOP"]) })
+  .strict();
+// The owner says whether the salon goes on after the trial. Stopping keeps
+// all data; the booking page closes when the free days run out.
+export async function chooseRenewal(
+  db: PrismaClient,
+  actor: Actor,
+  raw: unknown,
+  now = new Date(),
+) {
+  const { choice } = renewalInput.parse(raw);
+  return db.$transaction(async (tx) => {
+    const current = await refreshActor(tx, actor);
+    requireOwner(current);
+    const salon = await tx.salon.findUniqueOrThrow({
+      where: { id: current.salonId },
+      select: { reviewStatus: true, trialEndsAt: true, paidUntil: true },
+    });
+    const { state } = billingState(salon, now);
+    if (state === "PENDING" || state === "FREE")
+      throw new HttpError(409, "Танай салонд төлбөрийн сонголт шаардлагагүй.");
+    await tx.salon.update({
+      where: { id: current.salonId },
+      data: { renewalChoice: choice, renewalChosenAt: now },
+    });
+    return { choice };
+  });
 }

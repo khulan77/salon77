@@ -29,6 +29,7 @@ test(
       const actors = await bookingSeed(db);
       await saveBookingSettings(db, actors.owner, {
         ...defaultBookingSettings,
+        bookingTheme: "DARK",
         notificationsEnabled: true,
         reminderMinutes: [],
       });
@@ -61,6 +62,7 @@ test(
             null,
           );
           const v = await readManagedVisit(db, "salon-a", token);
+          assert.equal(v.bookingTheme, "DARK");
           assert.equal(v.items.length, 2);
           assert.equal(v.status, "PENDING");
           assert.equal(v.canChange, true);
@@ -134,6 +136,7 @@ test(
             cancellationNoticeMinutes: 10 * 24 * 60,
           });
           const v = await readManagedVisit(db, "salon-a", token);
+          assert.equal(v.bookingTheme, "LIGHT");
           assert.equal(v.canChange, false);
           assert.deepEqual(
             (await managedAvailability(db, "salon-a", { token, date })).slots,
@@ -145,6 +148,7 @@ test(
           );
           await saveBookingSettings(db, actors.owner, {
             ...defaultBookingSettings,
+            bookingTheme: "DARK",
             notificationsEnabled: true,
             reminderMinutes: [],
           });

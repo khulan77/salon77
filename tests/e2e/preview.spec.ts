@@ -52,6 +52,11 @@ test("preview onboarding validates and does not pretend to save", async ({
   page,
 }) => {
   await page.goto("/onboarding");
+  // The first step lists what to prepare and why salons are verified.
+  await expect(
+    page.getByRole("heading", { name: "Бүртгүүлэхэд бэлдэх зүйлс" }),
+  ).toBeVisible();
+  await expect(page.getByText("24 цагийн дотор")).toBeVisible();
   await page
     .getByRole("textbox", { name: "Салоны нэр", exact: true })
     .fill("Cloud Nail");
@@ -119,7 +124,7 @@ test("preview APIs reject writes and external origins", async ({
 });
 test("preview invitations do not pretend to send email", async ({ page }) => {
   await page.goto("/team");
-  await page.getByRole("button", { name: "Гишүүн урих" }).click();
+  await page.getByRole("button", { name: "Ресепшн урих" }).click();
   await expect(
     page.getByText(
       "Танилцах горимд урилга үүсгэх боломжгүй. Эхлээд салоноо бүртгэнэ үү.",

@@ -74,6 +74,9 @@ model Salon {
   paidUntil       DateTime?
   // A fee the operator set for this salon; empty uses the per-branch price.
   monthlyPriceMnt Int?
+  // The owner's answer as the trial ends; empty until asked.
+  renewalChoice   RenewalChoice?
+  renewalChosenAt DateTime?          @db.Timestamptz(3)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   members         SalonMember[]
@@ -85,6 +88,7 @@ model Salon {
   bookings        Booking[]
   notifications   Notification[]
   images          SalonImage[]
+  branchImages    BranchImage[]
   platformAudit   PlatformAuditLog[]
   activity        BookingActivity[]
   reviews         Review[]
@@ -133,7 +137,8 @@ model Branch {
   // Opening hours in minutes after local midnight; staff shifts default to these.
   openMinute   Int                @default(600)
   closeMinute  Int                @default(1140)
-  // The branch's own photo, shown at the top of the booking page.
+  // The branch's main photo (the first of `images`), shown at the top of the
+  // booking page and in link previews.
   imageUrl     String?
   active       Boolean            @default(true)
   createdAt    DateTime           @default(now())
@@ -145,6 +150,8 @@ model Branch {
   staff        StaffBranch[]
   bookings     Booking[]
   productStock ProductStock[]
+  // Photo gallery; the first photo is the main one and imageUrl mirrors it.
+  images       BranchImage[]
 
   activity BookingActivity[]
 
@@ -316,6 +323,8 @@ model WorkingBreak {
   hours          WorkingHours @relation(fields: [workingHoursId, salonId], references: [id, salonId], onDelete: Cascade)
 
   @@index([salonId])
+  // Loading the breaks of each working-hours row (schedules, staff pages).
+  @@index([workingHoursId, salonId])
 }
 
 model TimeOff {
@@ -414,6 +423,8 @@ model Booking {
 
   @@unique([id, salonId])
   @@unique([salonId, idempotencyKey])
+  // The owner's all-branch calendar filters by salon and time only.
+  @@index([salonId, startAt])
   @@index([salonId, branchId, startAt])
   @@index([salonId, staffId, startAt])
   @@index([salonId, customerId, startAt])
@@ -457,7 +468,16 @@ enum BookingConfirmationMode {
   MANUAL_CONFIRM
 }
 
+enum BookingTheme {
+  LIGHT
+  DARK
+  PINK
+  NATURAL
+  GOLD
+}
+
 model BookingSettings {
+  bookingTheme                BookingTheme            @default(LIGHT)
   salonId                     String                  @id
   publicBookingEnabled        Boolean                 @default(true)
   bookingConfirmationMode     BookingConfirmationMode @default(MANUAL_CONFIRM)
@@ -475,6 +495,7 @@ model BookingSettings {
   pendingExpiryMinutes        Int                     @default(0)
   notificationsEnabled        Boolean                 @default(false)
   listedInDirectory           Boolean                 @default(true)
+  autoCompletePast            Boolean                 @default(true)
   reminderMinutes             Int[]                   @default([1440])
   updatedAt                   DateTime                @default(now()) @updatedAt
   salon                       Salon                   @relation(fields: [salonId], references: [id], onDelete: Cascade)
@@ -620,6 +641,22 @@ model SalonImage {
   @@index([salonId, sortOrder])
 }
 
+// Photos of one branch's space, shown when that branch is picked on the booking page.
+model BranchImage {
+  id        String   @id @default(cuid())
+  salonId   String
+  branchId  String
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  salon     Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [branchId, salonId], references: [id, salonId], onDelete: Cascade)
+
+  @@unique([id, salonId])
+  @@index([branchId, sortOrder])
+  @@index([salonId])
+}
+
 enum FeedbackKind {
   BUG
   SUGGESTION
@@ -641,11 +678,14 @@ model Feedback {
   status    FeedbackStatus @default(OPEN)
   reply     String?
   repliedAt DateTime?
+  // When the platform operator first opened it; null = unread.
+  readAt    DateTime?
   createdAt DateTime       @default(now())
   salon     Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status, createdAt])
+  @@index([readAt])
   @@index([salonId, createdAt])
 }
 
@@ -705,4 +745,9 @@ model Review {
   @@unique([id, salonId])
   @@unique([bookingId, salonId])
   @@index([salonId, createdAt])
+}
+
+enum RenewalChoice {
+  CONTINUE
+  STOP
 }

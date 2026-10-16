@@ -6,7 +6,9 @@ import {
   answerFeedback,
   listFeedback,
   listOwnFeedback,
+  markFeedbackRead,
   sendFeedback,
+  unreadFeedbackCount,
 } from "../../lib/services/feedback";
 import { HttpError } from "../../lib/errors";
 const status = (code: number) => (e: unknown) =>
@@ -86,6 +88,31 @@ test("salon requests to the platform", { timeout: 120000 }, async (t) => {
       assert.equal(mine[0].reply, "Зассан. Дахин оролдоод үзээрэй.");
       assert.equal(mine[0].status, "DONE");
       assert.equal((await listOwnFeedback(db, actors.other))[0].reply, "");
+    });
+    await t.test("new requests count as unread until opened", async () => {
+      await assert.rejects(unreadFeedbackCount(db, userIds.owner), status(404));
+      await assert.rejects(
+        markFeedbackRead(db, userIds.owner, []),
+        status(404),
+      );
+      const inbox = await listFeedback(db, admin);
+      assert.equal(await unreadFeedbackCount(db, admin), 3);
+      assert.ok(inbox.every((f) => f.unread));
+      assert.equal(
+        await markFeedbackRead(
+          db,
+          admin,
+          inbox.map((f) => f.id),
+        ),
+        3,
+      );
+      assert.equal(await unreadFeedbackCount(db, admin), 0);
+      assert.ok((await listFeedback(db, admin)).every((f) => !f.unread));
+      await sendFeedback(db, actors.other, {
+        kind: "QUESTION",
+        message: "Шинэ асуулт байна, тусална уу.",
+      });
+      assert.equal(await unreadFeedbackCount(db, admin), 1);
     });
     await t.test("one account cannot flood the inbox", async () => {
       for (let i = 0; i < 9; i++)

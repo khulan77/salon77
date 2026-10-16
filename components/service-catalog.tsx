@@ -57,7 +57,9 @@ export function ServiceCatalog({
   serviceTypes?: string[];
 }) {
   const router = useRouter();
-  const owner = data.role === "SALON_OWNER";
+  const owner = data.role === "SALON_OWNER",
+    // Receptionists add and edit services of their own branch.
+    canAdd = owner || data.role === "RECEPTIONIST";
   const [service, setService] = useState<Service | "new" | null>(null);
   const [category, setCategory] = useState<Category | "new" | null>(null);
   const [error, setError] = useState("");
@@ -93,7 +95,7 @@ export function ServiceCatalog({
   function submitService(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const active = form.get("active") === "on";
+    const active = owner ? form.get("active") === "on" : true;
     if (current?.active && !active && !window.confirm(deactivateConfirm))
       return;
     void run(
@@ -184,18 +186,20 @@ export function ServiceCatalog({
             )}
           </p>
         </div>
-        {owner && (
+        {canAdd && (
           <div className="heading-controls">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setError("");
-                setCategory("new");
-              }}
-            >
-              <Plus size={14} />
-              Ангилал нэмэх
-            </Button>
+            {owner && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setError("");
+                  setCategory("new");
+                }}
+              >
+                <Plus size={14} />
+                Ангилал нэмэх
+              </Button>
+            )}
             {service ? (
               <Button variant="outline" onClick={() => openService(null)}>
                 <X size={14} />
@@ -366,7 +370,7 @@ export function ServiceCatalog({
                     .join(", ") || "Салбар сонгоогүй"}
                 </p>
               </div>
-              {owner && (
+              {s.editable && (
                 <div className="service-row-actions">
                   <Button
                     variant="outline"
@@ -377,14 +381,16 @@ export function ServiceCatalog({
                     <Pencil size={13} />
                     Засах
                   </Button>
-                  <button
-                    type="button"
-                    className="text-action"
-                    disabled={pending || data.preview}
-                    onClick={() => toggleActive(s)}
-                  >
-                    {s.active ? "Идэвхгүй болгох" : "Идэвхжүүлэх"}
-                  </button>
+                  {owner && (
+                    <button
+                      type="button"
+                      className="text-action"
+                      disabled={pending || data.preview}
+                      onClick={() => toggleActive(s)}
+                    >
+                      {s.active ? "Идэвхгүй болгох" : "Идэвхжүүлэх"}
+                    </button>
+                  )}
                 </div>
               )}
             </li>
@@ -401,7 +407,7 @@ export function ServiceCatalog({
               : "Та одоогоор үйлчилгээ нэмээгүй байна."}
           </h2>
           <p>Эхлээд ангилал үүсгээд, үйлчилгээний үнэ, хугацааг оруулаарай.</p>
-          {owner && !service && (
+          {canAdd && !service && (
             <Button onClick={() => openService("new")}>
               <Plus size={14} />
               Үйлчилгээ нэмэх
@@ -547,7 +553,9 @@ function ServiceEditor({
         </div>
         {!catalog.categories.length && (
           <div className="notice">
-            Эхлээд «Ангилал нэмэх» товчоор ангиллаа үүсгэнэ үү.
+            {data.role === "SALON_OWNER"
+              ? "Эхлээд «Ангилал нэмэх» товчоор ангиллаа үүсгэнэ үү."
+              : "Ангилал алга байна. Салоны админаас ангилал үүсгэхийг хүснэ үү."}
           </div>
         )}
         <label className="field">
@@ -629,14 +637,16 @@ function ServiceEditor({
             />
             Онлайнаар захиалахыг зөвшөөрөх
           </label>
-          <label className="check-field">
-            <input
-              type="checkbox"
-              name="active"
-              defaultChecked={service?.active ?? true}
-            />
-            Идэвхтэй
-          </label>
+          {data.role === "SALON_OWNER" && (
+            <label className="check-field">
+              <input
+                type="checkbox"
+                name="active"
+                defaultChecked={service?.active ?? true}
+              />
+              Идэвхтэй
+            </label>
+          )}
         </div>
         <p className="field-hint">
           Онлайнаар зөвшөөрсөн, идэвхтэй үйлчилгээ салоны цахим захиалгын

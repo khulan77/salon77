@@ -14,10 +14,10 @@ import {
 import { Button } from "./ui/button";
 import { requestJson } from "@/lib/client-request";
 import { userFacingError } from "@/lib/ui-language";
-import type { AdminData } from "@/lib/admin-data";
+import type { SetupData } from "@/lib/admin-data";
 // First steps for a new salon, shown above the calendar until the salon can
 // take bookings: a branch, services, staff and their hours.
-export function SetupSteps({ data }: { data: AdminData }) {
+export function SetupSteps({ data }: { data: SetupData }) {
   const steps = [
     {
       title: "Салбар",

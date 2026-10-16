@@ -21,9 +21,11 @@ test("settings tabs show team access and the most recent sign-in", async ({
   );
   const latest = page.getByRole("region", { name: "Сүүлд нэвтэрсэн" });
   await expect(latest).toContainText("Хамгийн сүүлд нэвтэрсэн");
-  await expect(latest).toContainText("Эзэмшигч");
+  await expect(latest).toContainText("Админ");
   await expect(latest).toContainText("дөнгөж сая");
-  await expect(page.locator("table").first()).toContainText("Сүүлд нэвтэрсэн");
+  await expect(page.getByRole("region", { name: "Гишүүд" })).toContainText(
+    "Сүүлд нэвтэрсэн",
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,

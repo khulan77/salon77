@@ -6,7 +6,9 @@ async function expectMongolian(page: Page) {
   const text = await page.locator("body").innerText();
   // Brands and timezone notation are deliberately not translated.
   // Booking links are machine addresses and stay in Latin script.
+  // Email addresses are machine-readable and stay in Latin script too.
   const remaining = text
+    .replace(/\S+@\S+\.[a-z]{2,}/gi, "")
     .replace(/salon77\.mn\/\S*/gi, "")
     .replace(/salon77|salon|UTC|s\./gi, "");
   expect(remaining.match(/[a-zA-Z]{2,}/g) ?? []).toEqual([]);
@@ -94,7 +96,7 @@ test("search, user menu, branch form and invitation form have Mongolian text", a
   await expect(page.getByRole("dialog")).toBeVisible();
   await expectMongolian(page);
   await page.goto("/team");
-  await page.getByRole("button", { name: "Гишүүн урих" }).click();
+  await page.getByRole("button", { name: "Ресепшн урих" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expectMongolian(page);
 });

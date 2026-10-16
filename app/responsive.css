@@ -1,0 +1,185 @@
+/* Final viewport audit: preserve layout while making controls touchable. */
+.auth-page {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.auth-main,
+.auth-aside,
+.auth-form {
+  min-width: 0;
+}
+.auth-form {
+  width: min(350px, 100%);
+}
+.auth-aside .brand {
+  min-height: 44px;
+}
+.auth-form :is(input, .button) {
+  min-height: 44px;
+}
+.auth-switch a,
+.invite-back a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.lp-btn.small,
+.lp-link {
+  min-height: 44px;
+}
+.lp-link {
+  display: inline-flex;
+  align-items: center;
+}
+.lp-nav-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+@media (max-width: 760px) {
+  .auth-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Admin, onboarding and platform: 44px touch targets on touch screens and
+   narrow windows. With a mouse on a wide screen the compact desktop layout
+   stays as designed, so the whole day and a whole month fit on one screen. */
+@media (pointer: coarse), (max-width: 1024px) {
+  :is(.app-shell, .onboarding-container, .pf)
+    :is(
+      button,
+      .button,
+      select,
+      input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(
+          [type="file"]
+        )
+    ) {
+    min-height: 44px;
+  }
+  :is(.app-shell, .onboarding-container, .pf) button {
+    min-width: 44px;
+  }
+  /* Dense grids keep their compact cells: a calendar card opens as a whole,
+     and a month of timesheet days has to fit across. */
+  .app-shell :is(.booking-card, .grid-booking, .timesheet-table) button {
+    min-height: 0;
+    min-width: 0;
+  }
+  .app-shell :is(.icon-button, .profile-button, .calendar-date-input) {
+    flex-shrink: 0;
+    min-width: 44px;
+  }
+  .app-shell
+    :is(.nav-item, .settings-tabs a, .check-field, .switch, .option-card) {
+    min-height: 44px;
+  }
+  :is(.main-footer, .profile-checklist, .onboarding-container) a,
+  .pf a:not(.pf-focus > a),
+  .app-shell .text-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .app-shell .icon-button {
+    min-height: 44px;
+  }
+}
+:is(.lp, .onboarding-container) a[href^="tel:"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.day-grid-panel {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+@media (max-width: 760px) {
+  .topbar {
+    padding-inline: 12px;
+    gap: 4px;
+  }
+  .breadcrumb {
+    gap: 4px;
+    min-width: 0;
+  }
+  .header-actions {
+    gap: 2px;
+  }
+  .breadcrumb > span:not(:last-child) {
+    display: none;
+  }
+  /* Phone: the date with its arrows on one line, the tools below. */
+  .calendar-date-nav {
+    display: grid;
+    grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px;
+    align-items: center;
+    gap: 8px 6px;
+    width: 100%;
+  }
+  .calendar-date-nav > :nth-child(2) {
+    grid-area: 1 / 1;
+  }
+  .calendar-date-nav > .calendar-date-title {
+    grid-area: 1 / 2 / 2 / 5;
+    justify-content: center;
+    margin: 0;
+    font-size: 19px;
+  }
+  .calendar-date-nav > .calendar-date-title small {
+    font-size: 14px;
+  }
+  .calendar-date-nav > :nth-child(4) {
+    grid-area: 1 / 5;
+  }
+  .calendar-date-nav > :first-child {
+    grid-area: 2 / 1 / 3 / 3;
+    justify-self: start;
+  }
+  .calendar-date-nav > .calendar-date-input {
+    grid-area: 2 / 4;
+    width: 44px;
+    height: 44px;
+  }
+  .calendar-date-nav > :last-child {
+    grid-area: 2 / 5;
+  }
+  .settings-card-heading {
+    flex-wrap: wrap;
+  }
+  .settings-layout,
+  .settings-main {
+    min-width: 0;
+  }
+}
+.pf-header {
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.pf-header nav {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.pf-header nav a {
+  min-width: 44px;
+}
+.lp-nav nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+}
+.onboarding-sign-out {
+  min-width: 44px;
+  min-height: 44px;
+}
+.pf-table {
+  min-width: 640px;
+}
+.pf-table-wrap {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+.pf-table-wrap:focus-visible,
+.day-grid-panel:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}

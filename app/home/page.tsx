@@ -4,18 +4,20 @@ import type { Metadata } from "next";
 import {
   ArrowRight,
   BadgeCheck,
+  CalendarCheck,
+  Check,
   Droplets,
   Eye,
   Flower2,
   Hand,
-  Paintbrush,
-  Scissors,
-  CalendarCheck,
   Images,
   MapPin,
   MousePointerClick,
+  Paintbrush,
+  Scissors,
   Search,
   Sparkles,
+  Star,
   Store,
   Tag,
 } from "lucide-react";
@@ -25,7 +27,9 @@ import { directoryQuery, listDirectory } from "@/lib/services/directory";
 import { formatMnt } from "@/lib/ui-language";
 import { initials, tone } from "@/lib/avatar";
 import { optimizable } from "@/lib/image";
-import { site, formatSitePhone } from "@/lib/site";
+import { TRIAL_DAYS } from "@/lib/billing";
+import { Logo } from "@/components/logo";
+import { SiteFooter } from "@/components/site-footer";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Salon77 · Гоо сайхны салонд онлайнаар цаг захиалах",
@@ -34,12 +38,12 @@ export const metadata: Metadata = {
 };
 // Shortcuts into search; they only prefill the query.
 const categories = [
-  { name: "Хумс", icon: Paintbrush, tone: "rose" },
-  { name: "Үс", icon: Scissors, tone: "violet" },
-  { name: "Сормуус", icon: Eye, tone: "sky" },
-  { name: "Арьс арчилгаа", icon: Droplets, tone: "sage" },
-  { name: "Массаж", icon: Hand, tone: "sand" },
-  { name: "Спа", icon: Flower2, tone: "lilac" },
+  { name: "Хумс", icon: Paintbrush },
+  { name: "Үс", icon: Scissors },
+  { name: "Сормуус", icon: Eye },
+  { name: "Арьс арчилгаа", icon: Droplets },
+  { name: "Массаж", icon: Hand },
+  { name: "Спа", icon: Flower2 },
 ];
 const trust = [
   "Бүртгэл шаардлагагүй",
@@ -62,6 +66,11 @@ const steps = [
     title: "Баталгаажуулалт ав",
     text: "Бүртгэл, апп шаардлагагүй. Цагаа линкээрээ өөрчилж, цуцалж болно.",
   },
+];
+const ownerPoints = [
+  "Онлайн захиалга 24 цагийн турш",
+  "Календарь, ажилтан, ажлын цаг",
+  "Орлогын тайлан, үйлчлүүлэгчийн түүх",
 ];
 // Search, filters and paging stay on the directory even while "/" shows the
 // business page (see app/landing).
@@ -93,6 +102,8 @@ export default async function HomePage({
   const pages = Math.max(1, Math.ceil(data.total / data.pageSize));
   const link = (page: number) =>
     `${DIRECTORY}?${new URLSearchParams({ query: data.query, district: data.district, page: String(page) })}`;
+  const search = (query: string) =>
+    `${DIRECTORY}?${new URLSearchParams({ query })}#salons`;
   const stats = [
     data.stats.salons > 0 && `${data.stats.salons} салон`,
     data.stats.services > 0 && `${data.stats.services} үйлчилгээ`,
@@ -100,113 +111,124 @@ export default async function HomePage({
       `өнөөдөр ${data.stats.bookingsToday} захиалга`,
   ].filter(Boolean);
   return (
-    <div className="lp hp">
-      <div className="hp-glow" aria-hidden="true" />
-      <header className="lp-nav">
-        <Link href="/" className="lp-logo" aria-label="Salon77 нүүр">
-          <span className="lp-logo-mark">s</span>
-          salon77<span className="lp-dot">.</span>
-        </Link>
-        <div className="lp-nav-actions">
-          <Link href="/sign-in" className="lp-link hp-hide-sm">
-            Салон эзэмшигч нэвтрэх
+    <div className="hp">
+      <header className="hp-nav">
+        <Logo href="/" />
+        <nav aria-label="Хуудасны хэсгүүд">
+          <a href="#salons">Салонууд</a>
+          <a href="#how">Хэрхэн захиалах вэ</a>
+          <Link href="/business">Салонуудад</Link>
+        </nav>
+        <div className="hp-nav-actions">
+          <Link href="/sign-in" className="hp-signin">
+            Нэвтрэх
           </Link>
-          <Link href="/business" className="lp-btn small outline">
+          <Link href="/business" className="hp-btn small">
             Бизнесээ бүртгүүлэх
           </Link>
         </div>
       </header>
       <main>
         <section className="hp-hero">
-          <span className="lp-pill">
-            <Sparkles size={13} /> Хумс, үс, сормуус, арьс арчилгаа
-          </span>
-          <h1>
-            Гоо сайхны цагаа
-            <br />
-            <em>хэдхэн товшилтоор</em> захиал
-          </h1>
-          <p>
-            Салоноо сонгоод сул цагийг нь шууд хараарай. Залгаж, мессеж бичиж
-            хүлээх шаардлагагүй.
-          </p>
-          <form
-            className="hp-search"
-            method="get"
-            action={DIRECTORY}
-            role="search"
-          >
-            <label>
-              <Search size={19} />
-              <input
-                type="search"
-                name="query"
-                defaultValue={data.query}
-                placeholder="Салон эсвэл үйлчилгээ"
-                aria-label="Салон эсвэл үйлчилгээ хайх"
-              />
-            </label>
-            <label>
-              <MapPin size={19} />
-              <select
-                name="district"
-                defaultValue={data.district}
-                aria-label="Дүүрэг"
-              >
-                <option value="">Бүх дүүрэг</option>
-                {data.districts.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit">Хайх</button>
-          </form>
-          {data.popular.length > 0 && (
-            <nav className="hp-popular" aria-label="Түгээмэл ангилал">
-              <span>Түгээмэл:</span>
-              {data.popular.map((name) => (
-                <Link
-                  key={name}
-                  href={`${DIRECTORY}?${new URLSearchParams({ query: name })}`}
-                  aria-current={data.query === name ? "true" : undefined}
-                >
-                  {name}
-                </Link>
-              ))}
-            </nav>
-          )}
-          {stats.length > 0 && <p className="hp-stats">{stats.join(" · ")}</p>}
-          <ul className="hp-trust">
-            {trust.map((t) => (
-              <li key={t}>
-                <BadgeCheck size={15} /> {t}
-              </li>
-            ))}
-          </ul>
-        </section>
-        <nav className="hp-cats" aria-label="Үйлчилгээний төрөл">
-          {categories.map((c) => (
-            <Link
-              key={c.name}
-              href={`${DIRECTORY}?${new URLSearchParams({ query: c.name })}`}
-              className={`tone-${c.tone}`}
-              aria-current={data.query === c.name ? "true" : undefined}
+          <div className="hp-hero-copy">
+            <span className="hp-pill">
+              <Sparkles size={13} /> Хумс, үс, сормуус, арьс арчилгаа
+            </span>
+            <h1>
+              Гоо сайхны цагаа <em>хэдхэн товшилтоор</em> захиал
+            </h1>
+            <p>
+              Салоноо сонгоод сул цагийг нь шууд хараарай. Залгаж, мессеж бичиж
+              хүлээх шаардлагагүй.
+            </p>
+            <form
+              className="hp-search"
+              method="get"
+              action={DIRECTORY}
+              role="search"
             >
-              <span>
-                <c.icon size={22} />
-              </span>
-              {c.name}
-            </Link>
-          ))}
-        </nav>
-        <section className="hp-results" aria-labelledby="hp-title">
-          <div className="hp-results-head">
+              <label className="hp-search-query">
+                <Search size={18} />
+                <input
+                  type="search"
+                  name="query"
+                  defaultValue={data.query}
+                  placeholder="Салон эсвэл үйлчилгээ"
+                  aria-label="Салон эсвэл үйлчилгээ хайх"
+                />
+              </label>
+              <label className="hp-search-district">
+                <MapPin size={18} />
+                <select
+                  name="district"
+                  defaultValue={data.district}
+                  aria-label="Дүүрэг"
+                >
+                  <option value="">Бүх дүүрэг</option>
+                  {data.districts.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="submit">
+                <Search size={17} />
+                Хайх
+              </button>
+            </form>
+            {data.popular.length > 0 && (
+              <nav className="hp-popular" aria-label="Түгээмэл ангилал">
+                <span>Түгээмэл:</span>
+                {data.popular.map((name) => (
+                  <Link
+                    key={name}
+                    href={search(name)}
+                    aria-current={data.query === name ? "true" : undefined}
+                  >
+                    {name}
+                  </Link>
+                ))}
+              </nav>
+            )}
+            <ul className="hp-trust">
+              {trust.map((t) => (
+                <li key={t}>
+                  <BadgeCheck size={15} /> {t}
+                </li>
+              ))}
+            </ul>
+            {stats.length > 0 && (
+              <p className="hp-stats">{stats.join(" · ")}</p>
+            )}
+          </div>
+          <HeroArt />
+        </section>
+        <section className="hp-section" aria-labelledby="hp-cats-title">
+          <div className="hp-head">
+            <h2 id="hp-cats-title">Ангиллаар хайх</h2>
+          </div>
+          <nav className="hp-cats" aria-label="Үйлчилгээний төрөл">
+            {categories.map((c) => (
+              <Link
+                key={c.name}
+                href={search(c.name)}
+                aria-current={data.query === c.name ? "true" : undefined}
+              >
+                <span>
+                  <c.icon size={22} />
+                </span>
+                {c.name}
+              </Link>
+            ))}
+          </nav>
+        </section>
+        <section id="salons" className="hp-section" aria-labelledby="hp-title">
+          <div className="hp-head">
             <div>
               <h2 id="hp-title">
-                {filtered ? "Хайлтын үр дүн" : "Салонууд"}
-                <span>{data.total}</span>
+                {filtered ? "Хайлтын үр дүн" : "Онцлох салонууд"}
+                <span className="hp-count">{data.total}</span>
               </h2>
               <p>
                 {filtered
@@ -217,7 +239,7 @@ export default async function HomePage({
               </p>
             </div>
             {filtered && (
-              <Link href={DIRECTORY} className="lp-link underline">
+              <Link href={DIRECTORY} className="hp-link">
                 Шүүлтүүр арилгах
               </Link>
             )}
@@ -252,15 +274,20 @@ export default async function HomePage({
                           <Images size={12} /> {s.photos}
                         </span>
                       )}
-                      {s.district && (
-                        <span className="hp-district">
-                          <MapPin size={12} /> {s.district}
-                        </span>
-                      )}
                     </div>
                     <div className="hp-body">
                       <h3>{s.name}</h3>
-                      {s.address && <p className="hp-place">{s.address}</p>}
+                      {(s.district || s.branches > 1) && (
+                        <p className="hp-place">
+                          <MapPin size={13} />
+                          {[
+                            s.district,
+                            s.branches > 1 && `${s.branches} салбар`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      )}
                       {s.categories.length > 0 && (
                         <ul className="hp-tags">
                           {s.categories.map((c) => (
@@ -288,7 +315,7 @@ export default async function HomePage({
                 <>
                   <h3>Тохирох салон олдсонгүй</h3>
                   <p>Өөр нэр, үйлчилгээ эсвэл дүүргээр хайгаад үзээрэй.</p>
-                  <Link href={DIRECTORY} className="lp-btn small outline">
+                  <Link href={DIRECTORY} className="hp-btn outline small">
                     Бүх салоныг харах
                   </Link>
                 </>
@@ -298,7 +325,7 @@ export default async function HomePage({
                   <p>
                     Салон эзэмшдэг бол одоо бүртгүүлж эхний эгнээнд харагдаарай.
                   </p>
-                  <Link href="/business" className="lp-btn small">
+                  <Link href="/business" className="hp-btn small">
                     Бизнесээ бүртгүүлэх
                   </Link>
                 </>
@@ -317,12 +344,14 @@ export default async function HomePage({
             </nav>
           )}
         </section>
-        <section className="hp-how" aria-labelledby="hp-how-title">
-          <h2 id="hp-how-title">Хэрхэн захиалах вэ</h2>
-          <ol>
+        <section id="how" className="hp-section" aria-labelledby="hp-how-title">
+          <div className="hp-head">
+            <h2 id="hp-how-title">Хэрхэн захиалах вэ</h2>
+          </div>
+          <ol className="hp-steps">
             {steps.map((s, i) => (
               <li key={s.title}>
-                <span className="hp-how-icon">
+                <span className="hp-step-icon">
                   <s.icon size={20} />
                 </span>
                 <small>{i + 1}-р алхам</small>
@@ -332,46 +361,69 @@ export default async function HomePage({
             ))}
           </ol>
         </section>
-        <section className="hp-owner">
+        <section className="hp-owner" aria-labelledby="hp-owner-title">
           <div>
             <span className="hp-owner-tag">Салон эзэмшигчдэд</span>
-            <h2>Салоноо энд үнэгүй байршуулаарай</h2>
+            <h2 id="hp-owner-title">Салоноо онлайн захиалгатай болгоорой</h2>
             <p>
-              Онлайн захиалга, календарь, ажилтан, тайлангаа нэг дороос удирдаж,
-              шинэ үйлчлүүлэгчдэд харагдаарай.
+              Шинэ үйлчлүүлэгчдэд харагдаж, захиалга, ажилтан, орлогоо нэг
+              дороос удирдаарай. Эхний {TRIAL_DAYS} хоног үнэгүй.
             </p>
+            <ul>
+              {ownerPoints.map((p) => (
+                <li key={p}>
+                  <Check size={15} strokeWidth={2.5} /> {p}
+                </li>
+              ))}
+            </ul>
           </div>
-          <Link href="/business" className="lp-btn light">
-            Бизнесээ бүртгүүлэх <ArrowRight size={16} />
-          </Link>
+          <div className="hp-owner-actions">
+            <Link href="/business" className="hp-btn light">
+              Бизнесээ бүртгүүлэх <ArrowRight size={16} />
+            </Link>
+            <Link href="/sign-in" className="hp-owner-signin">
+              Бүртгэлтэй юу? Нэвтрэх
+            </Link>
+          </div>
         </section>
       </main>
-      <footer className="hp-footer">
-        <div>
-          <Link href="/" className="lp-logo" aria-label="Salon77 нүүр">
-            <span className="lp-logo-mark">s</span>
-            salon77<span className="lp-dot">.</span>
-          </Link>
-          <p>Гоо сайхны салонд цагаа онлайнаар захиалах хялбар арга.</p>
+      <SiteFooter />
+    </div>
+  );
+}
+// Illustration of the booking flow; decorative, the copy carries the meaning.
+function HeroArt() {
+  return (
+    <div className="hp-art" aria-hidden="true">
+      <div className="hp-art-card">
+        <div className="hp-art-cover">
+          <span>Хумс · Сормуус</span>
         </div>
-        <nav aria-label="Үйлчлүүлэгчдэд">
-          <strong>Үйлчлүүлэгчдэд</strong>
-          <Link href={DIRECTORY}>Салон хайх</Link>
-          <a href="#hp-how-title">Хэрхэн захиалах вэ</a>
-        </nav>
-        <nav aria-label="Салон эзэмшигчдэд">
-          <strong>Салон эзэмшигчдэд</strong>
-          <Link href="/business">Бизнесээ бүртгүүлэх</Link>
-          <Link href="/sign-in">Нэвтрэх</Link>
-        </nav>
-        {site.phone && (
-          <div>
-            <strong>Холбоо барих</strong>
-            <a href={`tel:${site.phone}`}>{formatSitePhone(site.phone)}</a>
+        <div className="hp-art-body">
+          <strong>Таны дуртай салон</strong>
+          <span className="hp-art-rating">
+            <Star size={12} /> 4.9 · Сүхбаатар
+          </span>
+          <small>Маргааш, сул цаг</small>
+          <div className="hp-art-times">
+            {["10:00", "11:30", "14:00", "15:30", "17:00", "18:30"].map(
+              (t, i) => (
+                <i key={t} className={i === 2 ? "on" : ""}>
+                  {t}
+                </i>
+              ),
+            )}
           </div>
-        )}
-        <small>© {new Date().getFullYear()} Salon77</small>
-      </footer>
+          <em>Цаг захиалах</em>
+        </div>
+      </div>
+      <div className="hp-art-toast">
+        <CalendarCheck size={16} />
+        <div>
+          <strong>Захиалга баталгаажлаа</strong>
+          <span>Маргааш 14:00 · Гел будалт</span>
+        </div>
+      </div>
     </div>
   );
 }

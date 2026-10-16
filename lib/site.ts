@@ -1,13 +1,24 @@
+// Only absolute https links are shown, whatever the environment holds.
+function profileUrl(value: string | undefined) {
+  const url = value?.trim() ?? "";
+  return /^https:\/\/[^\s]+$/.test(url) ? url : "";
+}
 // Public company details shown on the landing page. Empty values are hidden,
 // so nothing placeholder-like ever reaches visitors.
 export const site = {
   name: "Salon77",
   // Shown in booking-link examples; the live address comes from APP_URL.
   domain: "salon77.mn",
-  // Shown as "@handle" and linked to instagram.com/<handle>.
-  instagram: "",
+  // Social profiles come from the environment; an empty value hides the icon.
+  facebook: profileUrl(process.env.NEXT_PUBLIC_FACEBOOK_URL),
+  instagram: profileUrl(process.env.NEXT_PUBLIC_INSTAGRAM_URL),
   // Mongolian numbers are formatted as "9911 2233".
   phone: "85563793",
+  email: "salon77.mn@gmail.com",
+  // Facebook page username, linked as m.me/<username> for Messenger.
+  messenger: "",
+  // How soon a new salon application is reviewed; shown to applicants.
+  reviewTime: "24 цагийн дотор",
   // Where salons transfer their monthly fee; shown on /billing.
   bank: {
     name: "Голомт банк",

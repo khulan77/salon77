@@ -50,6 +50,8 @@ export function RevenueReport({
       : `${formatDayLabel(report.from)} – ${formatDayLabel(report.to)}`;
   const rows = view === "service" ? report.byService : report.byStaff;
   const top = Math.max(1, ...rows.map((r) => r.revenue));
+  const emptyNote =
+    "Дууссан захиалга бүртгэгдэхээр энд тооцоо гарна. Цаг нь өнгөрсөн баталгаажсан захиалга автоматаар «Дууссан» болно.";
   return (
     <div className={`revenue-report ${pending ? "is-loading" : ""}`}>
       <div className="page-heading">
@@ -118,9 +120,22 @@ export function RevenueReport({
       </div>
       <section className="report-summary" aria-label="Орлогын үзүүлэлтүүд">
         <article className="report-hero">
-          <span>Нийт орлого</span>
-          <strong>{formatMnt(report.revenue)}</strong>
+          <span>Орсон орлого</span>
+          {report.completed || preview ? (
+            <strong>{formatMnt(report.revenue)}</strong>
+          ) : (
+            <p className="report-hero-empty">{emptyNote}</p>
+          )}
           <p>{range}</p>
+        </article>
+        <article className="report-expected">
+          <span>Хүлээгдэж буй</span>
+          <strong>{formatMnt(report.expected)}</strong>
+          <p>
+            {report.expectedCount
+              ? `${report.expectedCount} баталгаажсан захиалга`
+              : "Баталгаажсан захиалга алга"}
+          </p>
         </article>
         {[
           ["Дууссан захиалга", String(report.completed)],
@@ -192,14 +207,13 @@ export function RevenueReport({
           </ul>
         ) : (
           <p className="report-empty">
-            {preview
-              ? "Танилцах горимд жишээ орлого харуулахгүй."
-              : "Энэ хугацаанд дууссан захиалга алга."}
+            {preview ? "Танилцах горимд жишээ орлого харуулахгүй." : emptyNote}
           </p>
         )}
       </section>
       <p className="report-note">
-        Орлогыг «Дууссан» төлөвтэй захиалгын үнээр, захиалгын өдрөөр тооцно. Энэ
+        Орсон орлогыг «Дууссан» төлөвтэй захиалгын үнээр, хүлээгдэж буйг
+        баталгаажсан боловч дуусаагүй захиалгаар, захиалгын өдрөөр тооцно. Энэ
         нь төлбөрийн бүртгэл биш.
       </p>
     </div>

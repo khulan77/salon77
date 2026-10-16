@@ -4,7 +4,10 @@ import { spawn } from "node:child_process";
 import { testDatabase, seed, userIds } from "./database";
 import { bookingSeed } from "./bookings";
 async function main() {
-  const fixture = await testDatabase(55479);
+  // Overridable so parallel runs (other sessions, the audit) do not collide.
+  const dbPort = Number(process.env.FIXTURE_DB_PORT ?? 55479),
+    authPort = Number(process.env.FIXTURE_AUTH_PORT ?? 55480);
+  const fixture = await testDatabase(dbPort);
   await seed(fixture.db);
   await bookingSeed(fixture.db);
   const mobileId = "00000000-0000-0000-0000-000000000007";
@@ -156,7 +159,7 @@ async function main() {
     res.end(JSON.stringify({ message: "Invalid token" }));
   });
   await new Promise<void>((resolve) =>
-    auth.listen(55480, "127.0.0.1", resolve),
+    auth.listen(authPort, "127.0.0.1", resolve),
   );
   await fixture.db.$disconnect();
   await fixture.pg.exec("DEALLOCATE ALL");
@@ -187,9 +190,8 @@ async function main() {
         RATE_LIMIT_AVAILABILITY: "10000",
         DATABASE_URL: fixture.url,
         DIRECT_URL: fixture.url,
-        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:55480",
+        NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${authPort}`,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local_test_key",
-        ALLOW_DEVELOPMENT_INVITE_LINKS: "true",
       },
     },
   );

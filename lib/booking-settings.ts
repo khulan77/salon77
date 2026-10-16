@@ -1,9 +1,11 @@
 import { z } from "zod";
+import { bookingThemeKeys } from "./booking-themes";
 const bankText = z.string().trim().max(100);
 // Allowed reminder lead times in minutes (mirrored by a SQL check).
 export const REMINDER_OPTIONS = [2880, 1440, 180, 120, 60] as const;
 export const bookingSettingsSchema = z
   .object({
+    bookingTheme: z.enum(bookingThemeKeys).default("LIGHT"),
     publicBookingEnabled: z.boolean(),
     bookingConfirmationMode: z.enum(["AUTO_CONFIRM", "MANUAL_CONFIRM"]),
     advanceBookingDays: z.number().int().min(0).max(365),
@@ -20,8 +22,16 @@ export const bookingSettingsSchema = z
     pendingExpiryMinutes: z.number().int().min(0).max(10080),
     notificationsEnabled: z.boolean(),
     listedInDirectory: z.boolean(),
+    autoCompletePast: z.boolean(),
     reminderMinutes: z
-      .array(z.union(REMINDER_OPTIONS.map((m) => z.literal(m)) as [z.ZodLiteral<number>, ...z.ZodLiteral<number>[]]))
+      .array(
+        z.union(
+          REMINDER_OPTIONS.map((m) => z.literal(m)) as [
+            z.ZodLiteral<number>,
+            ...z.ZodLiteral<number>[],
+          ],
+        ),
+      )
       .max(REMINDER_OPTIONS.length)
       .transform((v) => [...new Set(v)].sort((a, b) => b - a)),
   })
@@ -46,6 +56,7 @@ export const bookingSettingsSchema = z
   });
 export type BookingPolicy = z.infer<typeof bookingSettingsSchema>;
 export const defaultBookingSettings: BookingPolicy = {
+  bookingTheme: "LIGHT",
   publicBookingEnabled: true,
   bookingConfirmationMode: "MANUAL_CONFIRM",
   advanceBookingDays: 365,
@@ -62,11 +73,13 @@ export const defaultBookingSettings: BookingPolicy = {
   pendingExpiryMinutes: 0,
   notificationsEnabled: false,
   listedInDirectory: true,
+  autoCompletePast: true,
   reminderMinutes: [1440],
 };
 export const publicBookingClosed = "Онлайн захиалга одоогоор хаалттай байна.";
 export function policyView(value: BookingPolicy): BookingPolicy {
   return {
+    bookingTheme: value.bookingTheme,
     publicBookingEnabled: value.publicBookingEnabled,
     bookingConfirmationMode: value.bookingConfirmationMode,
     advanceBookingDays: value.advanceBookingDays,
@@ -83,6 +96,7 @@ export function policyView(value: BookingPolicy): BookingPolicy {
     pendingExpiryMinutes: value.pendingExpiryMinutes,
     notificationsEnabled: value.notificationsEnabled,
     listedInDirectory: value.listedInDirectory,
+    autoCompletePast: value.autoCompletePast,
     reminderMinutes: value.reminderMinutes,
   };
 }

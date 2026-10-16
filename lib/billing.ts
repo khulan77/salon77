@@ -13,6 +13,10 @@ export const BILLING_LABELS: Record<BillingState, string> = {
   PAID: "Төлсөн",
   EXPIRED: "Хугацаа дууссан",
 };
+export const renewalLabels: Record<"CONTINUE" | "STOP", string> = {
+  CONTINUE: "Үргэлжлүүлнэ",
+  STOP: "Зогсооно",
+};
 type Salon = {
   reviewStatus: string;
   trialEndsAt: Date | null;

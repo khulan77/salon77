@@ -1,3 +1,4 @@
+import { recommendedBookingTheme } from "../booking-themes";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { type Actor, refreshActor, requireOwner } from "../access";
 import {
@@ -34,5 +35,17 @@ export async function saveBookingSettings(
       update: input,
     });
     return policyView(row as Parameters<typeof policyView>[0]);
+  });
+}
+
+// Called inside the salon creation transaction, after its default-settings trigger.
+export async function initializeBookingTheme(
+  db: Prisma.TransactionClient,
+  salonId: string,
+  serviceTypes: readonly string[],
+) {
+  await db.bookingSettings.update({
+    where: { salonId },
+    data: { bookingTheme: recommendedBookingTheme(serviceTypes) },
   });
 }

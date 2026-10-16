@@ -143,8 +143,8 @@ Instants are stored as `timestamptz(3)`. `lib/business-time.ts` converts local d
 
 ## External integrations
 
-Only **Supabase Auth** is integrated. There is no email, SMS, payments, maps, file storage or analytics. Invitation links are shown in the UI in development, or in production when `ALLOW_DEVELOPMENT_INVITE_LINKS=true`.
+Only **Supabase Auth** is integrated. There is no email, SMS, payments, maps, file storage or analytics. Invitation links are always shown to the owner to copy, and are also emailed when Resend has a verified sender (see `docs/DEPLOYMENT.md` 2c).
 
 ## Environment variables
 
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (must start with `sb_publishable_`), `DATABASE_URL` (pooler, `pgbouncer=true`, server-only), `DIRECT_URL` (migrations) and `ALLOW_DEVELOPMENT_INVITE_LINKS`. `.env` is git-ignored. `.env.example` holds placeholders only.
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (must start with `sb_publishable_`), `DATABASE_URL` (pooler, `pgbouncer=true`, server-only) and `DIRECT_URL` (migrations). `.env` is git-ignored. `.env.example` holds placeholders only.

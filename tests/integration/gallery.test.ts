@@ -81,6 +81,12 @@ test("salon photo gallery", { timeout: 120000 }, async (t) => {
           same.map((p) => p.id),
           after.map((p) => p.id),
         );
+        // A logo completes the profile (publish.ts) without a cover, so the
+        // card still falls back to the first gallery photo.
+        await db.salon.update({
+          where: { id: "a" },
+          data: { logoUrl: "https://media.test/logo.jpg" },
+        });
         const card = (await listDirectory(db, {})).salons.find(
           (s) => s.slug === "salon-a",
         )!;
@@ -294,12 +300,25 @@ test("salon photo gallery", { timeout: 120000 }, async (t) => {
       },
     );
     await t.test(
-      "photos are owner-only, own salon only, images only",
+      "photos need write access, own salon only, images only",
       async () => {
         const size = objects.size;
-        for (const actor of [actors.manager, actors.reception])
+        await assert.rejects(
+          setPhoto(db, actors.manager, "staff", "book-staff-a-1", jpeg, store),
+          status(403),
+        );
+        // Reception may change its own branch's staff and service photos
+        // (reception.test.ts), never the salon's own pictures.
+        for (const target of ["branch", "logo"] as const)
           await assert.rejects(
-            setPhoto(db, actor, "staff", "book-staff-a-1", jpeg, store),
+            setPhoto(
+              db,
+              actors.reception,
+              target,
+              target === "logo" ? "a" : "z",
+              jpeg,
+              store,
+            ),
             status(403),
           );
         // Another salon's owner cannot touch this salon's rows.

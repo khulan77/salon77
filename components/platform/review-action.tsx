@@ -57,7 +57,7 @@ export function ReviewAction({
               maxLength={500}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Салоны эзэн энэ тайлбарыг уншаад мэдээллээ засна"
+              placeholder="Салоны эзэн энэ тайлбарыг имэйл болон удирдлага дээрээ уншаад мэдээллээ засна"
             />
           </label>
           <div>
@@ -83,7 +83,7 @@ export function ReviewAction({
               disabled={busy}
               onClick={() => setRejecting(true)}
             >
-              {status === "APPROVED" ? "Зөвшөөрлийг цуцлах" : "Буцаах"}
+              {status === "APPROVED" ? "Баталгаажуулалтыг цуцлах" : "Буцаах"}
             </button>
           )}
           {status !== "APPROVED" && (
@@ -94,13 +94,13 @@ export function ReviewAction({
               onClick={() => {
                 if (
                   window.confirm(
-                    `«${name}» салоныг зөвшөөрөх үү? Салон нийтэд харагдаж, онлайн захиалга авч эхэлнэ.`,
+                    `«${name}» салоныг баталгаажуулах уу? Удирдлагын бүх хэсэг нээгдэж, 14 хоногийн туршилт эхэлнэ. Профайл бүрэн болмогц салонуудын жагсаалтад гарна.`,
                   )
                 )
                   send({ decision: "APPROVE" });
               }}
             >
-              {busy ? "Хадгалж байна…" : "Зөвшөөрөх"}
+              {busy ? "Хадгалж байна…" : "Баталгаажуулах"}
             </button>
           )}
         </div>

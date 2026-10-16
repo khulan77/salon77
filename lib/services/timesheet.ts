@@ -46,27 +46,31 @@ export async function readTimesheet(db: Database, actor: Actor, raw: unknown) {
   const current = await refreshActor(db, actor);
   requireTimesheetRole(current);
   if (input.branchId) requireBranch(current, input.branchId);
-  const staff = await db.staff.findMany({
-    where: staffScope(current, input.branchId),
-    select: {
-      id: true,
-      name: true,
-      title: true,
-      branches: {
-        where: { branch: { active: true } },
-        select: { branch: { select: { name: true } } },
+  const scope = staffScope(current, input.branchId);
+  const [staff, marks] = await Promise.all([
+    db.staff.findMany({
+      where: scope,
+      select: {
+        id: true,
+        name: true,
+        title: true,
+        branches: {
+          where: { branch: { active: true } },
+          select: { branch: { select: { name: true } } },
+        },
       },
-    },
-    orderBy: [{ name: "asc" }, { id: "asc" }],
-  });
-  const marks = await db.staffAttendance.findMany({
-    where: {
-      salonId: current.salonId,
-      staffId: { in: staff.map((s) => s.id) },
-      date: { gte: day(input.from), lte: day(input.to) },
-    },
-    select: { staffId: true, date: true, status: true },
-  });
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    }),
+    // Same staff filter through the relation, so both reads run at once.
+    db.staffAttendance.findMany({
+      where: {
+        salonId: current.salonId,
+        staff: scope,
+        date: { gte: day(input.from), lte: day(input.to) },
+      },
+      select: { staffId: true, date: true, status: true },
+    }),
+  ]);
   return {
     ...input,
     today: localStamp(new Date()).slice(0, 10),

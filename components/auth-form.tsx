@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { authenticate } from "@/app/auth/actions";
 import { Button } from "./ui/button";
+import { Logo } from "@/components/logo";
 export function AuthForm({
   signup,
   configured,
@@ -21,15 +22,7 @@ export function AuthForm({
   return (
     <div className="auth-page">
       <aside className="auth-aside">
-        <Link className="brand" href="/">
-          <span className="brand-symbol">
-            s<span>·</span>
-          </span>
-          <span>
-            salon<span className="brand-number">77</span>
-            <span className="brand-dot">.</span>
-          </span>
-        </Link>
+        <Logo className="brand" size="lg" />
         <div>
           <h1>
             Та үйлчлүүлэгчдээ халамжил.

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { membership } from "@/lib/auth";
+import { membership, setupAccess } from "@/lib/auth";
 import { actorFromMember } from "@/lib/access";
 import { failure, sameOrigin } from "@/lib/http";
 import { HttpError } from "@/lib/errors";
@@ -12,7 +12,7 @@ import {
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const actor = actorFromMember(await membership());
+    const actor = actorFromMember(await membership(setupAccess));
     if (
       Number(request.headers.get("content-length") ?? 0) >
       MAX_IMAGE_BYTES + 65536
@@ -38,7 +38,7 @@ export async function DELETE(request: Request) {
     return Response.json(
       await removeSalonCover(
         db,
-        actorFromMember(await membership()),
+        actorFromMember(await membership(setupAccess)),
         supabaseMediaStore(),
       ),
     );

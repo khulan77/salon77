@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { membership } from "@/lib/auth";
+import { membership, setupAccess } from "@/lib/auth";
 import { actorFromMember } from "@/lib/access";
 import { failure, sameOrigin } from "@/lib/http";
 import {
@@ -9,7 +9,10 @@ import {
 export async function GET() {
   try {
     return Response.json(
-      await readBookingSettings(db, actorFromMember(await membership())),
+      await readBookingSettings(
+        db,
+        actorFromMember(await membership(setupAccess)),
+      ),
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {
@@ -22,7 +25,7 @@ export async function PATCH(request: Request) {
     return Response.json(
       await saveBookingSettings(
         db,
-        actorFromMember(await membership()),
+        actorFromMember(await membership(setupAccess)),
         await request.json(),
       ),
     );

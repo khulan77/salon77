@@ -3,7 +3,7 @@ import type { z } from "zod";
 
 const roleLabels: Record<string, string> = {
   SUPER_ADMIN: "Системийн админ",
-  SALON_OWNER: "Эзэмшигч",
+  SALON_OWNER: "Админ",
   MANAGER: "Менежер",
   RECEPTIONIST: "Ресепшн",
   STAFF: "Ажилтан",

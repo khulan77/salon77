@@ -11,6 +11,12 @@ import {
 import { HttpError } from "../errors";
 export const invalidInvitation =
   "Энэ урилга хүчингүй эсвэл хугацаа нь дууссан байна.";
+const invitationProblems: Record<string, string> = {
+  EXPIRED:
+    "Энэ урилгын хугацаа дууссан байна. Салоны админаас шинэ линк авна уу.",
+  CANCELLED: "Энэ урилгыг админ цуцалсан байна.",
+  ACCEPTED: "Энэ урилгаар аль хэдийн нэгдсэн байна. Нэвтэрч орно уу.",
+};
 export function tokenHash(token: string) {
   return createHash("sha256").update(tokenSchema.parse(token)).digest("hex");
 }
@@ -25,13 +31,24 @@ export async function createInvitation(
   raw: unknown,
 ) {
   const input = inviteSchema.parse(raw);
-  const ids = [...new Set(input.branchIds)];
   const token = randomBytes(32).toString("hex");
   const invitation = await db.$transaction(
     async (tx) => {
       const current = await refreshActor(tx, actor);
       requireOwner(current);
-      await assertActiveBranches(tx, current, ids);
+      const branches = await tx.branch.findMany({
+        where: { salonId: current.salonId, active: true },
+        select: { id: true, name: true },
+      });
+      if (!branches.length)
+        throw new HttpError(409, "Эхлээд идэвхтэй салбар нэмнэ үү.");
+      const branchId =
+        input.branchId ?? (branches.length === 1 ? branches[0].id : null);
+      if (!branchId)
+        throw new HttpError(400, "Ресепшн аль салбарт ажиллахыг сонгоно уу.");
+      const branch = branches.find((b) => b.id === branchId);
+      if (!branch)
+        throw new HttpError(403, "Сонгосон салбарт хандах эрхгүй байна.");
       if (
         await tx.salonMember.findFirst({
           where: {
@@ -42,9 +59,10 @@ export async function createInvitation(
       )
         throw new HttpError(
           409,
-          "Энэ хэрэглэгч салоны гишүүн болсон байна. Эрхийг нь багийн жагсаалтаас өөрчилнө үү.",
+          "Энэ хүн салоны гишүүн болсон байна. Эрхийг нь багийн жагсаалтаас өөрчилнө үү.",
         );
-      await tx.invitation.updateMany({
+      // A new link for the same person replaces any earlier one.
+      const replaced = await tx.invitation.updateMany({
         where: {
           salonId: current.salonId,
           email: input.email,
@@ -52,23 +70,29 @@ export async function createInvitation(
         },
         data: { status: "CANCELLED", revokedAt: new Date() },
       });
-      return tx.invitation.create({
+      const salon = await tx.salon.findUniqueOrThrow({
+        where: { id: current.salonId },
+        select: { name: true },
+      });
+      const created = await tx.invitation.create({
         data: {
           salonId: current.salonId,
           name: input.name,
           email: input.email,
-          role: input.role,
+          role: "RECEPTIONIST",
           status: "PENDING",
           tokenHash: tokenHash(token),
           expiresAt: new Date(Date.now() + 7 * 86400000),
-          branches: {
-            create: ids.map((branchId) => ({
-              branchId,
-            })),
-          },
+          branches: { create: { branchId } },
         },
-        select: { id: true, expiresAt: true },
+        select: { id: true, expiresAt: true, email: true, name: true },
       });
+      return {
+        ...created,
+        salonName: salon.name,
+        branchName: branch.name,
+        replaced: replaced.count > 0,
+      };
     },
     { isolationLevel: "Serializable" },
   );
@@ -111,13 +135,10 @@ function checkInviteIdentity(
   } | null,
   user: InviteIdentity,
 ) {
-  if (
-    !invite ||
-    invitationStatus(invite) !== "PENDING" ||
-    invite.acceptedAt ||
-    invite.revokedAt
-  )
-    throw new HttpError(410, invalidInvitation);
+  if (!invite) throw new HttpError(410, invalidInvitation);
+  const status = invitationStatus(invite);
+  if (status !== "PENDING" || invite.acceptedAt || invite.revokedAt)
+    throw new HttpError(410, invitationProblems[status] ?? invalidInvitation);
   if (
     !user.emailConfirmed ||
     invite.email.toLowerCase() !== user.email.toLowerCase()
@@ -156,10 +177,43 @@ export async function inspectInvitation(
     expiresAt: invite.expiresAt.toISOString(),
   };
 }
+// What the invitation link shows before anyone signs in. The token is the
+// credential, so its holder may see the invited email.
+export async function previewInvitation(db: PrismaClient, token: string) {
+  const invite = await db.invitation.findUnique({
+    where: { tokenHash: tokenHash(token) },
+    include: {
+      salon: { select: { name: true, status: true } },
+      branches: {
+        include: { branch: { select: { name: true, active: true } } },
+      },
+    },
+  });
+  if (!invite || invite.salon.status !== "ACTIVE")
+    throw new HttpError(410, invalidInvitation);
+  const status = invitationStatus(invite);
+  if (status !== "PENDING")
+    throw new HttpError(410, invitationProblems[status] ?? invalidInvitation);
+  if (!invite.branches.length || invite.branches.some((b) => !b.branch.active))
+    throw new HttpError(410, invalidInvitation);
+  const account = await db.user.count({
+    where: { email: { equals: invite.email, mode: "insensitive" } },
+  });
+  return {
+    name: invite.name,
+    email: invite.email,
+    salonName: invite.salon.name,
+    role: invite.role,
+    branches: invite.branches.map((b) => b.branch.name),
+    expiresAt: invite.expiresAt.toISOString(),
+    hasAccount: account > 0,
+  };
+}
 export async function acceptInvitation(
   db: PrismaClient,
   user: InviteIdentity,
   token: string,
+  name?: string,
 ) {
   return db.$transaction(
     async (tx) => {
@@ -201,7 +255,7 @@ export async function acceptInvitation(
         create: {
           id: user.id,
           email: user.email.toLowerCase(),
-          name: invite.name,
+          name: name?.trim().slice(0, 100) || invite.name,
           // They signed in moments ago to accept the invitation.
           lastLoginAt: new Date(),
         },

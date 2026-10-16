@@ -1,33 +1,81 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { platformAdminId } from "@/lib/auth";
-import { listFeedback } from "@/lib/services/feedback";
+import { listFeedback, markFeedbackRead } from "@/lib/services/feedback";
 import { FEEDBACK_KINDS, type FeedbackKind } from "@/lib/feedback";
 import { FeedbackAnswer } from "@/components/platform/feedback-answer";
 import { formatTimeAgo } from "@/lib/ui-language";
-export default async function PlatformFeedback() {
+const filters = [
+  ["all", "Бүгд"],
+  ["new", "Шинэ"],
+  ["open", "Хүлээгдэж буй"],
+  ["done", "Шийдвэрлэсэн"],
+] as const;
+type Filter = (typeof filters)[number][0];
+export default async function PlatformFeedback({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
   const adminId = await platformAdminId();
+  const requested = (await searchParams).show;
+  const show: Filter = filters.some(([v]) => v === requested)
+    ? (requested as Filter)
+    : "all";
   const items = await listFeedback(db, adminId);
-  const open = items.filter((f) => f.status === "OPEN").length;
+  // Shown once as new, then counted as read.
+  await markFeedbackRead(
+    db,
+    adminId,
+    items.filter((f) => f.unread).map((f) => f.id),
+  );
+  const counts: Record<Filter, number> = {
+    all: items.length,
+    new: items.filter((f) => f.unread).length,
+    open: items.filter((f) => f.status === "OPEN").length,
+    done: items.filter((f) => f.status === "DONE").length,
+  };
+  const shown = items.filter((f) =>
+    show === "new"
+      ? f.unread
+      : show === "open"
+        ? f.status === "OPEN"
+        : show === "done"
+          ? f.status === "DONE"
+          : true,
+  );
   return (
     <>
       <div className="pf-heading">
         <h1>Санал хүсэлт</h1>
         <p>
-          Салонуудаас ирсэн алдаа, санал, асуулт. {open} нь хариу хүлээж байна.
+          Салонуудаас ирсэн алдаа, санал, асуулт. {counts.new} шинэ,{" "}
+          {counts.open} нь хариу хүлээж байна.
         </p>
       </div>
-      {items.length ? (
-        items.map((f) => (
+      <nav className="pf-chips" aria-label="Санал хүсэлт шүүх">
+        {filters.map(([value, text]) => (
+          <Link
+            key={value}
+            href={value === "all" ? "/platform/feedback" : `?show=${value}`}
+            aria-current={show === value ? "true" : undefined}
+          >
+            {text} <span>{counts[value]}</span>
+          </Link>
+        ))}
+      </nav>
+      {shown.length ? (
+        shown.map((f) => (
           <section
             key={f.id}
-            className={`pf-panel pf-feedback ${f.status === "DONE" ? "done" : ""}`}
+            className={`pf-panel pf-feedback ${f.status === "DONE" ? "done" : ""} ${f.unread ? "unread" : ""}`}
           >
             <div className="pf-panel-head">
               <h2>
                 <Link href={`/platform/salons/${f.salonId}`}>
                   {f.salonName}
                 </Link>
+                {f.unread && <em className="pf-badge new">Шинэ</em>}
                 <em
                   className={`pf-badge ${f.status === "DONE" ? "ok" : "wait"}`}
                 >
@@ -47,8 +95,15 @@ export default async function PlatformFeedback() {
           </section>
         ))
       ) : (
-        <section className="pf-panel">
-          <p className="pf-note">Одоогоор санал хүсэлт ирээгүй байна.</p>
+        <section className="pf-panel pf-empty-state">
+          <p className="pf-note">
+            {items.length
+              ? "Энэ шүүлтүүрт тохирох санал хүсэлт алга."
+              : "Одоогоор санал хүсэлт ирээгүй байна. Салонууд удирдлагын «Санал хүсэлт» хэсгээс илгээхэд энд харагдана."}
+          </p>
+          {show !== "all" && (
+            <Link href="/platform/feedback">Бүгдийг харах</Link>
+          )}
         </section>
       )}
     </>

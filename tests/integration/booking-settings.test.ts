@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { testDatabase, seed } from "../fixtures/database";
 import { bookingSeed } from "../fixtures/bookings";
 import {
+  initializeBookingTheme,
   readBookingSettings,
   saveBookingSettings,
 } from "../../lib/services/booking-settings";
@@ -92,6 +93,77 @@ test("Phase 4.1 salon booking policies", { timeout: 120000 }, async (t) => {
             .cancellationNoticeMinutes,
           360,
         );
+      },
+    );
+    await t.test(
+      "onboarding recommendations update the trigger-created policy atomically",
+      async () => {
+        for (const [type, expected] of [
+          ["HAIR", "DARK"],
+          ["NAILS", "PINK"],
+          ["SKIN", "NATURAL"],
+          ["OTHER", "LIGHT"],
+        ]) {
+          const id = `theme-${type.toLowerCase()}`;
+          await db.$transaction(async (tx) => {
+            await tx.salon.create({
+              data: {
+                id,
+                slug: id,
+                name: "Загварын салон",
+                phone: "99112233",
+                serviceTypes: [type],
+              },
+            });
+            await initializeBookingTheme(tx, id, [type]);
+          });
+          assert.equal(
+            (
+              await db.bookingSettings.findUniqueOrThrow({
+                where: { salonId: id },
+              })
+            ).bookingTheme,
+            expected,
+          );
+          await db.salon.delete({ where: { id } });
+        }
+      },
+    );
+    await t.test(
+      "themes persist per tenant and reject non-owner writes",
+      async () => {
+        for (const bookingTheme of [
+          "LIGHT",
+          "DARK",
+          "PINK",
+          "NATURAL",
+          "GOLD",
+        ] as const) {
+          await save({ bookingTheme });
+          assert.equal(
+            (await readBookingSettings(db, actors.owner)).bookingTheme,
+            bookingTheme,
+          );
+          assert.equal(
+            (await publicCatalog(db, "salon-a")).policy.bookingTheme,
+            bookingTheme,
+          );
+          assert.equal(
+            (await readBookingSettings(db, actors.other)).bookingTheme,
+            "LIGHT",
+          );
+        }
+        for (const actor of [actors.reception, actors.manager, actors.staff]) {
+          await assert.rejects(
+            saveBookingSettings(db, actor, {
+              ...defaultBookingSettings,
+              bookingTheme: "DARK",
+            }),
+            denied(403),
+          );
+        }
+        await assert.rejects(save({ bookingTheme: "INVALID" as "LIGHT" }));
+        await save({});
       },
     );
     await t.test(

@@ -1,9 +1,8 @@
-import { redirect } from "next/navigation";
 import { identity, HttpError } from "@/lib/auth";
 import { configured } from "@/lib/env";
 import { db } from "@/lib/db";
 import { tokenSchema } from "@/lib/validation";
-import { inspectInvitation, invalidInvitation } from "@/lib/services/team";
+import { previewInvitation, invalidInvitation } from "@/lib/services/team";
 import { InvitationAccept } from "@/components/invitation-accept";
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -11,6 +10,7 @@ export const metadata = {
   referrer: "no-referrer",
   robots: { index: false, follow: false },
 };
+// Open without signing in: the invited person creates their own password here.
 export default async function Page({
   searchParams,
 }: {
@@ -20,30 +20,20 @@ export default async function Page({
   if (!parsed.success || !configured)
     return <InvitationAccept token="" error={invalidInvitation} />;
   const token = parsed.data;
-  let user;
-  try {
-    user = await identity();
-  } catch (e) {
-    if (e instanceof HttpError && e.status === 401)
-      redirect(`/sign-in?next=${encodeURIComponent(`/invite?token=${token}`)}`);
-    throw e;
-  }
   let invitation;
   let error: string | undefined;
   try {
-    invitation = await inspectInvitation(
-      db,
-      {
-        id: user.id,
-        email: user.email!,
-        emailConfirmed: Boolean(user.email_confirmed_at),
-      },
-      token,
-    );
+    invitation = await previewInvitation(db, token);
   } catch (e) {
     error = e instanceof HttpError ? e.message : invalidInvitation;
   }
+  const user = invitation ? await identity().catch(() => null) : null;
   return (
-    <InvitationAccept token={token} invitation={invitation} error={error} />
+    <InvitationAccept
+      token={token}
+      invitation={invitation}
+      error={error}
+      signedInEmail={user?.email ?? null}
+    />
   );
 }

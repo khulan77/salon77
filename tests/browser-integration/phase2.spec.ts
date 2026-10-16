@@ -192,19 +192,21 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
     fullPage: true,
   });
   await page.goto("/team");
-  await page.getByRole("button", { name: "Гишүүн урих", exact: true }).click();
+  await page.getByRole("button", { name: "Ресепшн урих", exact: true }).click();
   dialog = page.getByRole("dialog");
   await dialog.getByLabel("Нэр", { exact: true }).fill(`Сараа ${suffix}`);
   const email = mobile ? "invite-mobile@example.test" : "invite@example.test";
   await dialog.getByLabel("Имэйл", { exact: true }).fill(email);
   await dialog
-    .getByRole("combobox", { name: "Эрх", exact: true })
-    .selectOption("RECEPTIONIST");
-  await dialog.getByLabel("Зайсан", { exact: true }).check();
+    .getByRole("combobox", { name: "Салбар", exact: true })
+    .selectOption({ label: "Зайсан" });
   await dialog.getByRole("button", { name: "Урилга үүсгэх" }).click();
   await expect(dialog).not.toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Урилгын линкийг хуулах" }),
+  ).toBeVisible();
   const invitePath = await page
-    .getByLabel("Урилгын холбоос", { exact: true })
+    .getByLabel("Урилгын линк", { exact: true })
     .inputValue();
   expect(invitePath).toContain("/invite?token=");
   await responsive(page);
@@ -215,27 +217,52 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
       : { width: 1440, height: 1000 },
   });
   const reception = await context.newPage();
+  // The link opens without signing in and shows the salon, role and branch.
   await reception.goto(invitePath);
-  await expect(reception).toHaveURL(/\/sign-in\?next=/);
-  await login(reception, email);
   await expect(
     reception.getByRole("heading", { name: "Багт нэгдэх урилга" }),
   ).toBeVisible();
-  await reception.getByRole("button", { name: "Урилга хүлээн авах" }).click();
+  await expect(reception.getByText("Ресепшн", { exact: true })).toBeVisible();
+  await expect(reception.getByLabel("Имэйл", { exact: true })).toHaveValue(
+    email,
+  );
+  await expect(reception.getByLabel("Имэйл", { exact: true })).toHaveAttribute(
+    "readonly",
+    "",
+  );
+  // The fixture user already has an account; switch to signing in if needed.
+  if (
+    !(await reception
+      .getByRole("button", { name: "Шинээр нэгдэх", exact: true })
+      .count())
+  )
+    await reception
+      .getByRole("button", { name: "Нэвтэрч нэгдэх", exact: true })
+      .click();
+  await reception
+    .getByLabel("Нууц үг", { exact: true })
+    .fill("TestPassword123!");
+  await reception
+    .getByRole("button", { name: "Нэвтэрч нэгдэх", exact: true })
+    .click();
   await expect(reception).toHaveURL(/\/(calendar|schedules)$/);
   expect(
     (await context.cookies()).find((c) => c.name === "salon77-tenant")?.value,
   ).toBe("a");
+  // The front desk sees and adds services of its own branch.
   await reception.goto("/services");
   await expect(
     reception.getByRole("heading", { name: service, exact: true }),
   ).toBeVisible();
   await expect(
-    reception.getByText("Хаалттай үйлчилгээ", { exact: true }),
-  ).toHaveCount(0);
-  await expect(
     reception.getByRole("button", { name: "Үйлчилгээ нэмэх", exact: true }),
+  ).toBeVisible();
+  await expect(
+    reception.getByRole("button", { name: "Ангилал нэмэх", exact: true }),
   ).toHaveCount(0);
+  const nav = reception.getByRole("navigation", { name: "Үндсэн цэс" });
+  for (const hidden of ["Тайлан", "Тохиргоо", "Салбарууд"])
+    await expect(nav.getByText(hidden, { exact: true })).toHaveCount(0);
   const services = await (await reception.request.get("/api/services")).json();
   for (const row of services.services) expect(row.branchIds).toEqual(["z"]);
   for (const route of [
@@ -272,8 +299,8 @@ test("owner setup, schedules, invitation acceptance and reception scope work end
   await responsive(reception);
   await reception.goto(invitePath);
   await expect(
-    reception.getByRole("alert").filter({ hasText: "хүчингүй" }),
-  ).toContainText("хүчингүй");
+    reception.getByRole("alert").filter({ hasText: "нэгдсэн" }),
+  ).toContainText("аль хэдийн нэгдсэн");
   await context.close();
 });
 

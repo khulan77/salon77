@@ -87,13 +87,20 @@ test(
         },
       );
       await t.test(
-        "only owners set discounts and the database bounds them",
+        "only the admin and own-branch reception set discounts; the database bounds them",
         async () => {
-          for (const actor of [actors.manager, actors.reception])
-            await assert.rejects(
-              saveService(db, actor, service(20), "book-service-a-60"),
-              (e: unknown) => e instanceof HttpError && e.status === 403,
-            );
+          await assert.rejects(
+            saveService(db, actors.manager, service(20), "book-service-a-60"),
+            (e: unknown) => e instanceof HttpError && e.status === 403,
+          );
+          // Reception prices services of its own branch only.
+          await assert.rejects(
+            saveService(db, actors.reception, {
+              ...service(20),
+              branchIds: ["y"],
+            }),
+            (e: unknown) => e instanceof HttpError && e.status === 403,
+          );
           await assert.rejects(
             saveService(db, actors.owner, service(95), "book-service-a-60"),
           );

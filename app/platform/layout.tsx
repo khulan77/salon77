@@ -14,9 +14,9 @@ export default async function PlatformLayout({
 }) {
   await platformAdminId();
   // Shown on every console page so a new application is never missed.
-  const [pending, requests] = await Promise.all([
+  const [pending, unread] = await Promise.all([
     db.salon.count({ where: { reviewStatus: "PENDING" } }),
-    db.feedback.count({ where: { status: "OPEN" } }),
+    db.feedback.count({ where: { readAt: null } }),
   ]);
   return (
     <div className="pf">
@@ -40,15 +40,16 @@ export default async function PlatformLayout({
           </Link>
           <Link href="/platform/feedback">
             Санал хүсэлт
-            {requests > 0 && (
+            {unread > 0 && (
               <b
                 className="pf-count"
-                aria-label={`${requests} санал хүсэлт хариу хүлээж байна`}
+                aria-label={`${unread} уншаагүй санал хүсэлт`}
               >
-                {requests}
+                {unread}
               </b>
             )}
           </Link>
+          <Link href="/platform/settings">Тохиргоо</Link>
         </nav>
       </header>
       <main className="pf-main">{children}</main>

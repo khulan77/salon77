@@ -19,9 +19,18 @@ import { hasSocial, socialRequired } from "@/lib/salon-application";
 import type { Application } from "@/lib/services/application";
 import { Button } from "./ui/button";
 import { ApplicationFields } from "./application-fields";
+import { ProfileChecklist } from "./profile-checklist";
+import type { ProfileItem } from "@/lib/services/publish";
+import { Logo } from "@/components/logo";
 // The owner's view of the platform's decision, with the form to correct the
 // application and send it again.
-export function ApplicationReview({ initial }: { initial: Application }) {
+export function ApplicationReview({
+  initial,
+  checklist,
+}: {
+  initial: Application;
+  checklist: ProfileItem[];
+}) {
   const router = useRouter();
   const [application, setApplication] = useState(initial);
   const [data, setData] = useState({
@@ -67,15 +76,7 @@ export function ApplicationReview({ initial }: { initial: Application }) {
   return (
     <div className="onboarding-page">
       <header className="onboarding-header">
-        <Link href="/" className="brand">
-          <span className="brand-symbol">
-            s<span>·</span>
-          </span>
-          <span>
-            salon<span className="brand-number">77</span>
-            <span className="brand-dot">.</span>
-          </span>
-        </Link>
+        <Logo className="brand" />
         {status === "APPROVED" ? (
           <Link href="/">Удирдлагын хэсэгт буцах ↗</Link>
         ) : (
@@ -124,6 +125,14 @@ export function ApplicationReview({ initial }: { initial: Application }) {
               Захиалгын хуудсаа урьдчилан харах <ArrowUpRight size={14} />
             </a>
           )}
+          <ProfileChecklist
+            items={checklist}
+            note={
+              status === "APPROVED"
+                ? "Бүгдийг бөглөмөгц захиалгын хуудас тань салонуудын жагсаалтад гарч, олон нийтэд нээгдэнэ."
+                : "Хянагдаж байх хооронд эдгээрийг бэлдэж болно. Баталгаажиж, бүгд бэлэн болмогц захиалгын хуудас тань олон нийтэд нээгдэнэ."
+            }
+          />
           {status === "REJECTED" && application.note && (
             <blockquote className="review-note">
               <span>Буцаасан шалтгаан</span>

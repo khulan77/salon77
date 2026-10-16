@@ -8,27 +8,86 @@ export type MediaStore = {
   // The bucket path of a URL this store issued, or null for foreign URLs.
   pathOf(url: string): string | null;
 };
+// Why uploads are off, named for the operator's log. Never includes the key.
+export type StorageProblem =
+  | "missing_url"
+  | "missing_key"
+  | "legacy_jwt_key"
+  | "publishable_key"
+  | "invalid_key";
+export function storageConfig(
+  env: Record<string, string | undefined> = process.env,
+):
+  | { ok: true; url: string; key: string }
+  | { ok: false; problem: StorageProblem } {
+  // Pasted values often carry quotes or a trailing newline.
+  const clean = (v?: string) => v?.trim().replace(/^["']|["']$/g, "") ?? "";
+  const url = clean(env.NEXT_PUBLIC_SUPABASE_URL).replace(/\/$/, ""),
+    key = clean(env.SUPABASE_SECRET_KEY);
+  if (!/^https?:\/\/\S+$/.test(url))
+    return { ok: false, problem: "missing_url" };
+  if (!key) return { ok: false, problem: "missing_key" };
+  if (/^sb_secret_[A-Za-z0-9_-]+$/.test(key)) return { ok: true, url, key };
+  return {
+    ok: false,
+    problem: key.startsWith("eyJ")
+      ? "legacy_jwt_key"
+      : key.startsWith("sb_publishable_")
+        ? "publishable_key"
+        : "invalid_key",
+  };
+}
+const hints: Record<StorageProblem, string> = {
+  missing_url: "NEXT_PUBLIC_SUPABASE_URL is not set",
+  missing_key: "SUPABASE_SECRET_KEY is not set",
+  legacy_jwt_key:
+    "SUPABASE_SECRET_KEY is a legacy service_role JWT; use an sb_secret_ key from Settings → API Keys",
+  publishable_key:
+    "SUPABASE_SECRET_KEY holds the publishable key; use the sb_secret_ key",
+  invalid_key: "SUPABASE_SECRET_KEY is not an sb_secret_ key",
+};
+let warned = false;
 export function supabaseMediaStore(): MediaStore | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, ""),
-    key = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !key || !/^sb_secret_[A-Za-z0-9_-]+$/.test(key)) return null;
+  const config = storageConfig();
+  if (!config.ok) {
+    if (!warned)
+      console.error(
+        `Salon77 image uploads disabled: ${hints[config.problem]}.`,
+      );
+    warned = true;
+    return null;
+  }
+  const { url, key } = config;
   const storage = `${url}/storage/v1`;
   const auth = { apikey: key, Authorization: `Bearer ${key}` };
   const prefix = `${storage}/object/public/${MEDIA_BUCKET}/`;
   return {
     async upload(path, bytes, contentType) {
-      const response = await fetch(`${storage}/object/${MEDIA_BUCKET}/${path}`, {
-        method: "POST",
-        headers: {
-          ...auth,
-          "Content-Type": contentType,
-          "Cache-Control": "max-age=31536000",
-          "x-upsert": "false",
+      const response = await fetch(
+        `${storage}/object/${MEDIA_BUCKET}/${path}`,
+        {
+          method: "POST",
+          headers: {
+            ...auth,
+            "Content-Type": contentType,
+            "Cache-Control": "max-age=31536000",
+            "x-upsert": "false",
+          },
+          body: new Blob([bytes as BlobPart], { type: contentType }),
         },
-        body: new Blob([bytes as BlobPart], { type: contentType }),
-      });
+      );
       // Never surface the provider's response; it may echo request details.
-      if (!response.ok) throw new Error("Storage upload failed");
+      if (!response.ok) {
+        console.error(
+          `Salon77 image upload failed: Supabase Storage answered ${response.status}` +
+            (response.status === 404
+              ? ` (does the "${MEDIA_BUCKET}" bucket exist?)`
+              : [401, 403].includes(response.status)
+                ? " (is SUPABASE_SECRET_KEY from this project?)"
+                : ""),
+        );
+        throw new Error("Storage upload failed");
+      }
       return prefix + path;
     },
     async remove(path) {

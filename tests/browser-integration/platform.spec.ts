@@ -85,7 +85,8 @@ test("the operator sets the monthly price per branch", async ({
   page,
 }, info) => {
   await login(page, "platform@example.test");
-  await page.goto("/platform");
+  // The price lives on the platform settings page.
+  await page.goto("/platform/settings");
   const panel = page.locator(".pf-price-panel");
   if (await panel.getByRole("button", { name: "Өөрчлөх" }).isVisible())
     await panel.getByRole("button", { name: "Өөрчлөх" }).click();
@@ -95,7 +96,8 @@ test("the operator sets the monthly price per branch", async ({
   });
   await panel.getByRole("button", { name: "Хадгалах" }).click();
   await expect(panel).toContainText("149,000₮");
-  await expect(page.locator(".pf-focus")).toContainText("Хугацаа дууссан");
+  await page.goto("/platform");
+  await expect(page.locator(".pf-focus")).toContainText("Энэ сарын төлбөр");
   await page.locator(".pf-filters").screenshot({
     path: `test-results/platform-filters-${info.project.name}.png`,
   });

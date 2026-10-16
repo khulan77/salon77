@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { membership } from "@/lib/auth";
+import { membership, setupAccess } from "@/lib/auth";
 import { actorFromMember } from "@/lib/access";
 import { failure, sameOrigin } from "@/lib/http";
 import { HttpError } from "@/lib/errors";
@@ -25,7 +25,7 @@ const subject = (request: Request) => {
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const actor = actorFromMember(await membership());
+    const actor = actorFromMember(await membership(setupAccess));
     const { target, id } = subject(request);
     if (
       Number(request.headers.get("content-length") ?? 0) >
@@ -55,7 +55,7 @@ export async function DELETE(request: Request) {
     return Response.json(
       await removePhoto(
         db,
-        actorFromMember(await membership()),
+        actorFromMember(await membership(setupAccess)),
         target,
         id,
         supabaseMediaStore(),

@@ -196,6 +196,18 @@ export function BookingCalendar({
       setError(userFacingError(e, "Захиалгыг өөрчилж чадсангүй."));
     }
   }
+  // A visit that has begun can be closed with one tap from its card.
+  const started = (b: BookingView, day: string) =>
+    day < today || (day === today && minuteOf(b.startAt) <= now);
+  function outcome(b: BookingView, status: "COMPLETED" | "NO_SHOW") {
+    return quickChange(
+      b,
+      { action: "status", status },
+      status === "COMPLETED"
+        ? "Захиалгыг дууссан гэж тэмдэглэлээ."
+        : "Ирээгүй гэж тэмдэглэлээ.",
+    );
+  }
   // Dropping a card on a staff column moves it to that person and time.
   function drop(staff: { id: string; name: string }, e: React.DragEvent) {
     e.preventDefault();
@@ -235,6 +247,7 @@ export function BookingCalendar({
   async function transition(status: string) {
     if (!selected) return;
     if (
+      status === "CANCELLED" &&
       !window.confirm(`Захиалгын төлөвийг «${statusLabels[status]}» болгох уу?`)
     )
       return;
@@ -549,6 +562,8 @@ export function BookingCalendar({
         <section
           className={`panel day-grid-panel ${loading ? "is-refreshing" : ""}`}
           ref={gridRef}
+          tabIndex={0}
+          aria-label="Ажилтнуудын цагийн календарь. Хажуу тийш гүйлгэж бусад ажилтныг харна уу."
           aria-busy={loading}
         >
           {columns.length ? (
@@ -797,6 +812,13 @@ export function BookingCalendar({
                               <em>{statusLabels[b.status]}</em>
                             </span>
                           )}
+                          {b.status === "CONFIRMED" &&
+                            started(b, date) &&
+                            !preview && (
+                              <span className="grid-booking-foot">
+                                <QuickOutcome booking={b} onPick={outcome} />
+                              </span>
+                            )}
                         </div>
                       );
                     })}
@@ -842,26 +864,32 @@ export function BookingCalendar({
                   </h2>
                   {list.length ? (
                     list.map((b) => (
-                      <button
-                        className={`booking-card tone-${bookingTone(b)} status-${b.status.toLowerCase()}`}
-                        key={b.id}
-                        type="button"
-                        onClick={() => openBooking(b)}
-                      >
-                        <span className="grid-booking-time">
-                          {timeRange(b)}
-                        </span>
-                        <strong>{b.customerName}</strong>
-                        <span className="grid-booking-service">
-                          {b.serviceName}
-                        </span>
-                        <small>{b.staffName}</small>
-                        {b.status !== "CONFIRMED" && (
-                          <span className="status-pill">
-                            {statusLabels[b.status]}
+                      <div className="week-booking" key={b.id}>
+                        <button
+                          className={`booking-card tone-${bookingTone(b)} status-${b.status.toLowerCase()}`}
+                          type="button"
+                          onClick={() => openBooking(b)}
+                        >
+                          <span className="grid-booking-time">
+                            {timeRange(b)}
                           </span>
-                        )}
-                      </button>
+                          <strong>{b.customerName}</strong>
+                          <span className="grid-booking-service">
+                            {b.serviceName}
+                          </span>
+                          <small>{b.staffName}</small>
+                          {b.status !== "CONFIRMED" && (
+                            <span className="status-pill">
+                              {statusLabels[b.status]}
+                            </span>
+                          )}
+                        </button>
+                        {b.status === "CONFIRMED" &&
+                          started(b, day) &&
+                          !preview && (
+                            <QuickOutcome booking={b} onPick={outcome} />
+                          )}
+                      </div>
                     ))
                   ) : (
                     <p className="field-hint">Захиалга алга.</p>
@@ -1315,5 +1343,44 @@ function Reschedule({
         {pending ? "Хадгалж байна…" : "Шинэ цагийг хадгалах"}
       </Button>
     </section>
+  );
+}
+// One-tap outcome for a visit in progress or past.
+function QuickOutcome({
+  booking,
+  onPick,
+}: {
+  booking: BookingView;
+  onPick: (b: BookingView, status: "COMPLETED" | "NO_SHOW") => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const pick = async (e: React.MouseEvent, status: "COMPLETED" | "NO_SHOW") => {
+    e.stopPropagation();
+    setBusy(true);
+    await onPick(booking, status);
+    setBusy(false);
+  };
+  return (
+    <span className="quick-outcome">
+      <button
+        type="button"
+        className="done"
+        disabled={busy}
+        aria-label={`Дууссан · ${booking.customerName}`}
+        onClick={(e) => pick(e, "COMPLETED")}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <Check size={11} strokeWidth={3} aria-hidden /> Дууссан
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        aria-label={`Ирээгүй · ${booking.customerName}`}
+        onClick={(e) => pick(e, "NO_SHOW")}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        Ирээгүй
+      </button>
+    </span>
   );
 }

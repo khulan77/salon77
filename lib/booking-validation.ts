@@ -128,7 +128,8 @@ export const sourceLabels: Record<string, string> = {
 export const transitions: Record<string, string[]> = {
   PENDING: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["COMPLETED", "CANCELLED", "NO_SHOW"],
-  COMPLETED: [],
+  // Auto-completed visits can still be corrected to a no-show.
+  COMPLETED: ["NO_SHOW"],
   CANCELLED: [],
   NO_SHOW: [],
 };

@@ -4,6 +4,7 @@ import { discountedPrice } from "../pricing";
 import { localStamp } from "../business-time";
 import { DISTRICTS, normalizeDistrict } from "../districts";
 import { paidUp } from "../billing";
+import { profileReady } from "./publish";
 type Database = Prisma.TransactionClient;
 export const directoryQuery = z
   .object({
@@ -21,14 +22,15 @@ const bookable: Prisma.ServiceWhereInput = {
   category: { active: true },
   branches: { some: { branch: { active: true } } },
 };
-// Only approved, active, paid-up, publicly bookable salons that did not opt
-// out are listed.
+// Only approved, active, paid-up, publicly bookable salons with a complete
+// profile (see publish.ts) that did not opt out are listed.
 const listed = (now = new Date()): Prisma.SalonWhereInput => ({
   status: "ACTIVE",
   ...paidUp(now),
   reviewStatus: "APPROVED",
   bookingSettings: { publicBookingEnabled: true, listedInDirectory: true },
   services: { some: bookable },
+  ...profileReady,
 });
 // Below this many listed salons, signed-out visitors to "/" see the business
 // page instead of a near-empty directory. DIRECTORY_MIN_SALONS overrides it.
@@ -86,8 +88,9 @@ export async function listDirectory(
   const spellings = (district: string) =>
     stored.filter((v) => normalizeDistrict(v) === district);
   const where: Prisma.SalonWhereInput = {
-    ...listed(now),
+    // Nested so the profile rule's own AND is never overwritten.
     AND: [
+      listed(now),
       input.query
         ? {
             OR: [
@@ -140,7 +143,7 @@ export async function listDirectory(
           },
           branches: {
             where: { active: true },
-            select: { district: true, address: true },
+            select: { district: true, address: true, imageUrl: true },
             orderBy: { createdAt: "asc" },
           },
         },
@@ -194,8 +197,13 @@ export async function listDirectory(
       return {
         name: s.name,
         slug: s.slug,
-        // The cover leads; without one, the first gallery photo stands in.
-        coverUrl: s.coverUrl ?? s.images[0]?.url ?? null,
+        // The first branch photo leads, then the salon cover, then the
+        // first work photo.
+        coverUrl:
+          s.branches.find((b) => b.imageUrl)?.imageUrl ??
+          s.coverUrl ??
+          s.images[0]?.url ??
+          null,
         photos: s.images.length + (s.coverUrl ? 1 : 0),
         description: s.description ?? "",
         district: s.branches[0]

@@ -1,0 +1,450 @@
+/* Inherit palette only inside a salon booking/manage root. */
+.pb-page[data-booking-theme] {
+  color: var(--foreground);
+  background: var(--background);
+  overflow-wrap: anywhere;
+}
+.pb-page[data-booking-theme] :is(button, input, select, textarea) {
+  color: inherit;
+}
+.pb-page[data-booking-theme] :is(button, a, input, select) {
+  min-height: 44px;
+}
+.pb-page[data-booking-theme] button {
+  min-width: 44px;
+}
+.pb-page[data-booking-theme]
+  :is(button, a, input, select, textarea):focus-visible {
+  outline-color: var(--accent);
+}
+.pb-page[data-booking-theme]
+  :is(
+    .pb-hero-body,
+    .pb-closed,
+    .pb-back,
+    .pb-service,
+    .pb-empty,
+    .pb-summary,
+    .pb-bar,
+    .pb-secondary,
+    .pb-ticket,
+    .pb-sheet-card,
+    .pb-reviews li,
+    .pb-masters > ul button,
+    .pb-chips button,
+    .pb-tabs button,
+    .pb-days button,
+    .pb-times button,
+    .pb-branches button,
+    .pb-status-check button,
+    input,
+    textarea,
+    select
+  ) {
+  background: var(--surface);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.pb-page[data-booking-theme]
+  :is(
+    .pb-about,
+    .pb-facts,
+    .pb-topbar span,
+    .pb-progress li,
+    .pb-heading small,
+    .pb-service p,
+    .pb-meta,
+    .pb-price s,
+    .pb-staff button,
+    .pb-days small,
+    .pb-period,
+    .pb-empty,
+    .pb-summary > span,
+    .pb-summary small,
+    .pb-note,
+    .pb-bar span,
+    .pb-done > p,
+    .pb-ticket > span,
+    .pb-ticket-row small,
+    .pb-masters small,
+    .pb-sheet-card > small,
+    .pb-sheet-card p,
+    .pb-reviews li p,
+    .pb-reviews li small,
+    .pb-rating span,
+    .pb-staff button small,
+    .pb-reviews h2 span,
+    .pb-branches small,
+    .pb-branch-count,
+    .pb-review > span
+  ) {
+  color: var(--muted);
+}
+.pb-page[data-booking-theme] :is(.pb-contact a, .pb-call, .pb-map-link) {
+  color: var(--accent);
+  border-color: var(--border);
+  display: inline-flex;
+  align-items: center;
+}
+.pb-page[data-booking-theme] :is(.pb-topbar, .pb-sheet-close) {
+  background: var(--surface);
+  color: var(--foreground);
+}
+.pb-page[data-booking-theme]
+  :is(
+    .pb-cover,
+    .pb-avatar,
+    .pb-master-photo,
+    .pb-master-services li,
+    .pb-review
+  ) {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--border);
+}
+.pb-page[data-booking-theme]
+  :is(.pb-service.is-on, .pb-branches button[aria-pressed="true"]) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--foreground);
+}
+.pb-page[data-booking-theme]
+  :is(
+    .pb-primary,
+    .pb-days button[aria-pressed="true"],
+    .pb-times button[aria-pressed="true"],
+    .pb-chips button[aria-pressed="true"],
+    .pb-tabs button[aria-pressed="true"],
+    .pb-service.is-on .pb-add
+  ) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.pb-page[data-booking-theme] .pb-days button[aria-pressed="true"] small {
+  color: var(--on-accent);
+}
+.pb-page[data-booking-theme]
+  :is(.pb-progress li.on, .pb-branches button[aria-pressed="true"] small) {
+  color: var(--foreground);
+}
+.pb-page[data-booking-theme]
+  :is(.pb-stars button, .pb-stars-view, .pb-rating, .pb-master-rating) {
+  color: var(--muted);
+}
+.pb-page[data-booking-theme]
+  :is(
+    .pb-stars button.on,
+    .pb-stars-view .on,
+    .pb-rating svg,
+    .pb-master-rating svg,
+    .pb-reviews h2 svg
+  ) {
+  color: var(--accent);
+  fill: var(--accent);
+}
+.pb-page[data-booking-theme] .pb-stars button.on svg {
+  fill: var(--accent);
+}
+.pb-page[data-booking-theme]
+  :is(.pb-add, .pb-progress li, .pb-ticket-row, .pb-ticket-total) {
+  border-color: var(--border);
+}
+.pb-page[data-booking-theme] .pb-contact {
+  flex-wrap: wrap;
+}
+.pb-page[data-booking-theme] .pb-back {
+  flex-shrink: 0;
+}
+/* Settings: theme picker with a miniature of the booking page per theme. */
+.booking-theme-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.booking-theme-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+@media (max-width: 520px) {
+  .booking-theme-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .booking-theme-open {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+.booking-theme-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.booking-theme-option:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgb(37 36 43 / 0.08);
+}
+.booking-theme-option:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.booking-theme-option:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+/* The native radio stays for keyboard and screen readers; the tick shows it. */
+.booking-theme-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.booking-theme-check {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+  box-shadow: 0 0 0 2px #fff;
+}
+.booking-theme-option:has(input:checked) .booking-theme-check {
+  opacity: 1;
+  transform: scale(1);
+}
+.booking-theme-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 6px;
+  padding: 0 4px;
+  font-size: 13px;
+}
+.booking-theme-option > small {
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6f6577;
+}
+.booking-theme-suggested {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 650;
+  color: #2f6b3a;
+  background: #e6f2e4;
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+.booking-theme-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 7px 8px;
+  overflow: hidden;
+  background: var(--background);
+  border-radius: 9px;
+  font-family: inherit;
+  pointer-events: none;
+}
+.btp-cover {
+  height: 34px;
+  margin: 0 -7px;
+  background: linear-gradient(
+    135deg,
+    var(--accent-soft),
+    color-mix(in srgb, var(--accent) 35%, var(--accent-soft))
+  );
+}
+.btp-card,
+.btp-service {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: min(var(--pb-radius), 10px);
+  color: var(--foreground);
+}
+.btp-card {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: -16px;
+  padding: 7px 8px;
+}
+.btp-title {
+  max-width: 100%;
+  font-family: var(--pb-heading-font);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btp-chip {
+  font-size: 8px;
+  font-weight: 650;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+.btp-service {
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 9px;
+  font-weight: 600;
+}
+.btp-service span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btp-service small {
+  display: block;
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.btp-service b {
+  flex-shrink: 0;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.btp-button {
+  padding: 6px;
+  border-radius: min(var(--pb-radius), 10px);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+}
+.pb-page[data-booking-theme] :is(.deposit-instructions, .pb-manage-link) {
+  background: var(--accent-soft);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.pb-page[data-booking-theme]
+  :is(.deposit-instructions strong, .deposit-instructions button) {
+  color: var(--accent);
+}
+.pb-page[data-booking-theme]
+  :is(
+    .deposit-instructions dt,
+    .deposit-instructions p,
+    .pb-manage-link small,
+    .pb-manage > p
+  ) {
+  color: var(--muted);
+}
+.pb-page[data-booking-theme] .deposit-instructions button {
+  background: var(--surface);
+  border-color: var(--border);
+}
+.pb-page[data-booking-theme] .pb-branch-count {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+/* Each theme's character: corner radius and heading typeface. */
+.pb-page[data-booking-theme]
+  :is(
+    .pb-hero-body,
+    .pb-service,
+    .pb-summary,
+    .pb-ticket,
+    .pb-sheet-card,
+    .pb-reviews li,
+    .pb-masters > ul button,
+    .pb-empty,
+    .pb-closed,
+    .deposit-instructions,
+    .pb-manage-link
+  ) {
+  border-radius: var(--pb-radius);
+}
+.pb-page[data-booking-theme]
+  :is(
+    .pb-branches button,
+    .pb-days button,
+    .pb-times button,
+    input,
+    select,
+    textarea
+  ) {
+  border-radius: min(var(--pb-radius), 12px);
+}
+.pb-page[data-booking-theme] :is(h1, h2, .pb-heading) {
+  font-family: var(--pb-heading-font);
+}
+/* Without a photo, the cover is a soft gradient in the theme's colours. */
+.pb-page[data-booking-theme] .pb-cover {
+  background:
+    radial-gradient(
+      circle at 18% 20%,
+      color-mix(in srgb, var(--surface) 55%, transparent),
+      transparent 45%
+    ),
+    linear-gradient(
+      135deg,
+      var(--accent-soft),
+      color-mix(in srgb, var(--accent) 28%, var(--accent-soft))
+    );
+}
+/* Address, hours and phone: icon centred on its line. */
+.pb-page[data-booking-theme] .pb-facts li {
+  align-items: center;
+}
+.pb-page[data-booking-theme] .pb-facts svg {
+  margin-top: 0;
+  color: var(--accent);
+}
+/* The picked branch: a tick in the accent colour on the soft background. */
+.pb-page[data-booking-theme] .pb-branches button svg {
+  color: var(--accent);
+}
+.pb-page[data-booking-theme] .pb-branches button[aria-pressed="true"] {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.pb-page[data-booking-theme] .pb-progress li.on {
+  border-color: var(--accent);
+}
+/* The page's own background runs straight into the Salon77 footer. */
+.pb-page[data-booking-theme] + .site-footer {
+  margin-top: 0;
+}

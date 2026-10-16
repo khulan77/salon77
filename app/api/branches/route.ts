@@ -1,11 +1,11 @@
-import { tenant, membership, HttpError } from "@/lib/auth";
+import { tenant, membership, HttpError, setupAccess } from "@/lib/auth";
 import { actorFromMember, branchWhere, requireBranch } from "@/lib/access";
 import { db } from "@/lib/db";
 import { branchSchema } from "@/lib/validation";
 import { failure, sameOrigin } from "@/lib/http";
 export async function GET(request: Request) {
   try {
-    const actor = actorFromMember(await membership());
+    const actor = actorFromMember(await membership(setupAccess));
     const branchId = new URL(request.url).searchParams.get("branchId");
     if (branchId) requireBranch(actor, branchId);
     return Response.json(
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const member = await tenant();
+    const member = await tenant(setupAccess);
     const data = branchSchema.parse(await request.json());
     return Response.json(
       await db.branch.create({ data: { ...data, salonId: member.salonId } }),
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     sameOrigin(request);
-    const member = await tenant();
+    const member = await tenant(setupAccess);
     const id = new URL(request.url).searchParams.get("id");
     if (!id) throw new HttpError(400, "Салбараа сонгоно уу.");
     const data = branchSchema.parse(await request.json());

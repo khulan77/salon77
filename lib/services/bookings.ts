@@ -3,7 +3,12 @@ import { branchWeek, weekSummary } from "../week-hours";
 import { publicReviews, staffRatings } from "./reviews";
 import { billingState } from "../billing";
 import { Prisma, type PrismaClient, type Booking } from "@prisma/client";
-import { type Actor, refreshActor, requireBranch } from "../access";
+import {
+  type Actor,
+  canAccessBranch,
+  refreshActor,
+  requireBranch,
+} from "../access";
 import { HttpError } from "../errors";
 import {
   availabilitySchema,
@@ -22,6 +27,7 @@ import { salonBookingPolicy } from "./booking-settings";
 import { depositAmount, publicBookingClosed } from "../booking-settings";
 import { discountedPrice } from "../pricing";
 import { assertGuestQuota, expireStalePending } from "./guest-guard";
+import { completePastBookings } from "./auto-complete";
 import { enqueueNotice } from "../notifications/outbox";
 import { recordActivity } from "./activity";
 type Clock = { now?: () => Date };
@@ -103,8 +109,10 @@ export async function resources(
   branchId: string,
   serviceId: string,
   staffId?: string,
+  // Read-only look at another branch of the same salon (free times only).
+  peek = false,
 ) {
-  if (scope.actor) requireBranch(scope.actor, branchId);
+  if (scope.actor && !peek) requireBranch(scope.actor, branchId);
   const service = await db.service.findFirst({
     where: {
       id: serviceId,
@@ -166,6 +174,7 @@ export async function slots(
     duration?: number;
     now?: Date;
     timeZone?: string;
+    peek?: boolean;
   } = {},
 ) {
   const now = options.now ?? new Date(),
@@ -189,6 +198,7 @@ export async function slots(
     input.branchId,
     input.serviceId,
     input.staffId,
+    options.peek,
   );
   const duration = options.duration ?? service.durationMinutes;
   const window = dayWindow(input.date, zone),
@@ -336,10 +346,16 @@ export async function availability(
     if (!["PENDING", "CONFIRMED"].includes(current.status))
       throw new HttpError(409, "Энэ захиалгын цагийг өөрчлөх боломжгүй.");
   }
+  // Desk members may see free times of the salon's other branches, but
+  // only the times: booking or changing there stays forbidden.
+  const peek = !!scope.actor && !canAccessBranch(scope.actor, input.branchId);
+  if (peek && (input.excludeBookingId || input.durationMinutes))
+    throw new HttpError(403, "Сонгосон салбарт хандах эрхгүй байна.");
   const result = await slots(db, scope, input, {
     excludeId: current?.id,
     duration: current?.durationMinutesSnapshot ?? input.durationMinutes,
     now: clock.now?.(),
+    peek,
   });
   return {
     slots: result.slots.map((s) => ({ startAt: s.startAt })),
@@ -702,6 +718,7 @@ export async function listBookings(
     actor.salonId,
     await salonBookingPolicy(db, actor.salonId),
   );
+  await completePastBookings(db, actor.salonId);
   const rows = await db.booking.findMany({
     where: {
       ...bookingScope(actor),
@@ -724,6 +741,50 @@ export async function listBookings(
       "Хэт олон захиалга байна. Салбар, ажилтнаар шүүж эсвэл нэг өдөр сонгоно уу.",
     );
   return rows.map(bookingView);
+}
+// What a desk member may pick when looking at another branch's free times:
+// branch and service names only, no prices, staff or customers.
+export async function peekOptions(db: Database, actor: Actor) {
+  requireBookingRole(actor);
+  if (actor.role === "SALON_OWNER") return { branches: [], services: [] };
+  const branches = await db.branch.findMany({
+    where: {
+      salonId: actor.salonId,
+      active: true,
+      id: { notIn: actor.branchIds },
+    },
+    select: { id: true, name: true },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!branches.length) return { branches, services: [] };
+  const ids = branches.map((b) => b.id);
+  const services = await db.service.findMany({
+    where: {
+      salonId: actor.salonId,
+      active: true,
+      category: { active: true },
+      branches: { some: { branchId: { in: ids }, salonId: actor.salonId } },
+    },
+    select: {
+      id: true,
+      name: true,
+      durationMinutes: true,
+      branches: {
+        where: { branchId: { in: ids } },
+        select: { branchId: true },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+  return {
+    branches,
+    services: services.map((s) => ({
+      id: s.id,
+      name: s.name,
+      durationMinutes: s.durationMinutes,
+      branchIds: s.branches.map((b) => b.branchId),
+    })),
+  };
 }
 export async function publicCatalog(
   db: Database,
@@ -775,6 +836,11 @@ export async function publicCatalog(
         imageUrl: true,
         latitude: true,
         longitude: true,
+        images: {
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: { url: true },
+          take: 10,
+        },
       },
       orderBy: { name: "asc" },
     }),

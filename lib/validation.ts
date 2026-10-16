@@ -96,10 +96,23 @@ export const inviteSchema = z
   .object({
     name: text(100),
     email: z.email().transform((s) => s.toLowerCase()),
-    role: z.enum(["MANAGER", "RECEPTIONIST", "STAFF"]),
-    branchIds: z.array(z.string().min(1)).min(1).max(100),
+    // Invites are for the front desk only. A one-branch salon may omit the
+    // branch; the service picks it.
+    branchId: z.string().min(1).max(100).optional(),
   })
   .strict();
+// Joining through an invitation: the email always comes from the invitation.
+export const joinSchema = z
+  .object({
+    name: text(100),
+    password: z.string().min(8).max(128),
+    confirm: z.string().max(128),
+  })
+  .strict()
+  .refine((v) => v.password === v.confirm, {
+    message: "Нууц үг хоорондоо таарахгүй байна.",
+    path: ["confirm"],
+  });
 
 export const memberSchema = z
   .object({

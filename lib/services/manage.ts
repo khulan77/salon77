@@ -108,6 +108,7 @@ export async function readManagedVisit(
   });
   return {
     // A finished visit can be rated once.
+    bookingTheme: scope.policy.bookingTheme,
     canReview: canReview(bookings, now) && !review,
     review,
     salonName: salon.name,

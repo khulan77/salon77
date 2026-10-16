@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {
   applicationAlert,
   approvalEmail,
+  emailSetup,
+  feedbackAlert,
+  rejectionEmail,
   ownerEmailConfig,
   platformEmailConfig,
   sendPlatformEmail,
@@ -20,8 +23,54 @@ test("platform alerts are off until Resend and the address are set", () => {
       apiKey: "re_x",
       to: "me@example.test",
       from: "Salon77 <onboarding@resend.dev>",
+      replyTo: "salon77.mn@gmail.com",
     },
   );
+});
+test("a free mailbox is never the sender; replies go to the operator", () => {
+  const base = { RESEND_API_KEY: "re_x", PLATFORM_ALERT_EMAIL: "me@x.mn" };
+  for (const from of ["salon77.mn@gmail.com", "Salon77 <a@yahoo.com>"]) {
+    const setup = emailSetup({ ...base, RESEND_FROM: from });
+    assert.equal(setup.fromProblem, "free-mail");
+    assert.equal(setup.ownerMail, false);
+    assert.equal(
+      platformEmailConfig({ ...base, RESEND_FROM: from })?.from,
+      "Salon77 <onboarding@resend.dev>",
+    );
+  }
+  const domain = { ...base, RESEND_FROM: "Salon77 <hello@salon77.mn>" };
+  assert.equal(emailSetup(domain).ownerMail, true);
+  assert.equal(platformEmailConfig(domain)?.from, "Salon77 <hello@salon77.mn>");
+  assert.equal(emailSetup(base).fromProblem, "missing");
+  assert.equal(
+    emailSetup({ ...base, RESEND_FROM: "onboarding@resend.dev" }).fromProblem,
+    "invalid",
+  );
+  assert.equal(
+    emailSetup({ ...domain, RESEND_REPLY_TO: "help@salon77.mn" }).replyTo,
+    "help@salon77.mn",
+  );
+});
+test("rejection and feedback mails carry the reason and links", () => {
+  const back = rejectionEmail(
+    { name: "Гоо Нэйлс", note: "Инстаграм холбоос ажиллахгүй байна." },
+    "https://salon77.mn",
+  );
+  assert.match(back.subject, /засах шаардлагатай/);
+  assert.match(back.text, /Инстаграм холбоос ажиллахгүй/);
+  assert.match(back.text, /https:\/\/salon77\.mn\/onboarding\/review/);
+  const alert = feedbackAlert(
+    {
+      salonName: "Гоо Нэйлс",
+      author: "Сараа",
+      kind: "Асуулт",
+      message: "Хэрхэн салбар нэмэх вэ?",
+    },
+    "https://salon77.mn",
+  );
+  assert.equal(alert.subject, "Шинэ санал хүсэлт: Гоо Нэйлс");
+  assert.match(alert.text, /Төрөл: Асуулт/);
+  assert.match(alert.text, /\/platform\/feedback/);
 });
 test("the alert names the salon and links to its review page", () => {
   const fresh = applicationAlert(salon, false, "https://salon77.mn");
@@ -40,7 +89,12 @@ test("the email goes to Resend with the configured sender", async () => {
     calls.push({ url, init });
     return new Response("{}", { status });
   }) as typeof fetch;
-  const config = { apiKey: "re_x", to: "me@example.test", from: "A <a@b.c>" };
+  const config = {
+    apiKey: "re_x",
+    to: "me@example.test",
+    from: "A <a@b.c>",
+    replyTo: "salon77.mn@gmail.com",
+  };
   const message = applicationAlert(salon, false, "");
   assert.equal(await sendPlatformEmail(message, null, send), false);
   assert.equal(calls.length, 0);
@@ -53,6 +107,7 @@ test("the email goes to Resend with the configured sender", async () => {
   assert.deepEqual(JSON.parse(String(calls[0].init.body)), {
     from: "A <a@b.c>",
     to: ["me@example.test"],
+    reply_to: "salon77.mn@gmail.com",
     subject: message.subject,
     text: message.text,
   });
@@ -62,8 +117,16 @@ test("the email goes to Resend with the configured sender", async () => {
 test("an approved salon's owner gets a congratulation with links", () => {
   assert.equal(ownerEmailConfig("owner@example.test", {}), null);
   assert.equal(ownerEmailConfig("", { RESEND_API_KEY: "re_x" }), null);
+  // The shared sender cannot reach owners, so a verified domain is needed.
   assert.equal(
-    ownerEmailConfig("owner@example.test", { RESEND_API_KEY: "re_x" })?.to,
+    ownerEmailConfig("owner@example.test", { RESEND_API_KEY: "re_x" }),
+    null,
+  );
+  assert.equal(
+    ownerEmailConfig("owner@example.test", {
+      RESEND_API_KEY: "re_x",
+      RESEND_FROM: "Salon77 <hello@salon77.mn>",
+    })?.to,
     "owner@example.test",
   );
   const mail = approvalEmail(

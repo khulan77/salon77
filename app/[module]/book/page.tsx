@@ -1,3 +1,4 @@
+import { bookingThemeStyle } from "@/lib/booking-themes";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -5,8 +6,9 @@ import { db } from "@/lib/db";
 import { configured } from "@/lib/env";
 import { publicCatalog, type PublicCatalog } from "@/lib/services/bookings";
 import { HttpError } from "@/lib/errors";
-import { identity } from "@/lib/auth";
+import { sessionUser } from "@/lib/auth";
 import { PublicBooking } from "@/components/public-booking";
+import { SiteFooter } from "@/components/site-footer";
 export const dynamic = "force-dynamic";
 // Shared by the metadata and the page so the catalog is read once.
 const visitorCatalog = cache((slug: string) =>
@@ -74,7 +76,7 @@ export default async function Page({
   // whether the signed-in user may preview their own salon under review.
   let catalog = await visitorCatalog(slug);
   if (!catalog) {
-    const user = await identity().catch(() => null);
+    const user = await sessionUser().catch(() => null);
     if (user)
       catalog = await publicCatalog(db, slug, user.id).catch((e) => {
         if (e instanceof HttpError && e.status === 404) return null;
@@ -83,22 +85,29 @@ export default async function Page({
   }
   if (!catalog) notFound();
   return (
-    <main className="pb-page">
-      {catalog.preview && (
-        <p className="pb-preview" role="status">
-          <strong>Урьдчилан харах горим</strong> · Салон тань баталгаажих хүртэл
-          энэ хуудас зөвхөн танд харагдана.
-        </p>
-      )}
-      {!catalog.preview && (
-        <script
-          type="application/ld+json"
-          // Structured data for search results: name, address, rating.
-          dangerouslySetInnerHTML={{ __html: structuredData(catalog, slug) }}
-        />
-      )}
-      <PublicBooking slug={slug} catalog={catalog} />
-    </main>
+    <>
+      <main
+        className="pb-page"
+        data-booking-theme={catalog.policy.bookingTheme}
+        style={bookingThemeStyle(catalog.policy.bookingTheme)}
+      >
+        {catalog.preview && (
+          <p className="pb-preview" role="status">
+            <strong>Урьдчилан харах горим</strong> · Салон тань баталгаажих
+            хүртэл энэ хуудас зөвхөн танд харагдана.
+          </p>
+        )}
+        {!catalog.preview && (
+          <script
+            type="application/ld+json"
+            // Structured data for search results: name, address, rating.
+            dangerouslySetInnerHTML={{ __html: structuredData(catalog, slug) }}
+          />
+        )}
+        <PublicBooking slug={slug} catalog={catalog} />
+      </main>
+      <SiteFooter />
+    </>
   );
 }
 function structuredData(catalog: PublicCatalog, slug: string) {

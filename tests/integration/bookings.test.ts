@@ -199,11 +199,21 @@ test(
             ),
             rejected(404),
           );
+          // Other branches' free times are readable (see reception.test.ts),
+          // but only for services that branch offers.
           await assert.rejects(
             availability(
               db,
               { actor: actors.reception },
               { ...query, branchId: "y" },
+            ),
+            rejected(404),
+          );
+          await assert.rejects(
+            createBooking(
+              db,
+              { actor: actors.reception },
+              { ...input(), branchId: "y" },
             ),
             rejected(403),
           );

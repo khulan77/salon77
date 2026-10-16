@@ -4,6 +4,7 @@ import {
   refreshActor,
   requireOwner,
   requireBranch,
+  requireOwnBranches,
   assertActiveBranches,
 } from "../access";
 import { HttpError } from "../errors";
@@ -57,6 +58,7 @@ export async function readStaff(
       },
       _count: {
         select: {
+          branches: true,
           bookings: {
             where: {
               status: { not: "CANCELLED" },
@@ -73,7 +75,9 @@ export async function readStaff(
     name: s.name,
     title: s.title,
     phone:
-      owner || actor.role === "MANAGER" || s.id === actor.staffId
+      owner ||
+      ["MANAGER", "RECEPTIONIST"].includes(actor.role) ||
+      s.id === actor.staffId
         ? (s.phone ?? "")
         : "",
     bio: s.bio ?? "",
@@ -84,6 +88,12 @@ export async function readStaff(
     branchIds: s.branches.map((b) => b.branchId),
     serviceIds: s.services.map((x) => x.serviceId),
     bookingCount: s._count.bookings,
+    // A receptionist edits only people who work at none of the other branches.
+    editable:
+      owner ||
+      (actor.role === "RECEPTIONIST" &&
+        s.branches.length > 0 &&
+        s._count.branches === s.branches.length),
   }));
 }
 export type StaffData = Awaited<ReturnType<typeof readStaff>>;
@@ -97,7 +107,32 @@ export async function saveStaff(
   return db.$transaction(
     async (tx) => {
       const current = await refreshActor(tx, actor);
-      requireOwner(current);
+      // The front desk adds and edits people of its own branch; linking
+      // logins and deactivating stay with the admin.
+      if (current.role === "RECEPTIONIST") {
+        const existing = id
+          ? await tx.staff.findFirst({
+              where: { id, salonId: current.salonId },
+              select: {
+                memberId: true,
+                branches: { select: { branchId: true } },
+              },
+            })
+          : null;
+        if (id && !existing) throw new HttpError(404, "Ажилтан олдсонгүй.");
+        if (existing)
+          requireOwnBranches(
+            current,
+            existing.branches.map((b) => b.branchId),
+          );
+        requireOwnBranches(current, branchIds);
+        if (
+          !data.active ||
+          (data.memberId && data.memberId !== existing?.memberId)
+        )
+          throw new HttpError(403, "Зөвхөн админ хандах эрхтэй.");
+        data.memberId = existing?.memberId ?? null;
+      } else requireOwner(current);
       if (
         id &&
         !(await tx.staff.findFirst({ where: { id, salonId: current.salonId } }))

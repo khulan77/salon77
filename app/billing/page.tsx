@@ -15,6 +15,7 @@ import { formatMnt } from "@/lib/ui-language";
 import { localStamp } from "@/lib/business-time";
 import { signOut } from "@/app/auth/actions";
 import { CopyValue } from "@/components/copy-value";
+import { RenewalChoice } from "@/components/renewal-choice";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Төлбөр · Salon77" };
 const date = (iso: string) => localStamp(iso).slice(0, 10).replace(/-/g, ".");
@@ -51,7 +52,7 @@ export default async function Page() {
                     ? "Үнэгүй туршилт дууссан"
                     : "Төлсөн хугацаа дууссан"
                   : billing.state === "TRIAL"
-                    ? `Үнэгүй туршилт · ${billing.daysLeft} хоног үлдсэн`
+                    ? `Үнэгүй хугацаа: ${billing.daysLeft} хоног үлдлээ`
                     : billing.state === "PAID"
                       ? `Төлсөн · ${billing.daysLeft} хоног үлдсэн`
                       : "Төлбөр шаардлагагүй"}
@@ -63,8 +64,24 @@ export default async function Page() {
                   : ""}
             </div>
           </div>
+          {owner && billing.askChoice && (
+            <RenewalChoice choice={billing.choice} expired={expired} />
+          )}
+          {billing.state !== "FREE" && billing.amountMnt === null && (
+            <p className="billing-basis">
+              Үнэгүй хугацааны дараах сарын төлбөрийг салбарын тоогоор бодно.
+              Дүнг бид урьдчилан мэдэгдэнэ.
+            </p>
+          )}
           {billing.amountMnt !== null && billing.state !== "FREE" && (
             <div className="billing-due">
+              <div className="billing-basis-row">
+                <span>
+                  {billing.customPrice
+                    ? "Танай салонд тусгайлан тогтоосон сарын үнэ."
+                    : "Идэвхтэй салбарын тоогоор бодогдоно."}
+                </span>
+              </div>
               {!billing.customPrice && (
                 <>
                   <div>

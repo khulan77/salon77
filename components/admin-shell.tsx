@@ -21,6 +21,7 @@ import { navigation, modules } from "@/lib/navigation";
 import { signOut } from "@/app/auth/actions";
 import type { AdminData } from "@/lib/admin-data";
 import { ActivityBell } from "./activity-bell";
+import { Logo } from "@/components/logo";
 export function AdminShell({
   data,
   children,
@@ -29,6 +30,7 @@ export function AdminShell({
   children: React.ReactNode;
 }) {
   const path = usePathname();
+  const approved = data.billing.state !== "PENDING";
   // The calendar uses the full viewport height, so it drops the page footer.
   const fullHeight = path === "/calendar" || path === "/bookings";
   const [open, setOpen] = useState(false);
@@ -46,15 +48,7 @@ export function AdminShell({
         />
       )}
       <aside className={`sidebar ${open ? "is-open" : ""}`}>
-        <Link href="/" className="brand" aria-label="Salon77 нүүр хуудас">
-          <span className="brand-symbol">
-            s<span>·</span>
-          </span>
-          <span>
-            salon<span className="brand-number">77</span>
-            <span className="brand-dot">.</span>
-          </span>
-        </Link>
+        <Logo className="brand" />
         <div className="workspace">
           <div className={`workspace-avatar ${data.logoUrl ? "has-logo" : ""}`}>
             {data.logoUrl ? (
@@ -73,7 +67,9 @@ export function AdminShell({
           {navigation
             .map((g) => ({
               ...g,
-              items: g.items.filter((i) => moduleAllowed(data.role, i.href)),
+              items: g.items.filter((i) =>
+                moduleAllowed(data.role, i.href, approved),
+              ),
             }))
             .filter((g) => g.items.length)
             .map((group) => (
@@ -119,10 +115,12 @@ export function AdminShell({
               {data.preview
                 ? "Танилцах горим"
                 : data.billing.state === "TRIAL"
-                  ? `Туршилт · ${data.billing.daysLeft} хоног`
+                  ? `Үнэгүй · ${data.billing.daysLeft} хоног`
                   : "Идэвхтэй"}
             </span>
-            {!data.preview && data.role !== "STAFF" && <ActivityBell />}
+            {!data.preview && approved && data.role !== "STAFF" && (
+              <ActivityBell />
+            )}
             <button
               className="icon-button"
               onClick={() => setSearch(true)}
@@ -170,23 +168,44 @@ export function AdminShell({
             </div>
           </div>
         </header>
-        {data.billing.warn && data.role === "SALON_OWNER" && (
-          <aside className="billing-banner" role="status">
+        {!approved && !data.preview && (
+          <aside className="billing-banner calm" role="status">
             <CalendarClock size={18} />
             <p>
-              <strong>
-                {data.billing.state === "TRIAL"
-                  ? "Үнэгүй туршилт"
-                  : "Төлсөн хугацаа"}{" "}
-                {data.billing.daysLeft} хоногийн дараа дуусна.
-              </strong>{" "}
-              Үргэлжлүүлэн ашиглахын тулд сарын төлбөрөө төлнө үү.
+              <strong>Салон тань хянагдаж байна.</strong> Энэ хооронд үйлчилгээ,
+              ажилтан, ажлын цаг, зургаа бэлдэж, захиалгын хуудсаа урьдчилан
+              харж болно. <Link href="/onboarding/review">Хүсэлтийн төлөв</Link>
             </p>
-            <Link href="/billing">
-              Төлбөрийн мэдээлэл <ArrowRight size={14} />
-            </Link>
           </aside>
         )}
+        {data.role === "SALON_OWNER" &&
+          !data.preview &&
+          (data.billing.state === "TRIAL" || data.billing.warn) && (
+            <aside
+              className={`billing-banner ${data.billing.warn ? "" : "calm"}`}
+              role="status"
+            >
+              <CalendarClock size={18} />
+              <p>
+                <strong>
+                  {data.billing.state === "TRIAL"
+                    ? `Үнэгүй хугацаа: ${data.billing.daysLeft} хоног үлдлээ.`
+                    : `Төлсөн хугацаа ${data.billing.daysLeft} хоногийн дараа дуусна.`}
+                </strong>{" "}
+                {data.billing.state === "TRIAL"
+                  ? data.billing.warn
+                    ? "Үргэлжлүүлэх эсвэл зогсоохоо сонгоно уу."
+                    : "Энэ хугацаанд бүх боломж бүрэн үнэгүй."
+                  : "Үргэлжлүүлэн ашиглахын тулд сарын төлбөрөө төлнө үү."}
+              </p>
+              <Link href="/billing">
+                {data.billing.state === "TRIAL" && data.billing.warn
+                  ? "Сонголт хийх"
+                  : "Төлбөрийн мэдээлэл"}{" "}
+                <ArrowRight size={14} />
+              </Link>
+            </aside>
+          )}
         <main
           className={fullHeight ? "page-content full-height" : "page-content"}
         >
@@ -235,7 +254,7 @@ export function AdminShell({
             <div className="search-results">
               {navigation
                 .flatMap((g) => g.items)
-                .filter((i) => moduleAllowed(data.role, i.href))
+                .filter((i) => moduleAllowed(data.role, i.href, approved))
                 .filter((i) =>
                   i.title.toLowerCase().includes(query.toLowerCase()),
                 )

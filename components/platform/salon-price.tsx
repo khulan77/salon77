@@ -41,7 +41,9 @@ export function SalonPrice({
     return (
       <div className="pf-salon-price">
         <span>{amountMnt === null ? "—" : formatMnt(amountMnt)}</span>
-        {custom && <em className="pf-badge plain">Тусгай</em>}
+        <em className="pf-badge plain">
+          {custom ? "Гараар тогтоосон" : "Салбарын үнээр"}
+        </em>
         <button type="button" onClick={() => setEditing(true)}>
           Үнэ өөрчлөх
         </button>

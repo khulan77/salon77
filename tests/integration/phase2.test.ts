@@ -331,7 +331,8 @@ test(
           );
           const result = await readSchedules(db, reception);
           assert.deepEqual(result.staff[0].branchIds, ["z"]);
-          assert.equal(result.staff[0].phone, "");
+          // The front desk calls its staff, so it sees their phone numbers.
+          assert.equal(result.staff[0].phone, staff.phone);
           assert.equal("reason" in result.timeOff[0], false);
           for (const read of [readCatalog, readStaff, readSchedules])
             await assert.rejects(read(db, reception, "y"), denied(403));
@@ -434,8 +435,7 @@ test(
       const inviteInput = {
         name: "Сараа",
         email: "invite@example.test",
-        role: "RECEPTIONIST",
-        branchIds: ["z"],
+        branchId: "z",
       };
       const inviteUser = {
         id: userIds.invite,
@@ -494,8 +494,20 @@ test(
         async () => {
           const input = { ...inviteInput, email: "future@example.test" };
           await assert.rejects(
-            createInvitation(db, owner, { ...input, branchIds: ["other"] }),
+            createInvitation(db, owner, { ...input, branchId: "other" }),
             denied(403),
+          );
+          // Salon A has two branches, so the front desk branch must be named.
+          await assert.rejects(
+            createInvitation(db, owner, {
+              name: input.name,
+              email: input.email,
+            }),
+            denied(400),
+          );
+          await assert.rejects(
+            createInvitation(db, owner, { ...input, role: "MANAGER" }),
+            /Unrecognized key|unrecognized/i,
           );
           await assert.rejects(
             createInvitation(db, reception, input),

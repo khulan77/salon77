@@ -4,6 +4,7 @@ import { type Actor, refreshActor, requireBranch } from "../access";
 import { HttpError } from "../errors";
 import { dateSchema } from "../booking-validation";
 import { addDays, dayWindow, localStamp } from "../business-time";
+import { completePastBookings } from "./auto-complete";
 type Database = Prisma.TransactionClient;
 // Long ranges switch to monthly buckets so the chart stays readable.
 const DAILY_LIMIT = 62;
@@ -103,6 +104,7 @@ export async function revenueReport(db: Database, actor: Actor, raw: unknown) {
   const current = await refreshActor(db, actor);
   requireReportRole(current);
   if (input.branchId) requireBranch(current, input.branchId);
+  await completePastBookings(db, current.salonId);
   const where: Prisma.BookingWhereInput = {
     salonId: current.salonId,
     ...(input.branchId
@@ -115,7 +117,7 @@ export async function revenueReport(db: Database, actor: Actor, raw: unknown) {
       lt: dayWindow(input.to).end,
     },
   };
-  const [rows, statuses] = await Promise.all([
+  const [rows, statuses, upcoming] = await Promise.all([
     db.booking.findMany({
       where: { ...where, status: "COMPLETED" },
       select: {
@@ -131,6 +133,12 @@ export async function revenueReport(db: Database, actor: Actor, raw: unknown) {
     db.booking.groupBy({
       by: ["status"],
       where: { ...where, status: { in: ["CANCELLED", "NO_SHOW"] } },
+      _count: { _all: true },
+    }),
+    // Confirmed but not yet done: money the salon still expects.
+    db.booking.aggregate({
+      where: { ...where, status: "CONFIRMED" },
+      _sum: { priceSnapshot: true, extraMnt: true },
       _count: { _all: true },
     }),
   ]);
@@ -153,6 +161,9 @@ export async function revenueReport(db: Database, actor: Actor, raw: unknown) {
     ),
     cancelled: count("CANCELLED"),
     noShow: count("NO_SHOW"),
+    expected:
+      (upcoming._sum.priceSnapshot ?? 0) + (upcoming._sum.extraMnt ?? 0),
+    expectedCount: upcoming._count._all,
   };
 }
 export type RevenueReport = Awaited<ReturnType<typeof revenueReport>>;
@@ -162,5 +173,7 @@ export function emptyReport(range: ReportQuery): RevenueReport {
     ...aggregateRevenue([], range),
     cancelled: 0,
     noShow: 0,
+    expected: 0,
+    expectedCount: 0,
   };
 }

@@ -4,5 +4,7 @@ import { moduleAllowed } from "@/lib/access";
 // The admin home is the calendar; staff, who do not see it, get their schedule.
 export default async function Page() {
   const data = await adminData();
+  // Awaiting approval: the application page lists what to prepare.
+  if (data.billing.state === "PENDING") redirect("/onboarding/review");
   redirect(moduleAllowed(data.role, "/calendar") ? "/calendar" : "/schedules");
 }

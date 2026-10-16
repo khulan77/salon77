@@ -2,32 +2,43 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import {
   ArrowRight,
-  AtSign,
   BellRing,
   Boxes,
+  Calculator,
   CalendarCheck,
   CalendarDays,
   ChartNoAxesCombined,
   Check,
   ClipboardCheck,
   History,
+  Landmark,
   Link2,
+  MessageCircle,
   MessageSquare,
-  Phone,
+  NotebookPen,
+  Receipt,
   ShieldCheck,
   Scissors,
   Sparkles,
   Star,
+  Store,
   TrendingUp,
   UserRound,
+  UserX,
   Users,
+  Wallet,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { configured } from "@/lib/env";
-import { identity } from "@/lib/auth";
-import { site, formatSitePhone } from "@/lib/site";
+import { sessionUser } from "@/lib/auth";
+import { site } from "@/lib/site";
+import { Logo } from "@/components/logo";
+import { SiteFooter } from "@/components/site-footer";
 import { formatMnt } from "@/lib/ui-language";
 import { smsDelivers } from "@/lib/notifications/provider";
+import { PERIOD_DAYS, TRIAL_DAYS, monthlyAmount } from "@/lib/billing";
+import { pricePerBranch } from "@/lib/services/billing";
+import { SignupPrep } from "@/components/signup-prep";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Salon77 · Салоны цаг захиалга, удирдлагын систем",
@@ -85,7 +96,7 @@ const groups = [
 const steps = [
   [
     "Бүртгүүлэх",
-    "Имэйлээрээ бүртгүүлээд салоныхоо мэдээллийг илгээнэ. Бид шалгаад баталгаажуулна.",
+    `Имэйлээрээ бүртгүүлээд салоныхоо мэдээллийг илгээнэ. Бид ${site.reviewTime} шалгаад баталгаажуулна.`,
   ],
   ["Тохируулах", "Үйлчилгээ, үнэ, ажилтан, ажлын цагаа нэмнэ. Хэдхэн минут."],
   [
@@ -93,11 +104,23 @@ const steps = [
     "Захиалгын линкээ Инстаграм, Фэйсбүүк хуудсандаа тавиад захиалга аваад эхэлнэ.",
   ],
 ];
-const faq = [
+// Mirrors lib/billing.ts: a free trial from approval, then a monthly fee per
+// active branch unless the operator agreed a salon's own price.
+const pricing = (pricePerBranch: number | null) => [
   [
-    "Бүртгүүлэхэд төлбөртэй юу?",
-    "Бүртгүүлэх, ашиглаж эхлэх нь үнэгүй. Төлбөрийн багцын мэдээллийг удахгүй зарлах бөгөөд өмнө нь заавал мэдэгдэнэ.",
+    "Төлбөр хэд вэ?",
+    `Салоноо баталгаажуулсан өдрөөс ${TRIAL_DAYS} хоног бүх боломж бүрэн үнэгүй. Дараа нь идэвхтэй салбарын тоогоор сар бүр төлнө${
+      pricePerBranch
+        ? `: нэг салбар ${PERIOD_DAYS} хоногт ${formatMnt(pricePerBranch)}.`
+        : ". Үнийг үнэгүй хугацаа дуусахаас өмнө танд мэдэгдэнэ."
+    } Олон салбартай эсвэл онцгой нөхцөлтэй салонтой үнийг тусад нь тохирно.`,
   ],
+  [
+    "Үнэгүй хугацаа дуусахад яах вэ?",
+    "Үргэлжлүүлэх эсвэл зогсоохоо өөрөө сонгоно. Төлбөр хийгээгүй бол захиалгын хуудас түр хаагдах боловч мэдээлэл тань устахгүй, төлбөр орсны дараа бүгд дахин нээгдэнэ.",
+  ],
+];
+const faq = [
   [
     "Үйлчлүүлэгч маань апп суулгах уу?",
     "Үгүй. Үйлчлүүлэгч линкээр орж утаснаасаа шууд цаг захиална. Бүртгүүлэх, нууц үг үүсгэх шаардлагагүй.",
@@ -115,6 +138,38 @@ const faq = [
     "Салон бүрийн мэдээлэл тусдаа хамгаалагдсан. Танай ажилтан, үйлчлүүлэгчийн мэдээллийг өөр салон хэзээ ч харахгүй.",
   ],
 ];
+// "Sound familiar?" cards: a common pain, then how the product handles it.
+const pains = [
+  {
+    id: "messages",
+    icon: MessageCircle,
+    title: "Инстаграм, утасны мессежинд хариулж амжихгүй",
+    text: "Үйлчилгээ хийж байхад утас дуугарч, оройн мессеж хариугүй үлдэж, үйлчлүүлэгч өөр салон руу явчихдаг.",
+    fix: "Захиалгын линкээ хуваалцахад үйлчлүүлэгч сул цагаа өөрөө харж, 24 цагийн турш цаг авна.",
+  },
+  {
+    id: "double",
+    icon: NotebookPen,
+    title: "Давхар захиалга, дэвтэрт бичсэн хуваарь",
+    text: "Нэг цагт хоёр хүн бичигдэж, дэвтэр салон дээр үлдэж, хэн хэзээ ирэхийг ажилтан бүр мэддэггүй.",
+    fix: "Захиалагдсан цаг автоматаар хаагдаж, бүх захиалга нэг календарьт ажилтан бүрээр харагдана.",
+  },
+  {
+    id: "noshow",
+    icon: UserX,
+    title: "Ирээгүй үйлчлүүлэгч",
+    text: "Цаг авчихаад ирэхгүй, урьдчилж хэлэхгүй. Тэр цаг хоосон өнгөрч, орлого алдагдана.",
+    fix: "Урьдчилгаа авч цагаа баталгаажуулаад, ирээгүй үйлчлүүлэгчийг түүхэнд нь тэмдэглэнэ.",
+  },
+  {
+    id: "revenue",
+    icon: Calculator,
+    title: "Сарын орлогоо мэдэхгүй",
+    text: "Орлого дэвтэр, банкны хуулга, бэлэн мөнгөнд тарж, аль үйлчилгээ, аль ажилтан их орлого оруулдгийг мэдэхгүй.",
+    fix: "Дууссан захиалга бүрээс орлого автоматаар бодогдож, өдөр, сар, үйлчилгээ, ажилтнаар харагдана.",
+  },
+] as const;
+type PainId = (typeof pains)[number]["id"];
 const calendar = [
   {
     col: 0,
@@ -267,7 +322,7 @@ const extras = [
 // Signed-in visitors skip sign-up: straight to their salon, or to onboarding.
 async function startHref() {
   if (!configured) return "/sign-up";
-  const user = await identity().catch(() => null);
+  const user = await sessionUser().catch(() => null);
   if (!user) return "/sign-up";
   const member = await db.salonMember.findFirst({
     where: { userId: user.id, active: true },
@@ -275,24 +330,24 @@ async function startHref() {
   });
   return member ? "/" : "/onboarding";
 }
+async function branchPrice() {
+  if (!configured) return null;
+  return pricePerBranch(db).catch(() => null);
+}
 export default async function BusinessPage() {
   // Messages are promised only once a real SMS gateway delivers them.
   const sms = smsDelivers();
-  const start = await startHref();
+  const [start, price] = await Promise.all([startHref(), branchPrice()]);
   const signedIn = start !== "/sign-up";
-  const phone = site.phone && formatSitePhone(site.phone);
-  const handle = site.instagram.replace(/^@/, "");
   const cta = "Бизнесээ бүртгүүлэх";
   return (
     <div className="lp">
       <header className="lp-nav">
-        <Link href="/business" className="lp-logo" aria-label="Salon77 нүүр">
-          <span className="lp-logo-mark">s</span>
-          salon77<span className="lp-dot">.</span>
-        </Link>
+        <Logo href="/business" />
         <nav aria-label="Хуудасны хэсгүүд">
-          <a href="#product">Тайлан, календарь</a>
+          <a href="#problems">Шийдэл</a>
           <a href="#features">Боломжууд</a>
+          <a href="#pricing">Үнэ</a>
           <a href="#how">Хэрхэн ажилладаг</a>
           <a href="#faq">Асуулт</a>
           <a href="#about">Бидний тухай</a>
@@ -327,8 +382,8 @@ export default async function BusinessPage() {
               <Link href={start} className="lp-btn">
                 {cta} <ArrowRight size={16} />
               </Link>
-              <a href="#features" className="lp-link underline">
-                Юу багтдаг вэ?
+              <a href="#problems" className="lp-link underline">
+                Ямар асуудлыг шийддэг вэ?
               </a>
             </div>
           </div>
@@ -400,12 +455,41 @@ export default async function BusinessPage() {
             </div>
           </div>
         </section>
-        <section className="lp-problem">
-          <p>
-            Мессежинд хариулж амжихгүй, давхар захиалга, ирээгүй үйлчлүүлэгч,
-            дэвтэрт бичсэн хуваарь…
+        <section id="problems" className="lp-section">
+          <div className="lp-heading">
+            <span className="lp-eyebrow">ТАНД ТАНИЛ УУ?</span>
+            <h2>Салон бүрт тулгардаг дөрвөн бэрхшээл</h2>
+            <p>Salon77 эдгээрийг нэг дор шийднэ.</p>
+          </div>
+          <div className="lp-pains">
+            {pains.map((p) => (
+              <article key={p.id} className="lp-pain">
+                <div className="lp-pain-art" aria-hidden="true">
+                  <PainArt id={p.id} />
+                </div>
+                <div className="lp-pain-copy">
+                  <h3>
+                    <p.icon size={17} />
+                    {p.title}
+                  </h3>
+                  <p>{p.text}</p>
+                </div>
+                <div className="lp-fix">
+                  <span className="lp-fix-label">
+                    <Check size={13} strokeWidth={3} /> Salon77-д
+                  </span>
+                  <p>{p.fix}</p>
+                  <div className="lp-shot" aria-hidden="true">
+                    <FixShot id={p.id} sms={sms} />
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="lp-sample-note">
+            Зураг дээрх нэр, тоо нь жишээ.
+            {!sms && " Мессеж сануулга удахгүй нэмэгдэнэ."}
           </p>
-          <strong>Salon77 эдгээрийг нэг дор шийднэ.</strong>
         </section>
         <section id="product" className="lp-section">
           <div className="lp-heading">
@@ -718,6 +802,81 @@ export default async function BusinessPage() {
             </div>
           </div>
         </section>
+        <section id="pricing" className="lp-section">
+          <div className="lp-heading">
+            <span className="lp-eyebrow">ҮНЭ</span>
+            <h2>Эхлээд үнэгүй туршаад үзээрэй</h2>
+            <p>Нуугдмал төлбөр, урт хугацааны гэрээ байхгүй.</p>
+          </div>
+          <div className="lp-pricing">
+            <div className="lp-price-trial">
+              <span className="lp-pill">
+                <Sparkles size={13} /> Эхлэх
+              </span>
+              <strong>{TRIAL_DAYS} хоног үнэгүй</strong>
+              <p>
+                Салон тань баталгаажсан өдрөөс эхлэн бүх боломжийг үнэгүй
+                ашиглана. Карт холбох шаардлагагүй.
+              </p>
+              <Link href={start} className="lp-btn light">
+                {cta} <ArrowRight size={16} />
+              </Link>
+            </div>
+            <div className="lp-price-after">
+              <h3>Дараа нь юунаас хамаарч бодогдох вэ?</h3>
+              <ul>
+                <li>
+                  <Store size={18} />
+                  <div>
+                    <strong>Идэвхтэй салбарын тоо</strong>
+                    <span>
+                      {price
+                        ? `Салбар бүрд ${PERIOD_DAYS} хоног тутам ${formatMnt(price)}. Жишээ нь 2 салбартай бол ${formatMnt(monthlyAmount(price, 2))}.`
+                        : `Төлбөр салбар бүрээр ${PERIOD_DAYS} хоног тутам бодогдоно. Үнийг үнэгүй хугацаа дуусахаас өмнө мэдэгдэнэ.`}
+                    </span>
+                  </div>
+                </li>
+                <li>
+                  <Users size={18} />
+                  <div>
+                    <strong>Ажилтан, захиалгын тоо хамаарахгүй</strong>
+                    <span>
+                      Ажилтан нэмэх, олон захиалга авахад төлбөр өсөхгүй.
+                    </span>
+                  </div>
+                </li>
+                <li>
+                  <Wallet size={18} />
+                  <div>
+                    <strong>Үргэлжлүүлэх эсэхээ өөрөө шийднэ</strong>
+                    <span>
+                      Үнэгүй хугацаа дуусахаас өмнө сануулна. Автоматаар мөнгө
+                      татахгүй, төлөөгүй ч мэдээлэл тань устахгүй.
+                    </span>
+                  </div>
+                </li>
+                <li>
+                  <Landmark size={18} />
+                  <div>
+                    <strong>Банкны шилжүүлгээр төлнө</strong>
+                    <span>Дансны мэдээлэл удирдлагын хэсэгт харагдана.</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+        <section id="prepare" className="lp-section">
+          <div className="lp-heading">
+            <span className="lp-eyebrow">БҮРТГҮҮЛЭХЭЭС ӨМНӨ</span>
+            <h2>Юу бэлдэх вэ?</h2>
+            <p>
+              Эдгээрийг урьдчилан бэлдвэл бүртгэл хурдан, баталгаажуулалт
+              саадгүй болно.
+            </p>
+          </div>
+          <SignupPrep heading="h3" />
+        </section>
         <section id="how" className="lp-section">
           <div className="lp-heading">
             <span className="lp-eyebrow">ХЭРХЭН АЖИЛЛАДАГ ВЭ</span>
@@ -739,7 +898,7 @@ export default async function BusinessPage() {
             <h2>Асуух зүйл байна уу?</h2>
           </div>
           <div>
-            {faq.map(([q, a]) => (
+            {[...pricing(price), ...faq].map(([q, a]) => (
               <details key={q}>
                 <summary>{q}</summary>
                 <p>{a}</p>
@@ -753,38 +912,130 @@ export default async function BusinessPage() {
             <h2>Монгол салонуудад зориулсан систем</h2>
             <p>{site.about}</p>
           </div>
-          {(phone || handle) && (
-            <div className="lp-contact">
-              <h3>Холбоо барих</h3>
-              {phone && (
-                <a href={`tel:${site.phone.replace(/\s/g, "")}`}>
-                  <Phone size={17} /> {phone}
-                </a>
-              )}
-              {handle && (
-                <a
-                  href={`https://instagram.com/${handle}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <AtSign size={17} /> {handle}
-                </a>
-              )}
-            </div>
-          )}
         </section>
         <section className="lp-final">
           <h2>Салоноо өнөөдрөөс онлайн болгоорой</h2>
-          <p>Бүртгүүлэх үнэгүй, хэдхэн минутад тохируулна.</p>
+          <p>{TRIAL_DAYS} хоног бүрэн үнэгүй, хэдхэн минутад тохируулна.</p>
           <Link href={start} className="lp-btn light">
             {cta} <ArrowRight size={16} />
           </Link>
         </section>
       </main>
-      <footer className="lp-footer">
-        <span>© {new Date().getFullYear()} Salon77</span>
-        <span>Таны салоны өсөлтөд зориулав.</span>
-      </footer>
+      <SiteFooter />
+    </div>
+  );
+}
+// Small drawings of each pain; decorative, the card text carries the meaning.
+function PainArt({ id }: { id: PainId }) {
+  if (id === "messages")
+    return (
+      <div className="lp-art-chat">
+        <i>Сайн байна уу, маргааш 3 цагт сул уу?</i>
+        <i>Үнэ нь хэд вэ?</i>
+        <i>Хариу өгөөч…</i>
+        <b>+12</b>
+      </div>
+    );
+  if (id === "double")
+    return (
+      <div className="lp-art-book">
+        <i>
+          <span>13:00</span> Оюун · үс засалт
+        </i>
+        <i className="clash">
+          <span>14:00</span> Сараа · гел
+        </i>
+        <i className="clash">
+          <span>14:00</span> Номин · маникюр
+        </i>
+        <i>
+          <span>15:30</span> ???
+        </i>
+      </div>
+    );
+  if (id === "noshow")
+    return (
+      <div className="lp-art-empty">
+        <UserX size={26} />
+        <div>
+          <span>15:00 · Сормуус</span>
+          <strong>Хүлээсээр…</strong>
+        </div>
+      </div>
+    );
+  return (
+    <div className="lp-art-cash">
+      <Receipt size={22} />
+      <NotebookPen size={22} />
+      <div>
+        <span>Энэ сарын орлого</span>
+        <strong>? ₮</strong>
+      </div>
+    </div>
+  );
+}
+// Miniature views of the real screens that solve each pain.
+function FixShot({ id, sms }: { id: PainId; sms: boolean }) {
+  if (id === "messages")
+    return (
+      <div className="lp-shot-book">
+        <strong>Цаг сонгох</strong>
+        <div>
+          {["10:00", "11:30", "14:00", "16:30"].map((t, i) => (
+            <i key={t} className={i === 1 ? "on" : ""}>
+              {t}
+            </i>
+          ))}
+        </div>
+        <em>
+          <CalendarCheck size={12} /> Шинэ захиалга · 23:40 · Номин Д.
+        </em>
+      </div>
+    );
+  if (id === "double")
+    return (
+      <div className="lp-shot-slots">
+        <span>Ану · Баасан</span>
+        <div>
+          <i>13:00</i>
+          <i className="taken">14:00</i>
+          <i>15:00</i>
+          <i>16:00</i>
+        </div>
+        <small>14:00 захиалагдсан тул сонгох боломжгүй</small>
+      </div>
+    );
+  if (id === "noshow")
+    return (
+      <div className="lp-shot-deposit">
+        <div>
+          <span>Урьдчилгаа 30%</span>
+          <b>{formatMnt(24_000)}</b>
+          <em className="ok">Төлсөн</em>
+        </div>
+        <div>
+          <span>Мессеж сануулга</span>
+          <em className={sms ? "ok" : "soon"}>
+            {sms ? "Илгээсэн" : "Удахгүй"}
+          </em>
+        </div>
+        <div>
+          <span>Өмнөх захиалга</span>
+          <em className="miss">Ирээгүй · 1</em>
+        </div>
+      </div>
+    );
+  return (
+    <div className="lp-shot-report">
+      <div>
+        <span>Энэ сарын орлого</span>
+        <strong>{formatMnt(showcaseRevenue)}</strong>
+      </div>
+      <div className="lp-shot-bars">
+        {revenueBars.slice(-8).map((h, i) => (
+          <i key={i} style={{ height: `${h}%` }} />
+        ))}
+      </div>
     </div>
   );
 }

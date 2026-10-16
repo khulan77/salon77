@@ -1,0 +1,671 @@
+[
+  {
+    "name": "business",
+    "width": 360,
+    "url": "/business",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "business",
+    "width": 768,
+    "url": "/business",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "business",
+    "width": 1280,
+    "url": "/business",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "home",
+    "width": 360,
+    "url": "/home",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "home",
+    "width": 768,
+    "url": "/home",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "home",
+    "width": 1280,
+    "url": "/home",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "sign-up",
+    "width": 360,
+    "url": "/sign-up",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "sign-up",
+    "width": 768,
+    "url": "/sign-up",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "sign-up",
+    "width": 1280,
+    "url": "/sign-up",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "invite",
+    "width": 360,
+    "url": "/invite",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "invite",
+    "width": 768,
+    "url": "/invite",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "invite",
+    "width": 1280,
+    "url": "/invite",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "onboarding",
+    "width": 360,
+    "url": "/onboarding",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "onboarding",
+    "width": 768,
+    "url": "/onboarding",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "onboarding",
+    "width": 1280,
+    "url": "/onboarding",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "dashboard",
+    "width": 360,
+    "url": "/calendar",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Календарь»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "dashboard",
+    "width": 768,
+    "url": "/calendar",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Календарь»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "dashboard",
+    "width": 1280,
+    "url": "/calendar",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Календарь»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "calendar",
+    "width": 360,
+    "url": "/calendar",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Календарь»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "calendar",
+    "width": 768,
+    "url": "/calendar",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Календарь»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "calendar",
+    "width": 1280,
+    "url": "/calendar",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Календарь»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "bookings",
+    "width": 360,
+    "url": "/bookings",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Захиалгууд»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "bookings",
+    "width": 768,
+    "url": "/bookings",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Захиалгууд»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "bookings",
+    "width": 1280,
+    "url": "/bookings",
+    "overflow": 0,
+    "small": [],
+    "clipped": [
+      "span.sr-only «Захиалгууд»"
+    ],
+    "tables": []
+  },
+  {
+    "name": "reports",
+    "width": 360,
+    "url": "/reports",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "reports",
+    "width": 768,
+    "url": "/reports",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "reports",
+    "width": 1280,
+    "url": "/reports",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "settings",
+    "width": 360,
+    "url": "/settings",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "settings",
+    "width": 768,
+    "url": "/settings",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "settings",
+    "width": 1280,
+    "url": "/settings",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "team",
+    "width": 360,
+    "url": "/team",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "team",
+    "width": 768,
+    "url": "/team",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "team",
+    "width": 1280,
+    "url": "/team",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "branches",
+    "width": 360,
+    "url": "/branches",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "branches",
+    "width": 768,
+    "url": "/branches",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "branches",
+    "width": 1280,
+    "url": "/branches",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-light",
+    "width": 360,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-light",
+    "width": 768,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-light",
+    "width": 1280,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-dark",
+    "width": 360,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-dark",
+    "width": 768,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-dark",
+    "width": 1280,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-pink",
+    "width": 360,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-pink",
+    "width": 768,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-pink",
+    "width": 1280,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-natural",
+    "width": 360,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-natural",
+    "width": 768,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-natural",
+    "width": 1280,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-gold",
+    "width": 360,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-gold",
+    "width": 768,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "book-gold",
+    "width": 1280,
+    "url": "/salon-a/book",
+    "overflow": 0,
+    "small": [
+      "a «Салон хайх» 73×40",
+      "a «Хэрхэн захиалах вэ» 125×40",
+      "a «Бизнесээ бүртгүүлэх» 135×40",
+      "a «Үнэ» 24×40",
+      "a «Нэвтрэх» 53×40",
+      "a «8556 3793» 90×40",
+      "a «salon77.mn@gmail.com» 168×40"
+    ],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "platform",
+    "width": 360,
+    "url": "/platform",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "platform",
+    "width": 768,
+    "url": "/platform",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  },
+  {
+    "name": "platform",
+    "width": 1280,
+    "url": "/platform",
+    "overflow": 0,
+    "small": [],
+    "clipped": [],
+    "tables": []
+  }
+]

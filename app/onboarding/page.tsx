@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { identity } from "@/lib/auth";
+import { sessionUser } from "@/lib/auth";
 import { configured } from "@/lib/env";
 import { db } from "@/lib/db";
 import { Onboarding } from "@/components/onboarding";
@@ -9,7 +9,7 @@ export default async function Page() {
   if (configured) {
     let user;
     try {
-      user = await identity();
+      user = await sessionUser();
     } catch {
       redirect("/sign-in");
     }

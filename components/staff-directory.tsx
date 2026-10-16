@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, UserRound } from "lucide-react";
-import type { AdminData, BranchView } from "@/lib/admin-data";
+import type { TeamData, BranchView } from "@/lib/admin-data";
 import type { StaffData, ScheduleData } from "@/lib/services/staff";
 import type { CatalogData } from "@/lib/services/catalog";
 import { requestJson } from "@/lib/client-request";
@@ -66,13 +66,15 @@ export function StaffDirectory({
   catalog,
   hours,
 }: {
-  data: AdminData;
+  data: TeamData;
   staff: StaffData;
   catalog: CatalogData;
   hours: Hours;
 }) {
   const router = useRouter(),
-    owner = data.role === "SALON_OWNER";
+    owner = data.role === "SALON_OWNER",
+    // Receptionists add staff to their own branch; only the admin edits.
+    canAdd = owner || data.role === "RECEPTIONIST";
   const [editing, setEditing] = useState<{
       staff: Staff | null;
       branchId?: string;
@@ -172,7 +174,7 @@ export function StaffDirectory({
           </Link>
         )}
         <footer>
-          {owner && (
+          {s.editable && (
             <button
               type="button"
               onClick={() => {
@@ -217,7 +219,7 @@ export function StaffDirectory({
             {staff.length} ажилтан · {data.branches.length} салбар
           </p>
         </div>
-        {owner && (
+        {canAdd && (
           <Button
             onClick={() => {
               setError("");
@@ -249,7 +251,7 @@ export function StaffDirectory({
                       {!b.active && " · Идэвхгүй"}
                     </small>
                   </h2>
-                  {owner && (
+                  {canAdd && b.active && (
                     <button
                       type="button"
                       className="text-link"
@@ -290,7 +292,7 @@ export function StaffDirectory({
           </div>
           <h2>Та одоогоор ажилтан нэмээгүй байна.</h2>
           <p>Ажилтан бүртгэхэд заавал нэвтрэх эрх үүсгэх шаардлагагүй.</p>
-          {owner && (
+          {canAdd && (
             <Button onClick={() => setEditing({ staff: null })}>
               Ажилтан нэмэх
             </Button>
@@ -361,7 +363,7 @@ function StaffForm({
   onClose,
   onSaved,
 }: {
-  data: AdminData;
+  data: TeamData;
   catalog: CatalogData;
   hours: Hours;
   current: Staff | null;
@@ -446,7 +448,8 @@ function StaffForm({
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const active = f.get("active") === "on";
+    const owner = data.role === "SALON_OWNER";
+    const active = owner ? f.get("active") === "on" : true;
     if (
       current?.active &&
       !active &&
@@ -506,18 +509,19 @@ function StaffForm({
       >
         <div className="quick-body">
           <Feedback error={error} />
-          {!data.preview && data.role === "SALON_OWNER" && (
-            <PhotoField
-              target="staff"
-              id={current?.id ?? null}
-              url={photo}
-              round
-              onChange={(url) => {
-                setPhoto(url);
-                router.refresh();
-              }}
-            />
-          )}
+          {!data.preview &&
+            ["SALON_OWNER", "RECEPTIONIST"].includes(data.role) && (
+              <PhotoField
+                target="staff"
+                id={current?.id ?? null}
+                url={photo}
+                round
+                onChange={(url) => {
+                  setPhoto(url);
+                  router.refresh();
+                }}
+              />
+            )}
           <div className="form-grid">
             <label className="field">
               Нэр
@@ -715,30 +719,39 @@ function StaffForm({
               />
               <small>Зөвхөн салоны баг харна.</small>
             </label>
-            <label className="field">
-              Холбох гишүүн
-              <select name="memberId" defaultValue={current?.memberId ?? ""}>
-                <option value="">Нэвтрэх эрхтэй холбохгүй</option>
-                {data.members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                    {!m.active && " · Идэвхгүй"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p className="field-hint">
-              Холбосон гишүүн өөрийн хуваарь, захиалгаа харна.
-            </p>
+            {data.role === "SALON_OWNER" && (
+              <>
+                <label className="field">
+                  Холбох гишүүн
+                  <select
+                    name="memberId"
+                    defaultValue={current?.memberId ?? ""}
+                  >
+                    <option value="">Нэвтрэх эрхтэй холбохгүй</option>
+                    {data.members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                        {!m.active && " · Идэвхгүй"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="field-hint">
+                  Холбосон гишүүн өөрийн хуваарь, захиалгаа харна.
+                </p>
+              </>
+            )}
           </details>
-          <label className="check-field">
-            <input
-              type="checkbox"
-              name="active"
-              defaultChecked={current?.active ?? true}
-            />
-            Идэвхтэй
-          </label>
+          {data.role === "SALON_OWNER" && (
+            <label className="check-field">
+              <input
+                type="checkbox"
+                name="active"
+                defaultChecked={current?.active ?? true}
+              />
+              Идэвхтэй
+            </label>
+          )}
         </div>
         <div className="quick-footer">
           <p>

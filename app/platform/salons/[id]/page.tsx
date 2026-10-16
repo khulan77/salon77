@@ -6,9 +6,10 @@ import { platformAdminId } from "@/lib/auth";
 import { HttpError } from "@/lib/errors";
 import { platformSalonDetail } from "@/lib/services/platform";
 import { salonBilling } from "@/lib/services/billing";
+import { profileChecklist } from "@/lib/services/publish";
 import { PaymentAction } from "@/components/platform/payment-action";
 import { SalonPrice } from "@/components/platform/salon-price";
-import { BILLING_LABELS } from "@/lib/billing";
+import { BILLING_LABELS, renewalLabels } from "@/lib/billing";
 import { CountChart } from "@/components/platform/count-chart";
 import { SalonStatusAction } from "@/components/platform/status-action";
 import { ReviewAction } from "@/components/platform/review-action";
@@ -47,7 +48,11 @@ export default async function PlatformSalon({
     if (e instanceof HttpError && e.status === 404) notFound();
     throw e;
   }
-  const billing = await salonBilling(db, salon.id);
+  const [billing, checklist] = await Promise.all([
+    salonBilling(db, salon.id),
+    profileChecklist(db, salon.id),
+  ]);
+  const owner = salon.members.find((m) => m.role === "SALON_OWNER");
   const online30 = salon.bySource.ONLINE ?? 0;
   const application = salon.application;
   const instagram = socialUrl("instagram", application.instagram);
@@ -86,95 +91,18 @@ export default async function PlatformSalon({
           status={salon.status}
         />
       </div>
-      {application.status === "APPROVED" && (
-        <section className="pf-panel" aria-labelledby="pf-billing">
-          <div className="pf-panel-head">
-            <h2 id="pf-billing">
-              Төлбөр <span>{BILLING_LABELS[billing.state]}</span>
-            </h2>
-            {billing.state !== "FREE" && (
-              <PaymentAction
-                id={salon.id}
-                name={salon.name}
-                amountMnt={billing.amountMnt}
-                branches={billing.branches}
-                nextEnd={billing.nextEnd}
-              />
-            )}
-          </div>
-          <dl className="pf-facts">
-            <div>
-              <dt>Эрх дуусах</dt>
-              <dd>
-                {billing.until
-                  ? `${date(billing.until)}${billing.daysLeft ? ` · ${billing.daysLeft} хоног үлдсэн` : ""}`
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt>Идэвхтэй салбар</dt>
-              <dd>{billing.branches}</dd>
-            </div>
-            <div>
-              <dt>Сарын төлбөр</dt>
-              <dd>
-                {billing.state === "FREE" ? (
-                  "—"
-                ) : (
-                  <SalonPrice
-                    id={salon.id}
-                    amountMnt={billing.amountMnt}
-                    custom={billing.customPrice}
-                  />
-                )}
-              </dd>
-            </div>
-          </dl>
-          {billing.payments.length > 0 ? (
-            <ul className="billing-history">
-              {billing.payments.map((p) => (
-                <li key={p.id}>
-                  <span>
-                    {date(p.periodStart)} – {date(p.periodEnd)} · {p.branches}{" "}
-                    салбар
-                  </span>
-                  <span>{formatMnt(p.amountMnt)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="pf-note">Төлбөр бүртгэгдээгүй.</p>
-          )}
-        </section>
-      )}
-      <section className="pf-panel" aria-labelledby="pf-revenue">
-        <div className="pf-panel-head">
-          <h2 id="pf-revenue">
-            Салоны орлого <span>Дууссан захиалгаар · сүүлийн 6 сар</span>
-          </h2>
-        </div>
-        <ul className="pf-revenue">
-          {salon.revenue.map((m) => (
-            <li key={m.month}>
-              <span>{formatMonthLabel(m.month)}</span>
-              <span className="pf-revenue-track">
-                <span
-                  style={{
-                    width: `${(m.revenue / Math.max(1, ...salon.revenue.map((r) => r.revenue))) * 100}%`,
-                  }}
-                />
-              </span>
-              <b>{formatMnt(m.revenue)}</b>
-              <small>{m.count} захиалга</small>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="pf-panel" aria-labelledby="pf-application">
+      <section
+        className="pf-panel pf-review-panel"
+        aria-labelledby="pf-application"
+      >
         <div className="pf-panel-head">
           <h2 id="pf-application">
-            Бүртгэлийн хүсэлт <span>{REVIEW_LABELS[application.status]}</span>
+            Баталгаажуулалт <span>{REVIEW_LABELS[application.status]}</span>
           </h2>
+          <small>
+            Эзэн:{" "}
+            {owner ? `${owner.name || owner.email} · ${owner.email}` : "—"}
+          </small>
         </div>
         <dl className="pf-facts">
           <div>
@@ -242,11 +170,128 @@ export default async function PlatformSalon({
             </div>
           )}
         </dl>
+        <div className="pf-profile">
+          <h3>
+            Профайлын бүрэн байдал{" "}
+            <span>
+              {checklist.filter((c) => c.done).length}/{checklist.length}
+            </span>
+          </h3>
+          <ul>
+            {checklist.map((c) => (
+              <li key={c.key} className={c.done ? "done" : ""}>
+                {c.done ? "✓" : "○"} {c.label}
+              </li>
+            ))}
+          </ul>
+          <p className="pf-note">
+            {checklist.every((c) => c.done)
+              ? "Профайл бүрэн. Баталгаажмагц салонуудын жагсаалтад гарна."
+              : "Дутуу зүйлсийг салоны эзэн бөглөтөл захиалгын хуудас жагсаалтад гарахгүй. Баталгаажуулахад саадгүй."}
+          </p>
+        </div>
         <ReviewAction
           id={salon.id}
           name={salon.name}
           status={application.status}
         />
+      </section>
+      {application.status === "APPROVED" && (
+        <section className="pf-panel" aria-labelledby="pf-billing">
+          <div className="pf-panel-head">
+            <h2 id="pf-billing">
+              Төлбөр <span>{BILLING_LABELS[billing.state]}</span>
+            </h2>
+            {billing.state !== "FREE" && (
+              <PaymentAction
+                id={salon.id}
+                name={salon.name}
+                amountMnt={billing.amountMnt}
+                branches={billing.branches}
+                nextEnd={billing.nextEnd}
+              />
+            )}
+          </div>
+          <dl className="pf-facts">
+            <div>
+              <dt>Эрх дуусах</dt>
+              <dd>
+                {billing.until
+                  ? `${date(billing.until)}${billing.daysLeft ? ` · ${billing.daysLeft} хоног үлдсэн` : ""}`
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>Салбар · үйлчилгээ · ажилтан</dt>
+              <dd>
+                {billing.usage.branches} · {billing.usage.services} ·{" "}
+                {billing.usage.staff}
+              </dd>
+            </div>
+            <div>
+              <dt>Энэ сарын онлайн захиалга</dt>
+              <dd>{billing.usage.onlineMonth}</dd>
+            </div>
+            <div>
+              <dt>Эзэмшигчийн сонголт</dt>
+              <dd>
+                {billing.choice ? renewalLabels[billing.choice] : "Сонгоогүй"}
+              </dd>
+            </div>
+            <div>
+              <dt>Сарын төлбөр</dt>
+              <dd>
+                {billing.state === "FREE" ? (
+                  "—"
+                ) : (
+                  <SalonPrice
+                    id={salon.id}
+                    amountMnt={billing.amountMnt}
+                    custom={billing.customPrice}
+                  />
+                )}
+              </dd>
+            </div>
+          </dl>
+          {billing.payments.length > 0 ? (
+            <ul className="billing-history">
+              {billing.payments.map((p) => (
+                <li key={p.id}>
+                  <span>
+                    {date(p.periodStart)} – {date(p.periodEnd)} · {p.branches}{" "}
+                    салбар
+                  </span>
+                  <span>{formatMnt(p.amountMnt)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="pf-note">Төлбөр бүртгэгдээгүй.</p>
+          )}
+        </section>
+      )}
+      <section className="pf-panel" aria-labelledby="pf-revenue">
+        <div className="pf-panel-head">
+          <h2 id="pf-revenue">
+            Салоны орлого <span>Дууссан захиалгаар · сүүлийн 6 сар</span>
+          </h2>
+        </div>
+        <ul className="pf-revenue">
+          {salon.revenue.map((m) => (
+            <li key={m.month}>
+              <span>{formatMonthLabel(m.month)}</span>
+              <span className="pf-revenue-track">
+                <span
+                  style={{
+                    width: `${(m.revenue / Math.max(1, ...salon.revenue.map((r) => r.revenue))) * 100}%`,
+                  }}
+                />
+              </span>
+              <b>{formatMnt(m.revenue)}</b>
+              <small>{m.count} захиалга</small>
+            </li>
+          ))}
+        </ul>
       </section>
       <section className="pf-stats" aria-label="Салоны үзүүлэлтүүд">
         {(

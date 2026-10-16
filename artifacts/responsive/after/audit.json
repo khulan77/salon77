@@ -1,0 +1,194 @@
+[
+  {
+    "name": "business",
+    "width": 360,
+    "contrastFailures": [],
+    "url": "/business",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "business",
+    "width": 768,
+    "contrastFailures": [],
+    "url": "/business",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "business",
+    "width": 1280,
+    "contrastFailures": [],
+    "url": "/business",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "home",
+    "width": 360,
+    "contrastFailures": [],
+    "url": "/home",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "home",
+    "width": 768,
+    "contrastFailures": [],
+    "url": "/home",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "home",
+    "width": 1280,
+    "contrastFailures": [],
+    "url": "/home",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "sign-up",
+    "width": 360,
+    "contrastFailures": [],
+    "url": "/sign-up",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "sign-up",
+    "width": 768,
+    "contrastFailures": [],
+    "url": "/sign-up",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "sign-up",
+    "width": 1280,
+    "contrastFailures": [],
+    "url": "/sign-up",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "invite",
+    "width": 360,
+    "contrastFailures": [],
+    "url": "/invite",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "invite",
+    "width": 768,
+    "contrastFailures": [],
+    "url": "/invite",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "invite",
+    "width": 1280,
+    "contrastFailures": [],
+    "url": "/invite",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "book",
+    "width": 360,
+    "contrastFailures": [],
+    "url": "/salon-a/book",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "book",
+    "width": 768,
+    "contrastFailures": [],
+    "url": "/salon-a/book",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "book",
+    "width": 1280,
+    "contrastFailures": [],
+    "url": "/salon-a/book",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "onboarding",
+    "width": 360,
+    "contrastFailures": [],
+    "url": "/onboarding",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "onboarding",
+    "width": 768,
+    "contrastFailures": [],
+    "url": "/onboarding",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "onboarding",
+    "width": 1280,
+    "contrastFailures": [],
+    "url": "/onboarding",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "dashboard",
+    "width": 360,
+    "contrastFailures": [],
+    "url": "/calendar",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "dashboard",
+    "width": 768,
+    "contrastFailures": [],
+    "url": "/calendar",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "dashboard",
+    "width": 1280,
+    "contrastFailures": [],
+    "url": "/calendar",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "calendar",
+    "width": 360,
+    "contrastFailures": [],
+    "url": "/calendar",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "calendar",
+    "width": 768,
+    "contrastFailures": [],
+    "url": "/calendar",
+    "overflow": false,
+    "small": []
+  },
+  {
+    "name": "calendar",
+    "width": 1280,
+    "contrastFailures": [],
+    "url": "/calendar",
+    "overflow": false,
+    "small": []
+  }
+]

@@ -1,4 +1,4 @@
-import { membership } from "@/lib/auth";
+import { membership, setupAccess } from "@/lib/auth";
 import { actorFromMember } from "@/lib/access";
 import { db } from "@/lib/db";
 import { failure, sameOrigin } from "@/lib/http";
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return Response.json(
       await readSchedules(
         db,
-        actorFromMember(await membership()),
+        actorFromMember(await membership(setupAccess)),
         new URL(request.url).searchParams.get("branchId") ?? undefined,
       ),
     );
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 async function save(request: Request, editing: boolean) {
   try {
     sameOrigin(request);
-    const actor = actorFromMember(await membership());
+    const actor = actorFromMember(await membership(setupAccess));
     const id = editing
       ? recordId.parse(new URL(request.url).searchParams.get("id"))
       : undefined;
@@ -43,7 +43,7 @@ export async function DELETE(request: Request) {
     return Response.json(
       await removeSchedule(
         db,
-        actorFromMember(await membership()),
+        actorFromMember(await membership(setupAccess)),
         "hours",
         recordId.parse(new URL(request.url).searchParams.get("id")),
       ),

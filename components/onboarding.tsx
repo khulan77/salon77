@@ -1,4 +1,5 @@
 "use client";
+import { bookingThemes, recommendedBookingTheme } from "@/lib/booking-themes";
 import { userFacingError } from "@/lib/ui-language";
 import {
   localizeInvalidField,
@@ -11,10 +12,12 @@ import { ArrowLeft, ArrowRight, Hourglass } from "lucide-react";
 import { Button } from "./ui/button";
 import { slugify } from "@/lib/slug";
 import { ApplicationFields } from "./application-fields";
+import { SignupPrep } from "./signup-prep";
 import { DistrictSelect } from "./district-select";
 import { hasSocial, socialRequired } from "@/lib/salon-application";
 import { site } from "@/lib/site";
 import { signOut } from "@/app/auth/actions";
+import { Logo } from "@/components/logo";
 export function Onboarding({
   preview,
   hasSalon,
@@ -134,15 +137,7 @@ export function Onboarding({
   return (
     <div className="onboarding-page">
       <header className="onboarding-header">
-        <Link href="/" className="brand">
-          <span className="brand-symbol">
-            s<span>·</span>
-          </span>
-          <span>
-            salon<span className="brand-number">77</span>
-            <span className="brand-dot">.</span>
-          </span>
-        </Link>
+        <Logo className="brand" />
         {/* Without a salon, "/" would only send the user back here. */}
         {preview || hasSalon ? (
           <Link href="/">Удирдлагын хэсэгт буцах ↗</Link>
@@ -181,6 +176,7 @@ export function Onboarding({
                   салоноо хадгалаарай.
                 </div>
               )}
+              {step === 0 && <SignupPrep heading="h2" />}
               {error && (
                 <div role="alert" className="error-message">
                   {error}
@@ -320,10 +316,23 @@ export function Onboarding({
                   </>
                 )}
                 {step === 2 && (
-                  <ApplicationFields
-                    value={data}
-                    onChange={(patch) => setData({ ...data, ...patch })}
-                  />
+                  <>
+                    <ApplicationFields
+                      value={data}
+                      onChange={(patch) => setData({ ...data, ...patch })}
+                    />
+                    <p className="field-hint">
+                      Санал болгох өнгөний загвар:{" "}
+                      <strong>
+                        {
+                          bookingThemes[
+                            recommendedBookingTheme(data.serviceTypes)
+                          ].label
+                        }
+                      </strong>
+                      . Дараа нь тохиргооноос сольж болно.
+                    </p>
+                  </>
                 )}
                 <div className="form-actions">
                   {step > 0 && (
@@ -355,9 +364,10 @@ export function Onboarding({
               <Hourglass size={52} strokeWidth={1.2} />
               <h1>{titles[steps]}</h1>
               <p>
-                Бид мэдээллийг тань шалгаад салоныг баталгаажуулна. Энэ хооронд
-                үйлчилгээ, ажилтан, зургаа бэлдээрэй. Баталгаажмагц салон тань
-                нийтэд харагдаж, онлайн захиалга авч эхэлнэ.
+                Бид мэдээллийг тань {site.reviewTime} шалгаад салоныг
+                баталгаажуулна. Энэ хооронд үйлчилгээ, ажилтан, зургаа
+                бэлдээрэй. Баталгаажмагц салон тань нийтэд харагдаж, онлайн
+                захиалга авч эхэлнэ.
               </p>
               <Button asChild>
                 <Link href="/">

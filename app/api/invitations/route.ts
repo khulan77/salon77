@@ -7,26 +7,29 @@ import {
   cancelInvitation,
   recordId,
 } from "@/lib/services/team";
-import { HttpError } from "@/lib/errors";
+import { sendInvitationEmail } from "@/lib/notifications/platform-email";
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
     const actor = actorFromMember(await tenant());
-    if (
-      process.env.NODE_ENV === "production" &&
-      process.env.ALLOW_DEVELOPMENT_INVITE_LINKS !== "true"
-    )
-      throw new HttpError(
-        503,
-        "Имэйл илгээлт тохируулагдаагүй байна. Админ туршилтын холбоосын горимыг идэвхжүүлэх шаардлагатай.",
-      );
     const result = await createInvitation(db, actor, await request.json());
+    const invitePath = `/invite?token=${result.token}`;
+    const origin =
+      process.env.APP_URL?.replace(/\/$/, "") || new URL(request.url).origin;
+    const emailed = await sendInvitationEmail(result.email, {
+      name: result.name,
+      salonName: result.salonName,
+      branchName: result.branchName,
+      link: `${origin}${invitePath}`,
+      expiresAt: result.expiresAt,
+    });
     return Response.json(
       {
         id: result.id,
-        invitePath: `/invite?token=${result.token}`,
-        message:
-          "Урилга үүслээ. Туршилтын горим: имэйл илгээгээгүй. Холбоосыг зөвхөн уригдсан хүнд дамжуулна уу.",
+        invitePath,
+        emailed,
+        replaced: result.replaced,
+        expiresAt: result.expiresAt.toISOString(),
       },
       { status: 201, headers: { "Cache-Control": "no-store" } },
     );

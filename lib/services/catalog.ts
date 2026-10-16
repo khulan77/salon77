@@ -11,6 +11,7 @@ import {
   refreshActor,
   requireOwner,
   requireBranch,
+  requireOwnBranches,
   assertActiveBranches,
 } from "../access";
 import { HttpError } from "../errors";
@@ -30,6 +31,15 @@ export async function readCatalog(
         : { branchId: { in: actor.branchIds } }),
     ...(owner ? {} : { branch: { active: true } }),
   };
+  // The owner's category list does not depend on the services; read both at
+  // once. The front desk picks from every active category when adding.
+  const ownerCategories =
+    owner || actor.role === "RECEPTIONIST"
+      ? db.serviceCategory.findMany({
+          where: { salonId: actor.salonId, ...(owner ? {} : { active: true }) },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        })
+      : null;
   const services = await db.service.findMany({
     where: {
       salonId: actor.salonId,
@@ -43,18 +53,22 @@ export async function readCatalog(
       ...(!owner ? { active: true, category: { active: true } } : {}),
       ...(!owner || branchId ? { branches: { some: branchFilter } } : {}),
     },
-    include: { branches: { where: branchFilter, select: { branchId: true } } },
+    include: {
+      branches: { where: branchFilter, select: { branchId: true } },
+      _count: { select: { branches: true } },
+    },
     orderBy: { name: "asc" },
   });
-  const categories = await db.serviceCategory.findMany({
-    where: {
-      salonId: actor.salonId,
-      ...(owner
-        ? {}
-        : { id: { in: services.map((s) => s.categoryId) }, active: true }),
-    },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-  });
+  const categories =
+    (await ownerCategories) ??
+    (await db.serviceCategory.findMany({
+      where: {
+        salonId: actor.salonId,
+        id: { in: services.map((s) => s.categoryId) },
+        active: true,
+      },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }));
   return {
     categories: categories.map((c) => ({
       id: c.id,
@@ -74,6 +88,12 @@ export async function readCatalog(
       active: s.active,
       onlineBookable: s.onlineBookable,
       branchIds: s.branches.map((b) => b.branchId),
+      // A receptionist edits only services no other branch offers.
+      editable:
+        owner ||
+        (actor.role === "RECEPTIONIST" &&
+          s.branches.length > 0 &&
+          s._count.branches === s.branches.length),
     })),
   };
 }
@@ -124,7 +144,24 @@ export async function saveService(
   return db.$transaction(
     async (tx) => {
       const current = await refreshActor(tx, actor);
-      requireOwner(current);
+      // The front desk adds and edits services of its own branch only.
+      if (current.role === "RECEPTIONIST") {
+        if (id) {
+          const existing = await tx.serviceBranch.findMany({
+            where: { serviceId: id, salonId: current.salonId },
+            select: { branchId: true },
+          });
+          if (!existing.length)
+            throw new HttpError(404, "Үйлчилгээ олдсонгүй.");
+          requireOwnBranches(
+            current,
+            existing.map((b) => b.branchId),
+          );
+        }
+        requireOwnBranches(current, input.branchIds);
+        if (!input.active)
+          throw new HttpError(403, "Зөвхөн админ хандах эрхтэй.");
+      } else requireOwner(current);
       return writeService(tx, current, input, id);
     },
     { isolationLevel: "Serializable" },

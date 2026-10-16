@@ -98,6 +98,19 @@ export function PublicBooking({
   const submission = useRef<{ payload: string; key: string } | null>(null);
   const trap = useRef<HTMLInputElement>(null);
   const branch = catalog.branches.find((b) => b.id === branchId);
+  const multiBranch = catalog.branches.length > 1;
+  // A different branch has its own services and staff; start the pick over.
+  function pickBranch(id: string) {
+    setBranchId(id);
+    setPicked([]);
+    setStaff({});
+  }
+  // The picked branch's own photos; otherwise the salon's cover or first work photo.
+  const heroPhotos = branch?.images.length
+    ? branch.images.map((i) => i.url)
+    : [branch?.imageUrl ?? salon.coverUrl ?? work[0]].filter(
+        (url): url is string => Boolean(url),
+      );
   const offered = catalog.services.filter((s) =>
     s.branchIds.includes(branchId),
   );
@@ -228,10 +241,11 @@ export function PublicBooking({
   const hero = (
     <header className="pb-hero">
       <SalonGallery
-        name={salon.name}
-        photos={[branch?.imageUrl ?? salon.coverUrl ?? work[0]].filter(
-          (url): url is string => Boolean(url),
-        )}
+        key={branch?.id ?? "salon"}
+        name={
+          multiBranch && branch ? `${salon.name}, ${branch.name}` : salon.name
+        }
+        photos={heroPhotos}
       />
       <div className="pb-hero-body">
         <div className="pb-title">
@@ -254,9 +268,47 @@ export function PublicBooking({
                 <span>· {catalog.reviews.count} үнэлгээ</span>
               </a>
             )}
+            {multiBranch && (
+              <span className="pb-branch-count">
+                <MapPin size={13} /> {catalog.branches.length} салбар
+              </span>
+            )}
           </div>
         </div>
         {salon.description && <p className="pb-about">{salon.description}</p>}
+        {multiBranch &&
+          (step === "menu" ? (
+            <div
+              className="pb-branches"
+              role="group"
+              aria-label="Салбар сонгох"
+            >
+              {catalog.branches.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  aria-pressed={b.id === branchId}
+                  onClick={() => pickBranch(b.id)}
+                >
+                  {b.id === branchId ? (
+                    <Check size={14} />
+                  ) : (
+                    <MapPin size={14} />
+                  )}
+                  <span>
+                    <b>{b.name}</b>
+                    {b.district && <small>{b.district}</small>}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            branch && (
+              <p className="pb-branch-picked">
+                <MapPin size={14} /> {branch.name}
+              </p>
+            )
+          ))}
         {branch && (
           <ul className="pb-facts">
             <li>
@@ -274,6 +326,14 @@ export function PublicBooking({
               <Clock3 size={14} />
               {branch.hours}
             </li>
+            {branch.phone && (
+              <li>
+                <Phone size={14} />
+                <a className="pb-map-link" href={`tel:${branch.phone}`}>
+                  {branch.phone}
+                </a>
+              </li>
+            )}
           </ul>
         )}
         <div className="pb-contact">
@@ -461,24 +521,6 @@ export function PublicBooking({
       )}
       {step === "menu" && (
         <section aria-labelledby="pb-services">
-          {catalog.branches.length > 1 && (
-            <div className="pb-chips" role="group" aria-label="Салбар сонгох">
-              {catalog.branches.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  aria-pressed={b.id === branchId}
-                  onClick={() => {
-                    setBranchId(b.id);
-                    setPicked([]);
-                    setStaff({});
-                  }}
-                >
-                  <MapPin size={13} /> {b.name}
-                </button>
-              ))}
-            </div>
-          )}
           <h2 id="pb-services" className="pb-heading">
             Үйлчилгээ сонгох
             <small>Нэг удаад 2 хүртэл үйлчилгээг 2 ажилтан зэрэг хийнэ.</small>

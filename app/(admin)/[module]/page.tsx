@@ -2,6 +2,7 @@ import { BookingSettings } from "@/components/booking-settings";
 import { SettingsTabs } from "@/components/settings-tabs";
 import { discountedPrice } from "@/lib/pricing";
 import { smsDelivers } from "@/lib/notifications/provider";
+import { inviteEmailReady } from "@/lib/notifications/platform-email";
 import { RevenueReport } from "@/components/revenue-report";
 import { Timesheet } from "@/components/timesheet";
 import { readTimesheet, timesheetQuery } from "@/lib/services/timesheet";
@@ -12,7 +13,11 @@ import {
   revenueReport,
 } from "@/lib/services/reports";
 import { BookingCalendar } from "@/components/booking-calendar";
+import { BranchSlots } from "@/components/branch-slots";
+import { peekOptions } from "@/lib/services/bookings";
 import { SetupSteps } from "@/components/setup-steps";
+import { ProfileChecklist } from "@/components/profile-checklist";
+import { profileChecklist } from "@/lib/services/publish";
 import { ReviewsBoard } from "@/components/reviews-board";
 import { listReviews } from "@/lib/services/reviews";
 import { CustomerDirectory } from "@/components/customer-directory";
@@ -25,17 +30,15 @@ import { readInventory } from "@/lib/services/inventory";
 import { readStaff, readSchedules } from "@/lib/services/staff";
 import { moduleAllowed } from "@/lib/access";
 import { ServiceCatalog } from "@/components/service-catalog";
-import { configured } from "@/lib/env";
 import { db } from "@/lib/db";
-import { membership } from "@/lib/auth";
-import { actorFromMember } from "@/lib/access";
 import { readCatalog } from "@/lib/services/catalog";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { adminData } from "@/lib/admin-data";
+import { adminActor, adminData, setupState, teamLists } from "@/lib/admin-data";
 import { modules } from "@/lib/navigation";
 import { Branches } from "@/components/branches";
+import { readBranchGalleries } from "@/lib/services/salon-media";
 import { Team } from "@/components/team";
 // The address visitors use, so the share link works on any domain.
 async function requestOrigin() {
@@ -60,8 +63,23 @@ export default async function Page({
   const { module } = await params;
   const item = modules.find((i) => i.href === `/${module}`);
   if (!item) notFound();
-  const data = await adminData();
-  if (!moduleAllowed(data.role, `/${module}`))
+  // The member is cached for the request; the page's own reads then run
+  // alongside the layout's branch list instead of after it.
+  const actor = await adminActor();
+  const role = actor?.role ?? "SALON_OWNER";
+  const approved = (await adminData()).billing.state !== "PENDING";
+  if (!approved && !moduleAllowed(role, `/${module}`, false))
+    return (
+      <section className="panel empty-page">
+        <h1>Баталгаажсаны дараа нээгдэнэ</h1>
+        <p>
+          Салон тань хянагдаж байна. Энэ хооронд үйлчилгээ, ажилтан, ажлын цаг,
+          салбар болон зургаа бэлдээрэй.
+        </p>
+        <Link href="/onboarding/review">Хүсэлтийн төлөв харах</Link>
+      </section>
+    );
+  if (!moduleAllowed(role, `/${module}`))
     return (
       <section className="panel empty-page">
         <h1>Хандах эрхгүй</h1>
@@ -70,14 +88,24 @@ export default async function Page({
       </section>
     );
   if (module === "settings") {
-    const salonId = configured ? (await membership()).salonId : null;
-    const [salon, services] = salonId
-      ? await Promise.all([
-          db.salon.findUnique({
+    const salonId = actor?.salonId;
+    const [data, salon, services, checklist] = await Promise.all([
+      adminData(),
+      salonId
+        ? db.salon.findUnique({
             where: { id: salonId },
-            select: { coverUrl: true, instagram: true, facebook: true },
-          }),
-          db.service.findMany({
+            select: {
+              coverUrl: true,
+              instagram: true,
+              facebook: true,
+              phone: true,
+              description: true,
+              serviceTypes: true,
+            },
+          })
+        : null,
+      salonId
+        ? db.service.findMany({
             where: {
               salonId,
               active: true,
@@ -92,12 +120,14 @@ export default async function Page({
             },
             orderBy: { name: "asc" },
             take: 3,
-          }),
-        ])
-      : [null, []];
+          })
+        : [],
+      salonId && role === "SALON_OWNER" ? profileChecklist(db, salonId) : null,
+    ]);
     return (
       <>
         <SettingsTabs active="/settings" />
+        {checklist && <ProfileChecklist items={checklist} />}
         <BookingSettings
           preview={data.preview}
           salonName={data.salonName}
@@ -106,6 +136,9 @@ export default async function Page({
           logoUrl={data.logoUrl}
           instagram={salon?.instagram ?? ""}
           facebook={salon?.facebook ?? ""}
+          phone={salon?.phone ?? ""}
+          description={salon?.description ?? ""}
+          serviceTypes={salon?.serviceTypes ?? []}
           origin={await requestOrigin()}
           coverUrl={salon?.coverUrl ?? null}
           branches={data.branches.filter((b) => b.active)}
@@ -135,9 +168,12 @@ export default async function Page({
             .toISOString()
             .slice(0, 10),
         };
-    const timesheet = data.preview
-      ? { ...range, today, staff: [], marks: [] }
-      : await readTimesheet(db, actorFromMember(await membership()), range);
+    const [data, timesheet] = await Promise.all([
+      adminData(),
+      actor
+        ? readTimesheet(db, actor, range)
+        : { ...range, today, staff: [], marks: [] },
+    ]);
     return (
       <Timesheet
         data={timesheet}
@@ -150,9 +186,10 @@ export default async function Page({
     const { from, to, branchId } = await searchParams;
     const parsed = reportQuery.safeParse({ from, to, branchId });
     const range = parsed.success ? parsed.data : monthToDate();
-    const report = data.preview
-      ? emptyReport(range)
-      : await revenueReport(db, actorFromMember(await membership()), range);
+    const [data, report] = await Promise.all([
+      adminData(),
+      actor ? revenueReport(db, actor, range) : emptyReport(range),
+    ]);
     return (
       <RevenueReport
         report={report}
@@ -164,19 +201,28 @@ export default async function Page({
   if (module === "customers")
     return (
       <CustomerDirectory
-        preview={data.preview}
-        owner={data.role === "SALON_OWNER"}
+        preview={!actor}
+        owner={role === "SALON_OWNER"}
         initialId={(await searchParams).id}
       />
     );
   if (module === "calendar" || module === "bookings") {
-    const actor = configured ? actorFromMember(await membership()) : null;
-    const [staff, catalog] = actor
-      ? await Promise.all([readStaff(db, actor), readCatalog(db, actor)])
-      : [[], { services: [], categories: [] }];
+    const [data, staff, catalog, peek, setup, checklist] = await Promise.all([
+      adminData(),
+      actor ? readStaff(db, actor) : [],
+      actor ? readCatalog(db, actor) : { services: [], categories: [] },
+      actor ? peekOptions(db, actor) : null,
+      module === "calendar" ? setupState() : null,
+      module === "calendar" && actor?.role === "SALON_OWNER"
+        ? profileChecklist(db, actor.salonId)
+        : null,
+    ]);
+    const setupDone = setup && setup.services && setup.staff && setup.hours;
     return (
       <>
-        {module === "calendar" && <SetupSteps data={data} />}
+        {setup && <SetupSteps data={{ ...data, setup }} />}
+        {/* The first steps come first; the rest of the profile after them. */}
+        {setupDone && checklist && <ProfileChecklist items={checklist} />}
         <BookingCalendar
           mode={module}
           preview={data.preview}
@@ -193,39 +239,46 @@ export default async function Page({
             staff: staff.filter((s) => s.active),
           }}
         />
+        {module === "calendar" && peek && !data.preview && (
+          <BranchSlots options={peek} />
+        )}
       </>
     );
   }
   if (module === "reviews")
     return (
       <ReviewsBoard
-        owner={data.role === "SALON_OWNER"}
-        initial={
-          configured && !data.preview
-            ? await listReviews(db, actorFromMember(await membership()))
-            : []
-        }
+        owner={role === "SALON_OWNER"}
+        initial={actor ? await listReviews(db, actor) : []}
       />
     );
-  if (module === "branches") return <Branches data={data} />;
-  if (module === "team")
+  if (module === "branches") {
+    const [data, photos] = await Promise.all([
+      adminData(),
+      actor ? readBranchGalleries(db, actor) : {},
+    ]);
+    return <Branches data={data} photos={photos} />;
+  }
+  if (module === "team") {
+    const [data, lists] = await Promise.all([adminData(), teamLists()]);
     return (
       <>
         <SettingsTabs active="/team" />
-        <Team data={data} />
+        <Team data={{ ...data, ...lists }} emailReady={inviteEmailReady()} />
       </>
     );
+  }
   if (module === "services") {
-    const actor = configured ? actorFromMember(await membership()) : null;
-    const [catalog, salon] = actor
-      ? await Promise.all([
-          readCatalog(db, actor),
-          db.salon.findUnique({
+    const [data, catalog, salon] = await Promise.all([
+      adminData(),
+      actor ? readCatalog(db, actor) : { categories: [], services: [] },
+      actor
+        ? db.salon.findUnique({
             where: { id: actor.salonId },
             select: { serviceTypes: true },
-          }),
-        ])
-      : [{ categories: [], services: [] }, null];
+          })
+        : null,
+    ]);
     return (
       <ServiceCatalog
         data={data}
@@ -235,22 +288,17 @@ export default async function Page({
     );
   }
   if (module === "employees") {
-    const actor = configured ? actorFromMember(await membership()) : null;
-    const [staff, catalog, schedule] = actor
-      ? await Promise.all([
-          readStaff(db, actor),
-          readCatalog(db, actor),
-          readSchedules(db, actor),
-        ])
-      : [
-          [],
-          { services: [], categories: [] },
-          { staff: [], hours: [], timeOff: [] },
-        ];
+    // The schedule already carries the staff list; no second staff read.
+    const [data, lists, catalog, schedule] = await Promise.all([
+      adminData(),
+      teamLists(),
+      actor ? readCatalog(db, actor) : { services: [], categories: [] },
+      actor ? readSchedules(db, actor) : { staff: [], hours: [], timeOff: [] },
+    ]);
     return (
       <StaffDirectory
-        data={data}
-        staff={staff}
+        data={{ ...data, ...lists }}
+        staff={schedule.staff}
         catalog={catalog}
         hours={schedule.hours}
       />
@@ -259,34 +307,29 @@ export default async function Page({
   if (module === "support")
     return (
       <SupportDesk
-        preview={data.preview}
-        initial={
-          configured
-            ? await listOwnFeedback(db, actorFromMember(await membership()))
-            : []
-        }
+        preview={!actor}
+        initial={actor ? await listOwnFeedback(db, actor) : []}
       />
     );
   if (module === "inventory") {
-    const actor = configured ? actorFromMember(await membership()) : null;
-    return (
-      <Inventory
-        data={data}
-        products={actor ? await readInventory(db, actor) : []}
-      />
-    );
+    const [data, products] = await Promise.all([
+      adminData(),
+      actor ? readInventory(db, actor) : [],
+    ]);
+    return <Inventory data={data} products={products} />;
   }
-  if (module === "schedules")
+  if (module === "schedules") {
+    const [data, schedule] = await Promise.all([
+      adminData(),
+      actor ? readSchedules(db, actor) : { staff: [], hours: [], timeOff: [] },
+    ]);
     return (
       <StaffSchedules
         data={data}
-        schedule={
-          configured
-            ? await readSchedules(db, actorFromMember(await membership()))
-            : { staff: [], hours: [], timeOff: [] }
-        }
+        schedule={schedule}
         initialStaff={(await searchParams).staffId}
       />
     );
+  }
   notFound();
 }

@@ -25,7 +25,7 @@ These rules apply to every change, whether a human or an agent makes it. Also re
 - Call `refreshActor()` inside write transactions.
 - Every new business table needs `salonId`, a composite `(id, salonId)` unique key, composite foreign keys for relations, `ENABLE ROW LEVEL SECURITY`, and `REVOKE ALL … FROM anon, authenticated`.
 - Public endpoints select publishable fields explicitly. Never reuse admin loaders for public responses.
-- Secrets: never commit `.env` and never print connection strings or keys. `SUPABASE_SECRET_KEY` is the only privileged key. It is read in `lib/storage.ts` for image uploads and must never be imported into client components or given a `NEXT_PUBLIC_` prefix. Only `NEXT_PUBLIC_*` values may reach the browser, and that key must be the publishable one.
+- Secrets: never commit `.env` and never print connection strings or keys. `SUPABASE_SECRET_KEY` is the only privileged key. It is read in `lib/storage.ts` for image uploads and, through that same check, in `lib/auth-admin.ts` to create the confirmed account of an invited receptionist. It must never be imported into client components or given a `NEXT_PUBLIC_` prefix. Only `NEXT_PUBLIC_*` values may reach the browser, and that key must be the publishable one.
 
 ## Booking invariants (do not weaken)
 
@@ -65,4 +65,4 @@ All user-facing text is natural Mongolian Cyrillic: labels, validation, errors, 
 
 ## Design
 
-Use the existing design system (`app/globals.css`, `components/ui`) as the source of truth: warm neutrals, dark text, a restrained purple accent and soft borders. Do not redesign working screens. Admin screens are optimized for speed, and public screens are mobile-first.
+Use the existing design system (`app/globals.css`, `components/ui`) as the source of truth: warm gray neutrals, dark text, a rose primary (`--brand-*`), a gold secondary (`--gold-*`) and soft borders. Colors, type sizes, spacing and radii are tokens in the `:root` block at the top of `app/globals.css`; use them instead of literal values, and keep text at WCAG AA contrast (gray-500, brand-600 or darker on light backgrounds). The logo is always `components/logo.tsx`, and public pages end with `components/site-footer.tsx`. Do not redesign working screens. Admin screens are optimized for speed, and public screens are mobile-first.

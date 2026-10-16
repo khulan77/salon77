@@ -1,3 +1,4 @@
+import { initializeBookingTheme } from "@/lib/services/booking-settings";
 import { cookies } from "next/headers";
 import { identity, membership, HttpError } from "@/lib/auth";
 import { actorFromMember } from "@/lib/access";
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
         if (await tx.salonMember.findFirst({ where: { userId: user.id } }))
           throw new HttpError(409, "Та аль хэдийн салоны гишүүн болсон байна.");
         // Every new salon waits for the platform's review before it is public.
-        return tx.salon.create({
+        const created = await tx.salon.create({
           data: {
             ...data,
             instagram: data.instagram || null,
@@ -41,6 +42,8 @@ export async function POST(request: Request) {
             members: { create: { userId: user.id, role: "SALON_OWNER" } },
           },
         });
+        await initializeBookingTheme(tx, created.id, data.serviceTypes);
+        return created;
       },
       { isolationLevel: "Serializable" },
     );

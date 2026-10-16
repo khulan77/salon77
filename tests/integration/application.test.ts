@@ -25,6 +25,10 @@ test("salon applications", { timeout: 120000 }, async (t) => {
   try {
     await seed(db);
     const actors = await bookingSeed(db);
+    // Complete profiles, so only the review decides who is listed.
+    await db.salon.updateMany({
+      data: { coverUrl: "https://example.test/cover.webp" },
+    });
     const admin = "00000000-0000-0000-0000-000000000009";
     await db.user.create({
       data: { id: admin, email: "ops@example.test", isSuperAdmin: true },
