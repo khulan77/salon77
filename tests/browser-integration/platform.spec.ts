@@ -12,6 +12,11 @@ test("the platform operator sees every salon; salon owners cannot", async ({
   await login(page, "platform@example.test");
   // The platform operator lands on the console straight after signing in.
   await expect(page).toHaveURL(/\/platform$/);
+  // Without a salon of their own, salon pages lead back to the console.
+  for (const path of ["/", "/calendar", "/onboarding"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/platform$/);
+  }
   await page.goto("/platform");
   await expect(
     page.getByRole("heading", { name: "Платформын тойм" }),

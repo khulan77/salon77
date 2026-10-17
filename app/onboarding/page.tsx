@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { sessionUser } from "@/lib/auth";
+import { isPlatformOperator, sessionUser } from "@/lib/auth";
 import { configured } from "@/lib/env";
 import { db } from "@/lib/db";
 import { Onboarding } from "@/components/onboarding";
@@ -19,6 +19,8 @@ export default async function Page() {
         select: { id: true },
       }),
     );
+    // The platform operator has no salon to set up; the console is home.
+    if (!hasSalon && (await isPlatformOperator(user.id))) redirect("/platform");
   }
   return <Onboarding preview={!configured} hasSalon={hasSalon} />;
 }

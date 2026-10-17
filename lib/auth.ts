@@ -78,6 +78,15 @@ export async function tenant(options: Parameters<typeof membership>[0] = {}) {
     throw new HttpError(403, "Зөвхөн эзэмшигч хандах эрхтэй.");
   return member;
 }
+// Whether a user is the platform operator; an operator without a salon of
+// their own belongs on the console, not in salon onboarding.
+export async function isPlatformOperator(userId: string) {
+  const row = await db.user.findUnique({
+    where: { id: userId },
+    select: { isSuperAdmin: true },
+  });
+  return Boolean(row?.isSuperAdmin);
+}
 // Platform console: a verified session whose User row is a super admin.
 // Anything else looks like a missing page.
 export async function platformAdminId(): Promise<string> {

@@ -320,4 +320,42 @@ export async function updateMember(
     { isolationLevel: "Serializable" },
   );
 }
+// Takes a member out of the salon. Their Salon77 account stays; only this
+// salon's access goes. Bookings and attendance they recorded stay too, with
+// the link to the removed member cleared.
+export async function removeMember(db: PrismaClient, actor: Actor, id: string) {
+  await db.$transaction(
+    async (tx) => {
+      const current = await refreshActor(tx, actor);
+      requireOwner(current);
+      const member = await tx.salonMember.findFirst({
+        where: { id, salonId: current.salonId },
+      });
+      if (!member) throw new HttpError(404, "Гишүүн олдсонгүй.");
+      if (member.role === "SALON_OWNER" || member.id === current.id)
+        throw new HttpError(409, "Эзэмшигчийг багаас хасах боломжгүй.");
+      const salonId = current.salonId;
+      await tx.booking.updateMany({
+        where: { salonId, createdByMemberId: id },
+        data: { createdByMemberId: null },
+      });
+      await tx.booking.updateMany({
+        where: { salonId, cancelledByMemberId: id },
+        data: { cancelledByMemberId: null },
+      });
+      await tx.staffAttendance.updateMany({
+        where: { salonId, updatedByMemberId: id },
+        data: { updatedByMemberId: null },
+      });
+      await tx.staff.updateMany({
+        where: { salonId, memberId: id },
+        data: { memberId: null },
+      });
+      await tx.salonMember.delete({
+        where: { id_salonId: { id, salonId } },
+      });
+    },
+    { isolationLevel: "Serializable" },
+  );
+}
 export const recordId = z.string().min(1).max(100);

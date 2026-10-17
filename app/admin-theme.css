@@ -57,3 +57,11 @@
 .app-shell .button-primary {
   box-shadow: none;
 }
+/* Removing a team member reads as a destructive action. */
+.app-shell .team-remove {
+  color: var(--danger-700);
+}
+.app-shell .team-remove:hover:not(:disabled) {
+  background: var(--danger-50);
+  color: var(--danger-700);
+}

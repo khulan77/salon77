@@ -4,6 +4,8 @@ import { cache } from "react";
 import { configured } from "./env";
 import {
   membership,
+  sessionUser,
+  isPlatformOperator,
   HttpError,
   noSalonAccess,
   salonSuspended,
@@ -89,8 +91,14 @@ export const adminMember = cache(async () => {
     return await membership({ unapproved: true });
   } catch (e) {
     if (e instanceof HttpError && e.status === 401) redirect("/sign-in");
-    if (e instanceof HttpError && e.message === noSalonAccess)
-      redirect("/onboarding");
+    if (e instanceof HttpError && e.message === noSalonAccess) {
+      const user = await sessionUser().catch(() => null);
+      redirect(
+        user && (await isPlatformOperator(user.id))
+          ? "/platform"
+          : "/onboarding",
+      );
+    }
     if (e instanceof HttpError && e.message === salonUnapproved)
       redirect("/onboarding/review");
     if (e instanceof HttpError && e.message === salonSuspended)

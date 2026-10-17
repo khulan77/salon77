@@ -108,6 +108,10 @@ Every admin page runs several database queries one after another, so the distanc
 
 Check after a deploy: open «Тайлан», then «Календарь»; the skeleton appears at once and the page fills in well under a second.
 
+## 2c. Photos and Vercel image optimization
+
+Photos are served straight from Supabase Storage (`images.unoptimized` in `next.config.ts`). Vercel's image optimizer is off by default because on the Hobby plan it answers `402 OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED` once the monthly quota is used, and every photo then shows as broken. On a paid plan, set `IMAGE_OPTIMIZATION=on` and redeploy to turn it back on.
+
 ## 3. Domain
 
 1. Vercel → **Settings → Domains** → add `salon77.mn` and `www.salon77.mn` (redirect www → apex).

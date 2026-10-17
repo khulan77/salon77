@@ -34,6 +34,10 @@ if (!storageHost)
 
 const nextConfig: NextConfig = {
   images: {
+    // Vercel's optimizer answers 402 once the Hobby plan's monthly image quota
+    // is used up, which broke every photo. Photos are served straight from
+    // Supabase Storage unless IMAGE_OPTIMIZATION=on (e.g. on a paid plan).
+    unoptimized: process.env.IMAGE_OPTIMIZATION !== "on",
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 2678400,
     remotePatterns: storageHost

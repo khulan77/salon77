@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Headset,
   Check,
+  Trash2,
 } from "lucide-react";
 import { localStamp } from "@/lib/business-time";
 import type { TeamData } from "@/lib/admin-data";
@@ -129,6 +130,25 @@ export function Team({
       setEditing(null);
     } catch (e) {
       setError(userFacingError(e, "Мэдээллийг хадгалж чадсангүй."));
+    } finally {
+      setPending(false);
+    }
+  }
+  async function remove(m: TeamData["members"][number]) {
+    if (
+      !window.confirm(
+        `«${m.name}»-г багаас хасах уу? Энэ салонд нэвтрэх эрх нь хаагдана. Бүртгэсэн захиалгууд хэвээр үлдэнэ.`,
+      )
+    )
+      return;
+    setPending(true);
+    setError("");
+    try {
+      await requestJson(`/api/members?id=${m.id}`, "DELETE");
+      setMessage(`«${m.name}»-г багаас хаслаа.`);
+      router.refresh();
+    } catch (e) {
+      setError(userFacingError(e, "Гишүүнийг хасаж чадсангүй."));
     } finally {
       setPending(false);
     }
@@ -320,6 +340,18 @@ export function Team({
                     >
                       <Pencil size={13} />
                       Засах
+                    </Button>
+                  )}
+                  {m.role !== "SALON_OWNER" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="team-remove"
+                      disabled={pending}
+                      onClick={() => remove(m)}
+                    >
+                      <Trash2 size={13} />
+                      Устгах
                     </Button>
                   )}
                 </div>
