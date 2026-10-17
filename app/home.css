@@ -782,6 +782,48 @@
   margin: 0 0 18px;
   color: var(--hx-muted);
 }
+/* Before the first salon: a small, quiet note instead of a big empty box. */
+.hx-empty.soon {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 18px 20px;
+  border-style: solid;
+  border-color: var(--hx-line);
+  text-align: left;
+}
+.hx-empty.soon > div {
+  flex: 1;
+  min-width: 0;
+}
+.hx-empty.soon h3 {
+  margin: 0 0 2px;
+  font-size: 16px;
+}
+.hx-empty.soon p {
+  margin: 0;
+  font-size: 13px;
+}
+.hx-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--hx-gold-soft);
+  color: var(--hx-gold-ink);
+}
+@media (max-width: 560px) {
+  .hx-empty.soon {
+    flex-wrap: wrap;
+  }
+  .hx-empty.soon .hx-btn {
+    width: 100%;
+  }
+}
 .hx-pager {
   display: flex;
   justify-content: center;

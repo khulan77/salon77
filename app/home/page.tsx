@@ -30,6 +30,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { db } from "@/lib/db";
+import { sessionUser } from "@/lib/auth";
 import { configured } from "@/lib/env";
 import {
   directoryQuery,
@@ -129,6 +130,9 @@ export default async function HomePage({
     ? await listDirectory(db, input)
     : emptyDirectory(input);
   const filtered = Boolean(data.query || data.district || data.filter);
+  // Before any salon is listed there is nothing to count or filter.
+  const noSalons = data.total === 0 && !filtered;
+  const viewer = configured ? await sessionUser().catch(() => null) : null;
   const pages = Math.max(1, Math.ceil(data.total / data.pageSize));
   const url = (params: Record<string, string>, hash = "") => {
     const search = new URLSearchParams(
@@ -202,14 +206,16 @@ export default async function HomePage({
           <Link href="/business" className="hx-pill">
             <Store size={16} /> Бизнесээ бүртгүүлэх
           </Link>
+          {viewer && (
+            <Link href="/" className="hx-square" aria-label="Мэдэгдэл">
+              <Bell size={18} />
+            </Link>
+          )}
           <Link
-            href="/sign-in"
-            className="hx-square"
-            aria-label="Мэдэгдэл: нэвтэрч харна"
+            href={viewer ? "/" : "/sign-in"}
+            className="hx-square dark"
+            aria-label={viewer ? "Миний хэсэг" : "Нэвтрэх"}
           >
-            <Bell size={18} />
-          </Link>
-          <Link href="/sign-in" className="hx-square dark" aria-label="Нэвтрэх">
             <UserRound size={18} />
           </Link>
         </div>
@@ -315,7 +321,9 @@ export default async function HomePage({
                 {data.query || data.district
                   ? "Хайлтын үр дүн"
                   : "Шилдэг салонууд"}
-                <span className="hx-count">{data.total}</span>
+                {data.total > 0 && (
+                  <span className="hx-count">{data.total}</span>
+                )}
               </h2>
               {(data.query || data.district) && (
                 <p className="hx-sub">
@@ -327,24 +335,26 @@ export default async function HomePage({
                 </p>
               )}
             </div>
-            <nav className="hx-tabs" aria-label="Салон шүүх">
-              {filters.map((f) => (
-                <Link
-                  key={f.key}
-                  href={url(
-                    {
-                      query: data.query,
-                      district: data.district,
-                      filter: f.key,
-                    },
-                    "#salons",
-                  )}
-                  aria-current={data.filter === f.key ? "true" : undefined}
-                >
-                  {f.label}
-                </Link>
-              ))}
-            </nav>
+            {!noSalons && (
+              <nav className="hx-tabs" aria-label="Салон шүүх">
+                {filters.map((f) => (
+                  <Link
+                    key={f.key}
+                    href={url(
+                      {
+                        query: data.query,
+                        district: data.district,
+                        filter: f.key,
+                      },
+                      "#salons",
+                    )}
+                    aria-current={data.filter === f.key ? "true" : undefined}
+                  >
+                    {f.label}
+                  </Link>
+                ))}
+              </nav>
+            )}
           </div>
           {data.salons.length ? (
             <ul className="hx-grid">
@@ -355,7 +365,7 @@ export default async function HomePage({
               ))}
             </ul>
           ) : (
-            <div className="hx-empty">
+            <div className={`hx-empty ${filtered ? "" : "soon"}`}>
               {filtered ? (
                 <>
                   <h3>Тохирох салон олдсонгүй</h3>
@@ -366,11 +376,17 @@ export default async function HomePage({
                 </>
               ) : (
                 <>
-                  <h3>Удахгүй энд салонууд нэмэгдэнэ</h3>
-                  <p>
-                    Салон эзэмшдэг бол одоо бүртгүүлж эхний эгнээнд харагдаарай.
-                  </p>
-                  <Link href="/business" className="hx-btn">
+                  <span className="hx-empty-icon">
+                    <Store size={18} />
+                  </span>
+                  <div>
+                    <h3>Удахгүй энд салонууд нэмэгдэнэ</h3>
+                    <p>
+                      Салон эзэмшдэг бол одоо бүртгүүлж эхний эгнээнд
+                      харагдаарай.
+                    </p>
+                  </div>
+                  <Link href="/business" className="hx-btn small">
                     Бизнесээ бүртгүүлэх
                   </Link>
                 </>

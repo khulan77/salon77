@@ -693,3 +693,37 @@
     font-size: 46px;
   }
 }
+
+/* The price after the free days, under the trial's 0₮. */
+.bx-plan-after {
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: #cfcac4;
+}
+.bx-plan-after b {
+  font-size: 18px;
+  font-weight: 700;
+  color: #d9c19a;
+  white-space: nowrap;
+}
+
+/* Phone: the six product screens scroll sideways instead of stacking. */
+@media (max-width: 640px) {
+  .lp.bx .lp-bento {
+    display: flex;
+    gap: 14px;
+    margin: 0 -16px;
+    padding: 4px 16px 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  .lp.bx .lp-bento::-webkit-scrollbar {
+    display: none;
+  }
+  .lp.bx .lp-bento > .lp-tile {
+    flex: 0 0 86%;
+    scroll-snap-align: start;
+  }
+}

@@ -286,3 +286,38 @@
 a.ax-submit {
   text-decoration: none;
 }
+/* Under 768px the dark panel is a single slim bar with the logo, so the
+   form is on the first screen. */
+@media (max-width: 767px) {
+  .ax-aside {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+  }
+  .ax-aside .ax-copy {
+    display: none;
+  }
+  .ax-aside .logo-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .ax-aside .logo-word {
+    font-size: 15px;
+  }
+  .ax-aside .logo-tagline {
+    display: none;
+  }
+  .ax-main {
+    padding-top: 4px;
+  }
+  .ax-help {
+    font-size: 13px;
+  }
+  .ax-form {
+    padding-block: 8px 24px;
+  }
+  .ax-lead {
+    margin-bottom: 20px;
+  }
+}

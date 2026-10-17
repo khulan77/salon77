@@ -4,11 +4,12 @@ test("business page explains the product and leads to sign-up", async ({
 }, info) => {
   await page.goto("/business");
   await expect(page.locator("h1")).toContainText("салоноо онлайн болгоё");
+  // One short page: pains, the product on one screen, the booking link,
+  // price, preparation, questions.
   for (const heading of [
-    "Онлайн захиалгын систем",
-    "Салоны бүрэн удирдлага",
-    "Баг ба эрх",
-    "Найдвартай, аюулгүй",
+    "Орлого, захиалга, ажилтнаа тоогоор хараарай",
+    "Нэг линкээр 24/7 цаг захиалга авна",
+    "Ил тод, уян хатан нөхцөл",
   ])
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
   // The pains come first, each with how the product handles it.

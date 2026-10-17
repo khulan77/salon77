@@ -13,19 +13,12 @@ import {
   ChartNoAxesCombined,
   Check,
   ClipboardCheck,
-  Droplets,
-  Eye,
-  Flower2,
-  Hand,
-  Paintbrush,
-  Palette,
   History,
   Landmark,
   Link2,
   MessageCircle,
   NotebookPen,
   Receipt,
-  ShieldCheck,
   Scissors,
   Sparkles,
   Star,
@@ -43,7 +36,6 @@ import { site } from "@/lib/site";
 import { HomeFooter } from "@/components/home-footer";
 import { Logo } from "@/components/logo";
 import { SERVICE_TYPES, type ServiceType } from "@/lib/salon-application";
-import { templatesFor } from "@/lib/service-templates";
 import { formatMnt } from "@/lib/ui-language";
 import { smsDelivers } from "@/lib/notifications/provider";
 import { PERIOD_DAYS, TRIAL_DAYS, monthlyAmount } from "@/lib/billing";
@@ -55,74 +47,17 @@ export const metadata: Metadata = {
   description:
     "Салоноо онлайн захиалгатай болгоод календарь, ажилтан, урьдчилгаа, тайлангаа нэг дороос удирдаарай.",
 };
-const groups = [
-  {
-    icon: Link2,
-    title: "Онлайн захиалгын систем",
-    text: "Салон бүр өөрийн захиалгын линктэй. Үйлчлүүлэгч утаснаасаа 24 цагийн турш цаг авна.",
-    items: [
-      "Үйлчлүүлэгч бүртгүүлэх, апп суулгах шаардлагагүй",
-      "Ажилтан, өдөр, сул цагаа өөрөө сонгоно",
-      "2 үйлчилгээг 2 ажилтан зэрэг хийх захиалга",
-      "Урьдчилгааг хувиар эсвэл тогтмол дүнгээр авах",
-      "Хямдралтай үнэ шууд харагдана",
-    ],
-  },
-  {
-    icon: CalendarCheck,
-    title: "Салоны бүрэн удирдлага",
-    text: "Өдөр тутмын ажил бүгд нэг дор, компьютер болон утсан дээр.",
-    items: [
-      "Календарь: өдөр, долоо хоногоор, салбар, ажилтнаар",
-      "Үйлчлүүлэгчийн бүртгэл, үйлчилгээний түүх",
-      "Үйлчилгээ, үнэ, хугацаа, ангилал",
-      "Ажилтан, ажлын цаг, цагийн бүртгэл",
-      "Орлогын тайлан: өдөр, сар, үйлчилгээ, ажилтнаар",
-    ],
-  },
-  {
-    icon: Users,
-    title: "Баг ба эрх",
-    text: "Хүн бүр зөвхөн өөрт хэрэгтэй хэсгээ харна.",
-    items: [
-      "Эзэмшигч, менежер, ресепшн, ажилтан гэсэн эрх",
-      "Хариуцсан салбараар хязгаарлах",
-      "Олон салбартай салонд тохиромжтой",
-      "Хэн хэзээ нэвтэрснийг харах",
-    ],
-  },
-  {
-    icon: ShieldCheck,
-    title: "Найдвартай, аюулгүй",
-    text: "Захиалгын алдаа, хуурамч захиалгаас хамгаална.",
-    items: [
-      "Нэг ажилтанд нэг цагт давхар захиалга орохгүй",
-      "Хуурамч, олон дахин захиалгаас хамгаалалт",
-      "Баталгаажаагүй захиалгыг автоматаар цуцлах",
-      "Салон бүрийн мэдээлэл тусдаа хамгаалагдсан",
-    ],
-  },
-];
-const steps = [
-  [
-    "Бүртгүүлэх",
-    `Имэйлээрээ бүртгүүлээд салоныхоо мэдээллийг илгээнэ. Бид ${site.reviewTime} шалгаад баталгаажуулна.`,
-  ],
-  ["Тохируулах", "Үйлчилгээ, үнэ, ажилтан, ажлын цагаа нэмнэ. Хэдхэн минут."],
-  [
-    "Линкээ хуваалцах",
-    "Захиалгын линкээ Инстаграм, Фэйсбүүк хуудсандаа тавиад захиалга аваад эхэлнэ.",
-  ],
-];
 // Mirrors lib/billing.ts: a free trial from approval, then a monthly fee per
 // active branch unless the operator agreed a salon's own price.
+// Shown wherever the price would be, until the platform sets one.
+const UNPRICED = "Үнийг бүртгүүлсний дараа тохиролцоно";
 const pricing = (pricePerBranch: number | null) => [
   [
     "Төлбөр хэд вэ?",
     `Салоноо баталгаажуулсан өдрөөс ${TRIAL_DAYS} хоног бүх боломж бүрэн үнэгүй. Дараа нь идэвхтэй салбарын тоогоор сар бүр төлнө${
       pricePerBranch
         ? `: нэг салбар ${PERIOD_DAYS} хоногт ${formatMnt(pricePerBranch)}.`
-        : ". Үнийг үнэгүй хугацаа дуусахаас өмнө танд мэдэгдэнэ."
+        : `. ${UNPRICED}.`
     } Олон салбартай эсвэл онцгой нөхцөлтэй салонтой үнийг тусад нь тохирно.`,
   ],
   [
@@ -344,18 +279,8 @@ async function branchPrice() {
   if (!configured) return null;
   return pricePerBranch(db).catch(() => null);
 }
-// The service types a salon can pick at onboarding, each with its starter
-// services (lib/service-templates.ts).
-const industries: { type: ServiceType; icon: typeof Scissors }[] = [
-  { type: "HAIR", icon: Scissors },
-  { type: "NAILS", icon: Paintbrush },
-  { type: "LASHES", icon: Eye },
-  { type: "BROWS", icon: Sparkles },
-  { type: "MAKEUP", icon: Palette },
-  { type: "SKIN", icon: Droplets },
-  { type: "MASSAGE", icon: Hand },
-  { type: "WAXING", icon: Flower2 },
-];
+// Footer shortcuts into the directory by service type.
+const footerTypes: ServiceType[] = ["HAIR", "NAILS", "LASHES", "SKIN", "MASSAGE"];
 export default async function BusinessPage() {
   // Messages are promised only once a real SMS gateway delivers them.
   const sms = smsDelivers();
@@ -367,10 +292,9 @@ export default async function BusinessPage() {
       <header className="lp-nav">
         <Logo href="/business" className="hx-logo" />
         <nav aria-label="Хуудасны хэсгүүд">
-          <a href="#industries">Шийдэл</a>
-          <a href="#features">Боломжууд</a>
+          <a href="#problems">Шийдэл</a>
+          <a href="#product">Боломжууд</a>
           <a href="#pricing">Үнэ</a>
-          <a href="#how">Хэрхэн ажилладаг</a>
           <a href="#faq">Асуулт</a>
         </nav>
         <div className="lp-nav-actions">
@@ -477,36 +401,6 @@ export default async function BusinessPage() {
               <em>Цаг захиалах</em>
             </div>
           </div>
-        </section>
-        <section
-          id="industries"
-          className="lp-section bx-industries"
-          aria-labelledby="bx-industries-title"
-        >
-          <div className="lp-heading">
-            <span className="lp-eyebrow">Салбар бүрт</span>
-            <h2 id="bx-industries-title">Таны салбарт зориулсан шийдэл</h2>
-            <p>
-              Үйлчилгээний төрлөө сонгоход бэлэн үйлчилгээний жагсаалт нэмэгдэж,
-              та зөвхөн үнээ оруулна.
-            </p>
-          </div>
-          <ul className="bx-industry-grid">
-            {industries.map(({ type, icon: Icon }) => (
-              <li key={type}>
-                <span className="bx-industry-icon">
-                  <Icon size={20} strokeWidth={1.6} />
-                </span>
-                <h3>{SERVICE_TYPES[type]}</h3>
-                <p>
-                  {templatesFor([type])
-                    .slice(0, 3)
-                    .map((t) => t.name)
-                    .join(" · ")}
-                </p>
-              </li>
-            ))}
-          </ul>
         </section>
         <section id="problems" className="lp-section">
           <div className="lp-heading">
@@ -801,34 +695,6 @@ export default async function BusinessPage() {
             харагдана.
           </p>
         </section>
-        <section id="features" className="lp-section">
-          <div className="lp-heading">
-            <span className="lp-eyebrow">ЮУ БАГТДАГ ВЭ</span>
-            <h2>Салонд хэрэгтэй бүх зүйл нэг дор</h2>
-            <p>
-              Бүртгүүлмэгц бүх боломж нээгдэнэ. Нэмэлт програм, тохиргоо
-              шаардлагагүй.
-            </p>
-          </div>
-          <div className="lp-groups">
-            {groups.map((g) => (
-              <article key={g.title}>
-                <span className="lp-icon">
-                  <g.icon size={19} />
-                </span>
-                <h3>{g.title}</h3>
-                <p>{g.text}</p>
-                <ul>
-                  {g.items.map((item) => (
-                    <li key={item}>
-                      <Check size={14} /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
-        </section>
         <section className="lp-section bx-link" aria-labelledby="bx-link-title">
           <div className="bx-link-copy">
             <span className="bx-chip">Шууд захиалга</span>
@@ -915,6 +781,18 @@ export default async function BusinessPage() {
                 <strong>0₮</strong>
                 <span>/ эхний {TRIAL_DAYS} хоногт</span>
               </div>
+              <p className="bx-plan-after">
+                {price ? (
+                  <>
+                    Дараа нь{" "}
+                    <b>
+                      {formatMnt(price)} / салбар · {PERIOD_DAYS} хоног
+                    </b>
+                  </>
+                ) : (
+                  <>Дараа нь: {UNPRICED}</>
+                )}
+              </p>
               <ul>
                 <li>
                   <Check size={16} /> Бүх ажилтан, үйлчилгээгээ бүрэн тохируулах
@@ -940,7 +818,7 @@ export default async function BusinessPage() {
                   <p>
                     {price
                       ? `Салбар бүрд ${PERIOD_DAYS} хоног тутам ${formatMnt(price)}. Жишээ нь 2 салбартай бол ${formatMnt(monthlyAmount(price, 2))}.`
-                      : `Төлбөр салбар бүрээр ${PERIOD_DAYS} хоног тутам бодогдоно. Үнийг үнэгүй хугацаа дуусахаас өмнө мэдэгдэнэ.`}
+                      : `Төлбөр салбар бүрээр ${PERIOD_DAYS} хоног тутам бодогдоно. ${UNPRICED}.`}
                   </p>
                 </li>
                 <li>
@@ -990,21 +868,6 @@ export default async function BusinessPage() {
           </div>
           <SignupPrep heading="h3" />
         </section>
-        <section id="how" className="lp-section">
-          <div className="lp-heading">
-            <span className="lp-eyebrow">ХЭРХЭН АЖИЛЛАДАГ ВЭ</span>
-            <h2>Гуравхан алхмаар эхэлнэ</h2>
-          </div>
-          <ol className="lp-steps">
-            {steps.map(([title, text], i) => (
-              <li key={title}>
-                <span>{i + 1}</span>
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
         <section id="faq" className="lp-section lp-faq">
           <div className="lp-heading">
             <span className="lp-eyebrow">ТҮГЭЭМЭЛ АСУУЛТ</span>
@@ -1019,13 +882,6 @@ export default async function BusinessPage() {
             ))}
           </div>
         </section>
-        <section id="about" className="lp-section lp-about">
-          <div>
-            <span className="lp-eyebrow">БИДНИЙ ТУХАЙ</span>
-            <h2>Монгол салонуудад зориулсан систем</h2>
-            <p>{site.about}</p>
-          </div>
-        </section>
         <section className="lp-final">
           <h2>Салоноо өнөөдрөөс онлайн болгоорой</h2>
           <p>{TRIAL_DAYS} хоног бүрэн үнэгүй, хэдхэн минутад тохируулна.</p>
@@ -1035,7 +891,7 @@ export default async function BusinessPage() {
         </section>
       </main>
       <HomeFooter
-        categories={industries.slice(0, 5).map((i) => SERVICE_TYPES[i.type])}
+        categories={footerTypes.map((t) => SERVICE_TYPES[t])}
       />
     </div>
   );
