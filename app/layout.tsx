@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     default: "Salon77 — Таны салон нэг дор",
     template: "%s · Salon77",
   },
-  // Icons and the share image come from app/icon.svg, favicon.ico,
+  // Icons and the share image come from app/icon.png, favicon.ico,
   // apple-icon.png and opengraph-image.png; absolute links need the site URL.
   ...(process.env.APP_URL && URL.canParse(process.env.APP_URL)
     ? { metadataBase: new URL(process.env.APP_URL) }

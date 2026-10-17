@@ -5,6 +5,7 @@ import { configured } from "@/lib/env";
 import { db } from "@/lib/db";
 import { site, formatSitePhone } from "@/lib/site";
 import { signOut } from "@/app/auth/actions";
+import { Logo } from "@/components/logo";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Салон түр хаагдсан · Salon77" };
 // Members of a salon the platform closed (usually an unpaid monthly fee).
@@ -22,6 +23,7 @@ export default async function Page() {
     <div className="onboarding-page">
       <main className="onboarding-container">
         <section className="onboarding-card suspended-card">
+          <Logo className="page-logo" />
           <span className="suspended-icon">
             <Lock size={22} />
           </span>

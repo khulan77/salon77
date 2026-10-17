@@ -37,7 +37,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="site-footer-inner">
         <div className="site-footer-brand">
-          <Logo href="/" />
+          <Logo href="/" tone="light" />
           <p>
             Гоо сайхны салонд цагаа онлайнаар захиалах, салоноо нэг дороос
             удирдах систем.

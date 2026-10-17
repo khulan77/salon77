@@ -38,6 +38,7 @@ import {
 } from "@/lib/services/directory";
 import { formatDuration, formatMnt } from "@/lib/ui-language";
 import { HomeFooter } from "@/components/home-footer";
+import { Logo } from "@/components/logo";
 import { initials, tone } from "@/lib/avatar";
 import { optimizable } from "@/lib/image";
 import { TRIAL_DAYS } from "@/lib/billing";
@@ -157,15 +158,7 @@ export default async function HomePage({
   return (
     <div className="hx" id="top">
       <header className="hx-nav">
-        <Link href="/" className="hx-logo" aria-label="Salon77 нүүр хуудас">
-          <Image
-            src="/salon77-mn-logo.png"
-            alt="Salon77.mn"
-            width={792}
-            height={198}
-            priority
-          />
-        </Link>
+        <Logo href="/" className="hx-logo" />
         <form
           className="hx-nav-search"
           method="get"

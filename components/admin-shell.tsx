@@ -50,7 +50,7 @@ export function AdminShell({
         />
       )}
       <aside className={`sidebar ${open ? "is-open" : ""}`}>
-        <Logo className="brand" />
+        <Logo className="brand" tagline={false} />
         <div className="workspace">
           <div className={`workspace-avatar ${data.logoUrl ? "has-logo" : ""}`}>
             {data.logoUrl ? (

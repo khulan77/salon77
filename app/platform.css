@@ -31,34 +31,12 @@
     linear-gradient(160deg, #1b1b1e, #0d0d0e);
   border-bottom: 1px solid rgb(197 168 128 / 0.2);
 }
-.pf .pf-logo {
+.pf .pf-brand {
+  display: inline-flex;
+  align-items: center;
   gap: 10px;
-  min-height: 44px;
-  font-size: 20px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  color: #fff;
 }
-.pf .pf-logo img {
-  width: 34px;
-  height: 34px;
-}
-/* The old "s" tile rule targets this span; reset it for the wordmark. */
-.pf .pf-logo span {
-  display: inline;
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  background: none;
-  font-size: inherit;
-  white-space: nowrap;
-}
-.pf .pf-logo b {
-  font-weight: 500;
-  color: #c5a880;
-}
-.pf .pf-logo small {
-  margin-left: 4px;
+.pf .pf-brand > small {
   padding: 3px 9px;
   border: 1px solid rgb(197 168 128 / 0.4);
   border-radius: 999px;
@@ -132,4 +110,10 @@
 .pf .pf-delete .pf-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+@media (max-width: 560px) {
+  /* Phone: the logo without its small line keeps the bar within the screen. */
+  .pf .pf-brand .logo-tagline {
+    display: none;
+  }
 }

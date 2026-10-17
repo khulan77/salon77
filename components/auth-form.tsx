@@ -6,8 +6,8 @@ import {
   clearFieldValidity,
 } from "@/lib/form-validation";
 import { useActionState, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { Logo } from "./logo";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -161,21 +161,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="ax">
       <aside className="ax-aside">
-        <Link href="/" className="ax-brand" aria-label="Salon77 нүүр хуудас">
-          <Image
-            src="/salon77-mark.png"
-            alt=""
-            width={194}
-            height={194}
-            priority
-          />
-          <span>
-            <strong>
-              salon<em>77.mn</em>
-            </strong>
-            <small>Premium beauty & wellness</small>
-          </span>
-        </Link>
+        <Logo href="/" size="lg" tone="light" tagline className="ax-brand" />
         <div className="ax-copy">
           <h1>
             Та үйлчлүүлэгчдээ <em>халамжил.</em>

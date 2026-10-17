@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import "@fontsource-variable/source-serif-4";
 import "../home.css";
@@ -42,6 +41,7 @@ import { configured } from "@/lib/env";
 import { sessionUser } from "@/lib/auth";
 import { site } from "@/lib/site";
 import { HomeFooter } from "@/components/home-footer";
+import { Logo } from "@/components/logo";
 import { SERVICE_TYPES, type ServiceType } from "@/lib/salon-application";
 import { templatesFor } from "@/lib/service-templates";
 import { formatMnt } from "@/lib/ui-language";
@@ -365,15 +365,7 @@ export default async function BusinessPage() {
   return (
     <div className="lp bx" id="top">
       <header className="lp-nav">
-        <Link href="/business" className="hx-logo" aria-label="Salon77">
-          <Image
-            src="/salon77-mn-logo.png"
-            alt="Salon77.mn"
-            width={792}
-            height={198}
-            priority
-          />
-        </Link>
+        <Logo href="/business" className="hx-logo" />
         <nav aria-label="Хуудасны хэсгүүд">
           <a href="#industries">Шийдэл</a>
           <a href="#features">Боломжууд</a>

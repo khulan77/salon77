@@ -117,10 +117,6 @@
   min-height: 44px;
   flex-shrink: 0;
 }
-.hx-logo img {
-  width: auto;
-  height: 34px;
-}
 .hx-nav-search {
   position: relative;
   flex: 1;
@@ -1057,10 +1053,6 @@
   margin: 0 auto;
   padding: 56px clamp(16px, 4vw, 56px) 40px;
 }
-.hx-footer-brand img {
-  width: auto;
-  height: 38px;
-}
 .hx-footer-brand p {
   max-width: 300px;
   margin: 16px 0 14px;
@@ -1203,8 +1195,16 @@
     gap: 8px;
     height: 60px;
   }
-  .hx-logo img {
-    height: 28px;
+  /* Phone: a smaller logo leaves room for the actions. */
+  .hx-logo .logo-mark {
+    width: 30px;
+    height: 30px;
+  }
+  .hx-logo .logo-word {
+    font-size: 14px;
+  }
+  .hx-logo .logo-tagline {
+    font-size: 6.5px;
   }
   .hx-pill {
     padding: 0 12px;

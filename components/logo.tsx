@@ -1,15 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-// The earlier vector mark, kept for generated icons and images.
-export const MARK_PATHS = {
-  tile: "#b12d62",
-  letter:
-    "M31.5 16.2c-1.8-1.9-4.5-3-7.4-3-4.4 0-7.6 2.5-7.6 6 0 7.9 15.6 4.7 15.6 12 0 3.6-3.4 6.1-7.9 6.1-3.3 0-6.1-1.2-8-3.3",
-  sparkle:
-    "M37.5 6.8l1.35 3.1 3.1 1.35-3.1 1.35-1.35 3.1-1.35-3.1-3.1-1.35 3.1-1.35z",
-  sparkleFill: "#f4dcae",
-};
-// The current brand mark: champagne "77" on an obsidian tile.
+// The Salon77 mark: the gold "77" on its obsidian tile (public/salon77-mark.png;
+// app/icon.svg, apple-icon and the share image are made from it).
 export function LogoMark({ size = 32 }: { size?: number }) {
   return (
     <Image
@@ -22,29 +14,51 @@ export function LogoMark({ size = 32 }: { size?: number }) {
     />
   );
 }
-// Mark plus "salon77" wordmark; every screen uses this one component.
+// The one Salon77 logo: the mark, "SALON 77.MN" and the line beneath it, set
+// in the site font so it stays sharp at every size. tone="light" is for dark
+// backgrounds (white text); markOnly drops the words; tagline={false} drops
+// the small line.
 export function Logo({
   href = "/",
   size = "md",
   tone = "dark",
+  markOnly = false,
+  tagline = true,
   className = "",
 }: {
-  href?: string;
+  href?: string | null;
   size?: "sm" | "md" | "lg";
   tone?: "dark" | "light";
+  markOnly?: boolean;
+  tagline?: boolean;
   className?: string;
 }) {
-  const px = { sm: 26, md: 32, lg: 40 }[size];
-  return (
-    <Link
-      href={href}
-      className={`logo logo-${size} ${tone === "light" ? "logo-light" : ""} ${className}`}
-      aria-label="Salon77 нүүр хуудас"
-    >
+  const px = { sm: 30, md: 36, lg: 52 }[size];
+  const body = (
+    <>
       <LogoMark size={px} />
-      <span className="logo-word" aria-hidden="true">
-        salon<b>77.mn</b>
-      </span>
+      {!markOnly && (
+        <span className="logo-text" aria-hidden="true">
+          <span className="logo-word">
+            Salon <b>77.mn</b>
+          </span>
+          {tagline && (
+            <small className="logo-tagline">
+              Premium beauty &amp; wellness <i />
+            </small>
+          )}
+        </span>
+      )}
+    </>
+  );
+  const classes = `logo logo-${size} ${tone === "light" ? "logo-light" : ""} ${className}`;
+  return href === null ? (
+    <span className={classes} role="img" aria-label="Salon77">
+      {body}
+    </span>
+  ) : (
+    <Link href={href} className={classes} aria-label="Salon77 нүүр хуудас">
+      {body}
     </Link>
   );
 }

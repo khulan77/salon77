@@ -70,10 +70,6 @@
   background: #fff;
   border-bottom: 1px solid #e9e7e4;
 }
-.lp.bx .hx-logo img {
-  width: auto;
-  height: 34px;
-}
 .lp.bx .lp-nav nav {
   gap: 34px;
   font-size: 15px;
@@ -219,8 +215,13 @@
   }
 }
 @media (max-width: 560px) {
-  .lp.bx .hx-logo img {
-    height: 28px;
+  /* Phone: only the mark fits beside sign-in and the trial button. */
+  .lp.bx .hx-logo .logo-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .lp.bx .hx-logo .logo-text {
+    display: none;
   }
   /* Phone: the sign-in link becomes an icon; its name stays for readers. */
   .lp.bx .lp-nav-actions {

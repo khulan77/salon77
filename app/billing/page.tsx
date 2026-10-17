@@ -14,6 +14,7 @@ import { site, formatSitePhone } from "@/lib/site";
 import { formatMnt } from "@/lib/ui-language";
 import { localStamp } from "@/lib/business-time";
 import { signOut } from "@/app/auth/actions";
+import { Logo } from "@/components/logo";
 import { CopyValue } from "@/components/copy-value";
 import { RenewalChoice } from "@/components/renewal-choice";
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ export default async function Page() {
     <div className="onboarding-page">
       <main className="onboarding-container">
         <section className="onboarding-card billing-page">
+          <Logo className="page-logo" />
           <span className="eyebrow">САРЫН ТӨЛБӨР</span>
           <h1>{billing.name}</h1>
           <div className={`billing-status ${expired ? "expired" : ""}`}>

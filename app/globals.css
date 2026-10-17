@@ -5132,35 +5132,6 @@ button.mark:hover:not(:disabled) {
   background: var(--gray-800);
   color: #fff;
 }
-.pf-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 18px;
-  font-weight: 700;
-}
-.pf-logo span {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: var(--accent);
-  font-size: 14px;
-}
-.pf-logo em {
-  color: var(--brand-600);
-  font-style: normal;
-}
-.pf-logo small {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  background: rgb(255 255 255 / 0.12);
-  border-radius: 4px;
-  padding: 3px 6px;
-  margin-left: 6px;
-}
 .pf-header nav {
   display: flex;
   gap: 22px;
@@ -10321,27 +10292,68 @@ div.pf-price > * {
   flex-shrink: 0;
   display: block;
 }
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+/* "SALON 77.MN" set in the site font so it stays sharp at every size. */
 .logo-word {
-  font-size: 23px;
-  font-weight: var(--weight-bold);
-  letter-spacing: -0.045em;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 .logo-word b {
-  font-weight: 500;
-  color: #9a7d52;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  color: #b8996b;
+}
+.logo-tagline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #6b6b73;
+  white-space: nowrap;
+}
+.logo-tagline i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #c5a880;
 }
 .logo-sm .logo-word {
-  font-size: 19px;
+  font-size: 15px;
+}
+.logo-sm .logo-tagline {
+  font-size: 7px;
 }
 .logo-lg .logo-word {
-  font-size: 28px;
+  font-size: 24px;
+}
+.logo-lg .logo-tagline {
+  font-size: 10px;
 }
 .logo-light {
   color: #fff;
 }
 .logo-light .logo-word b {
-  color: #c5a880;
+  color: #d9c19a;
+}
+.logo-light .logo-tagline {
+  color: #b4afa9;
+}
+/* The logo heading a standalone card or page. */
+.page-logo {
+  margin-bottom: 18px;
 }
 
 /* Public footer shared by every public page. */
@@ -10363,7 +10375,7 @@ div.pf-price > * {
   color: #fff;
 }
 .site-footer .logo-word b {
-  color: var(--brand-300);
+  color: #d9c19a;
 }
 .site-footer-brand p {
   margin: var(--space-3) 0 0;

@@ -1,4 +1,5 @@
 "use client";
+import { Logo } from "./logo";
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,7 +35,7 @@ export function InvitationAccept({
   return (
     <main className="onboarding-container invite-page">
       <section className="onboarding-card">
-        <div className="eyebrow">SALON77</div>
+        <Logo className="page-logo" />
         <h1>Багт нэгдэх урилга</h1>
         {error && (
           <div className="error-message" role="alert">

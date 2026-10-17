@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowUp, Mail, Phone } from "lucide-react";
 import { site } from "@/lib/site";
+import { Logo } from "./logo";
 // The light public footer of /home and /business (styled in app/home.css).
 const DIRECTORY = "/home";
 export function HomeFooter({ categories }: { categories: string[] }) {
@@ -9,17 +9,12 @@ export function HomeFooter({ categories }: { categories: string[] }) {
     <footer className="hx-footer">
       <div className="hx-footer-inner">
         <div className="hx-footer-brand">
-          <Image
-            src="/salon77-mn-logo.png"
-            alt="Salon77.mn"
-            width={792}
-            height={198}
-          />
+          <Logo href="/" />
           <p>
             Улаанбаатар хотын гоо сайхны салонуудыг нэг дор харж, цагаа
             онлайнаар захиалах платформ.
           </p>
-          <span className="hx-footer-tag">Premium beauty & wellness</span>
+          <span className="hx-footer-tag">Салоны цаг захиалгын систем</span>
         </div>
         <nav aria-label="Үйлчилгээнүүд">
           <h3>Үйлчилгээнүүд</h3>
