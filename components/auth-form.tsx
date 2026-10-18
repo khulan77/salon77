@@ -161,7 +161,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="ax">
       <aside className="ax-aside">
-        <Logo href="/" size="lg" tone="light" tagline className="ax-brand" />
+        <Logo href="/" size="lg" tone="light" className="ax-brand" />
         <div className="ax-copy">
           <h1>
             Та үйлчлүүлэгчдээ <em>халамжил.</em>

@@ -902,6 +902,19 @@ export async function publicCatalog(
       orderBy: { name: "asc" },
     }),
   ]);
+  // Guests see a service only at branches where an active master offers it.
+  const offered = services
+    .map((s) => ({
+      ...s,
+      branches: s.branches.filter((b) =>
+        staff.some(
+          (m) =>
+            m.branches.some((x) => x.branchId === b.branchId) &&
+            m.services.some((v) => v.serviceId === s.id),
+        ),
+      ),
+    }))
+    .filter((s) => s.branches.length);
   const ratings = await staffRatings(db, scope.salonId);
   // Weekday hours per branch: the branch's own hours when every master
   // follows them, otherwise the span of the masters' shifts that day.
@@ -938,8 +951,10 @@ export async function publicCatalog(
       ...b,
       hours: weekSummary(weekFor(b)),
     })),
-    categories,
-    services: services.map((s) => ({
+    categories: categories.filter((c) =>
+      offered.some((s) => s.categoryId === c.id),
+    ),
+    services: offered.map((s) => ({
       ...s,
       // priceMnt is what the guest pays; listPriceMnt shows the struck-out price.
       priceMnt: discountedPrice(s.priceMnt, s.discountPercent),

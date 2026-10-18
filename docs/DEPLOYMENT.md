@@ -42,7 +42,7 @@ Check: you can sign up locally and receive the confirmation email from your SMTP
 | `SMS_HTTP_URL`                         | gateway endpoint, only with `SMS_PROVIDER=http`                                                 | —          |
 | `SMS_HTTP_API_KEY`                     | gateway key, sent as `Authorization: Bearer …`                                                  | **secret** |
 | `SMS_SENDER`                           | sender name or number registered with the gateway                                               | —          |
-| `DIRECTORY_MIN_SALONS`                 | optional; listed salons needed before `/` shows the directory (default 5)                       | —          |
+| `DIRECTORY_MIN_SALONS`                 | optional; listed salons needed before `/` shows the directory (default 0)                       | —          |
 | `RESEND_API_KEY`                       | optional; Resend key for platform and owner emails (see 2c)                                     | **secret** |
 | `PLATFORM_ALERT_EMAIL`                 | `salon77.mn@gmail.com`; gets new-salon and new-feedback alerts                                  | —          |
 | `RESEND_FROM`                          | sender on a domain verified in Resend, e.g. `Salon77 <hello@salon77.mn>`; never a Gmail address | —          |

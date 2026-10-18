@@ -35,11 +35,11 @@ const listed = (now = new Date()): Prisma.SalonWhereInput => ({
   services: { some: bookable },
   ...profileReady,
 });
-// Below this many listed salons, signed-out visitors to "/" see the business
-// page instead of a near-empty directory. DIRECTORY_MIN_SALONS overrides it.
+// Signed-out visitors to "/" see the directory. DIRECTORY_MIN_SALONS can ask
+// for this many listed salons first, showing the business page until then.
 export function directoryThreshold(raw = process.env.DIRECTORY_MIN_SALONS) {
   const value = Number(raw);
-  return raw?.trim() && Number.isInteger(value) && value >= 0 ? value : 5;
+  return raw?.trim() && Number.isInteger(value) && value >= 0 ? value : 0;
 }
 // Booking pages worth indexing: the same salons the directory lists.
 export function listedSalonSlugs(db: Database) {

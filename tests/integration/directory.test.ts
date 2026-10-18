@@ -209,12 +209,12 @@ test("public salon directory", { timeout: 120000 }, async (t) => {
       },
     );
     await t.test(
-      "the root shows the directory only above the salon threshold",
+      "the root shows the directory unless a salon threshold is set",
       async () => {
-        assert.equal(directoryThreshold(undefined), 5);
-        assert.equal(directoryThreshold(""), 5);
-        assert.equal(directoryThreshold("abc"), 5);
-        assert.equal(directoryThreshold("-1"), 5);
+        assert.equal(directoryThreshold(undefined), 0);
+        assert.equal(directoryThreshold(""), 0);
+        assert.equal(directoryThreshold("abc"), 0);
+        assert.equal(directoryThreshold("-1"), 0);
         assert.equal(directoryThreshold("0"), 0);
         assert.equal(directoryThreshold("12"), 12);
         // Only salon-a is still listed after the previous step.

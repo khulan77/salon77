@@ -4,9 +4,9 @@ import { configured } from "@/lib/env";
 import { showDirectory } from "@/lib/services/directory";
 import HomePage, { metadata as homeMetadata } from "../home/page";
 import BusinessPage, { metadata as businessMetadata } from "../business/page";
-// Signed-out "/" is rewritten here by proxy.ts. Until enough salons are
-// listed, the business page explains the product instead of an empty
-// directory. /home and /business stay reachable directly.
+// Signed-out "/" is rewritten here by proxy.ts and shows the directory,
+// unless DIRECTORY_MIN_SALONS asks for more listed salons first; then the
+// business page explains the product. /home and /business stay reachable.
 export const dynamic = "force-dynamic";
 const directory = async () => configured && (await showDirectory(db));
 export async function generateMetadata(): Promise<Metadata> {

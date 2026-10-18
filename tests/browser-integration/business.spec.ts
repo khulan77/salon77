@@ -6,15 +6,17 @@ async function login(page: Page, email: string) {
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"));
 }
-// The fixture lists fewer salons than the default threshold (5).
-test("with few salons the root shows the business page", async ({ page }) => {
+// Without DIRECTORY_MIN_SALONS the root opens straight on the directory.
+test("the root shows the salon directory", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator("h1")).toContainText("салоноо онлайн болгоё");
-  await expect(page.locator(".hx-card")).toHaveCount(0);
+  await expect(page.locator("h1")).toContainText("хэдхэн товшилтоор");
+  await expect(
+    page.locator(".hx-card").filter({ hasText: "Туршилтын салон" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Бизнесээ бүртгүүлэх/ }).first(),
-  ).toHaveAttribute("href", "/sign-up");
+  ).toHaveAttribute("href", "/business");
 });
 test("the salon directory stays at /home", async ({ page }, info) => {
   await page.goto("/home");

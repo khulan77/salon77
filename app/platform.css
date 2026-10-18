@@ -111,9 +111,3 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-@media (max-width: 560px) {
-  /* Phone: the logo without its small line keeps the bar within the screen. */
-  .pf .pf-brand .logo-tagline {
-    display: none;
-  }
-}

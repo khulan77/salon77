@@ -77,14 +77,17 @@ export function ServiceCatalog({
     setMessage("");
     setService(next);
   }
-  async function run(work: () => Promise<unknown>, done: string) {
+  async function run<T>(
+    work: () => Promise<T>,
+    done: string | ((result: T) => string),
+  ) {
     setError("");
     setPending(true);
     try {
-      await work();
+      const result = await work();
       setService(null);
       setCategory(null);
-      setMessage(done);
+      setMessage(typeof done === "string" ? done : done(result));
       router.refresh();
     } catch (e) {
       setError(userFacingError(e, saveFailed));
@@ -100,7 +103,7 @@ export function ServiceCatalog({
       return;
     void run(
       () =>
-        requestJson(
+        requestJson<{ chooseStaff?: boolean }>(
           `/api/services${current ? `?id=${current.id}` : ""}`,
           current ? "PATCH" : "POST",
           {
@@ -115,7 +118,10 @@ export function ServiceCatalog({
             branchIds: form.getAll("branches"),
           },
         ),
-      "Мэдээллийг хадгаллаа.",
+      (r) =>
+        r.chooseStaff
+          ? "Мэдээллийг хадгаллаа. Энэ үйлчилгээг үзүүлэх ажилтнаа сонгоно уу."
+          : "Мэдээллийг хадгаллаа.",
     );
   }
   function submitCategory(e: React.FormEvent<HTMLFormElement>) {
@@ -351,6 +357,11 @@ export function ServiceCatalog({
                     <span className="service-tag online">Онлайн</span>
                   )}
                   {!s.active && <span className="service-tag">Идэвхгүй</span>}
+                  {s.active && s.unstaffed && (
+                    <span className="service-tag unstaffed">
+                      Ажилтан оноогоогүй
+                    </span>
+                  )}
                   {owner && s.active && !s.imageUrl && (
                     <span className="service-tag todo">Зураггүй</span>
                   )}

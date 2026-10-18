@@ -140,9 +140,7 @@ export function PublicBooking({
     0,
   );
   const request =
-    // The public availability API stays closed until approval, so a preview
-    // never asks it.
-    step === "time" && chosen.length && !sameStaff && !catalog.preview
+    step === "time" && chosen.length && !sameStaff
       ? new URLSearchParams({
           branchId,
           date,
@@ -156,9 +154,12 @@ export function PublicBooking({
   useEffect(() => {
     if (!request) return;
     const controller = new AbortController();
-    fetch(`/api/public/${encodeURIComponent(slug)}/visits?${request}`, {
-      signal: controller.signal,
-    })
+    // The public API stays closed until approval; a preview asks with the
+    // signed-in member's access instead.
+    fetch(
+      `/api/${catalog.preview ? "preview" : "public"}/${encodeURIComponent(slug)}/visits?${request}`,
+      { signal: controller.signal },
+    )
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error);
@@ -176,7 +177,7 @@ export function PublicBooking({
           });
       });
     return () => controller.abort();
-  }, [request, slug]);
+  }, [request, slug, catalog.preview]);
   function toggle(id: string) {
     setStartAt("");
     setPicked((p) =>
@@ -717,12 +718,12 @@ export function PublicBooking({
                 : formatDuration(longest)}
             </small>
           </h2>
-          {catalog.preview ? (
-            <p className="pb-empty" role="status">
-              Урьдчилан харах горимд сул цаг харуулахгүй. Салон баталгаажсаны
-              дараа үйлчлүүлэгчид энд цагаа сонгоно.
+          {catalog.preview && (
+            <p className="pb-preview-note" role="note">
+              Урьдчилан харах: үйлчлүүлэгчид яг ийм цаг харагдана
             </p>
-          ) : loading ? (
+          )}
+          {loading ? (
             <p className="pb-empty" role="status">
               Сул цаг хайж байна…
             </p>

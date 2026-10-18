@@ -55,7 +55,12 @@ export async function readCatalog(
     },
     include: {
       branches: { where: branchFilter, select: { branchId: true } },
-      _count: { select: { branches: true } },
+      _count: {
+        select: {
+          branches: true,
+          staff: { where: { staff: { active: true } } },
+        },
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -88,6 +93,8 @@ export async function readCatalog(
       active: s.active,
       onlineBookable: s.onlineBookable,
       branchIds: s.branches.map((b) => b.branchId),
+      // No active master offers it, so guests cannot book it.
+      unstaffed: s._count.staff === 0,
       // A receptionist edits only services no other branch offers.
       editable:
         owner ||
@@ -162,10 +169,50 @@ export async function saveService(
         if (!input.active)
           throw new HttpError(403, "Зөвхөн админ хандах эрхтэй.");
       } else requireOwner(current);
-      return writeService(tx, current, input, id);
+      const saved = await writeService(tx, current, input, id);
+      // Editing leaves the masters as they are.
+      return {
+        ...saved,
+        ...(id
+          ? { staffAssigned: false, chooseStaff: false }
+          : await assignSoleStaff(tx, current, saved.id, input.branchIds)),
+      };
     },
     { isolationLevel: "Serializable" },
   );
+}
+// A salon with one master (often the owner after setupSoloOwner) gets each
+// new service on that master at once, so it can be booked straight away.
+// With more masters the owner picks who offers it; the caller says so.
+async function assignSoleStaff(
+  tx: Prisma.TransactionClient,
+  current: Actor,
+  serviceId: string,
+  branchIds: string[],
+) {
+  const salonId = current.salonId;
+  const staff = await tx.staff.findMany({
+    where: { salonId, active: true },
+    select: { id: true, branches: { select: { branchId: true } } },
+    take: 2,
+  });
+  if (staff.length !== 1)
+    return { staffAssigned: false, chooseStaff: staff.length > 1 };
+  const [{ id: staffId, branches }] = staff;
+  const missing = branchIds.filter(
+    (b) => !branches.some((x) => x.branchId === b),
+  );
+  // The front desk does not move a master to another branch.
+  if (current.role !== "SALON_OWNER") {
+    if (missing.length === branchIds.length)
+      return { staffAssigned: false, chooseStaff: false };
+  } else if (missing.length)
+    await tx.staffBranch.createMany({
+      data: missing.map((branchId) => ({ staffId, branchId, salonId })),
+      skipDuplicates: true,
+    });
+  await tx.staffService.create({ data: { staffId, serviceId, salonId } });
+  return { staffAssigned: true, chooseStaff: false };
 }
 async function writeService(
   tx: Prisma.TransactionClient,

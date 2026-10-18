@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import { testDatabase } from "../fixtures/database";
 import { actorFromMember } from "../../lib/access";
 import { setupProgress, setupSoloOwner } from "../../lib/services/staff";
-import { visitAvailability } from "../../lib/services/visits";
+import {
+  previewVisitAvailability,
+  visitAvailability,
+} from "../../lib/services/visits";
+import { readCatalog, saveService } from "../../lib/services/catalog";
+import { publicCatalog } from "../../lib/services/bookings";
 import { addDays, localStamp } from "../../lib/business-time";
 import { HttpError } from "../../lib/errors";
 const status = (code: number) => (e: unknown) =>
@@ -174,6 +179,68 @@ test("one-person salon setup", { timeout: 120000 }, async (t) => {
       });
       assert.equal(saturday.endMinute, 900);
     });
+    const newService = (name: string) =>
+      saveService(db, owner, {
+        name,
+        description: "",
+        categoryId: "solo-category",
+        priceMnt: 30000,
+        durationMinutes: 45,
+        onlineBookable: true,
+        active: true,
+        branchIds: ["solo-branch"],
+      });
+    await t.test("a service added later goes to the only master", async () => {
+      const { id, staffAssigned, chooseStaff } = await newService("Будалт");
+      assert.equal(staffAssigned, true);
+      assert.equal(chooseStaff, false);
+      assert.equal(
+        await db.staffService.count({
+          where: { salonId: "solo", serviceId: id },
+        }),
+        1,
+      );
+      const free = await visitAvailability(db, "goo-neils-solo", {
+        branchId: "solo-branch",
+        date,
+        items: [{ serviceId: id }],
+      });
+      assert.ok(free.slots.length > 0);
+      const catalog = await publicCatalog(db, "goo-neils-solo");
+      assert.ok(catalog.services.some((s) => s.id === id));
+    });
+    await t.test("with two masters the owner picks who offers it", async () => {
+      await db.staff.create({
+        data: {
+          id: "solo-second",
+          salonId: "solo",
+          name: "Номин",
+          title: "",
+          branches: { create: { branchId: "solo-branch" } },
+        },
+      });
+      const { id, staffAssigned, chooseStaff } = await newService("Хөмсөг");
+      assert.equal(staffAssigned, false);
+      assert.equal(chooseStaff, true);
+      assert.equal(
+        await db.staffService.count({
+          where: { salonId: "solo", serviceId: id },
+        }),
+        0,
+      );
+      const admin = await readCatalog(db, owner);
+      assert.equal(admin.services.find((s) => s.id === id)?.unstaffed, true);
+      assert.equal(
+        admin.services.find((s) => s.name === "Будалт")?.unstaffed,
+        false,
+      );
+      // Guests never see a service nobody offers.
+      const catalog = await publicCatalog(db, "goo-neils-solo");
+      assert.ok(!catalog.services.some((s) => s.id === id));
+      await db.staff.delete({
+        where: { id_salonId: { id: "solo-second", salonId: "solo" } },
+      });
+    });
     await t.test("owner only, own salon only, needs a service", async () => {
       await db.salonMember.create({
         data: {
@@ -196,8 +263,49 @@ test("one-person salon setup", { timeout: 120000 }, async (t) => {
       await assert.rejects(setupSoloOwner(db, empty), status(409));
       assert.equal(await db.staff.count({ where: { salonId: "empty" } }), 0);
       assert.equal(await db.staff.count({ where: { salonId: "solo" } }), 1);
-      await fixture.settle();
     });
+    await t.test(
+      "a salon under review: its team previews free times",
+      async () => {
+        await db.salon.update({
+          where: { id: "solo" },
+          data: { reviewStatus: "PENDING" },
+        });
+        const query = {
+          branchId: "solo-branch",
+          date,
+          items: [{ serviceId: "solo-service-1" }],
+        };
+        // The public API stays closed until approval.
+        await assert.rejects(
+          visitAvailability(db, "goo-neils-solo", query),
+          status(404),
+        );
+        const preview = await previewVisitAvailability(
+          db,
+          owner,
+          "goo-neils-solo",
+          query,
+        );
+        assert.ok(preview.slots.length > 0);
+        assert.equal(
+          localStamp(preview.slots[0].startAt).slice(0, 16),
+          `${date}T10:00`,
+        );
+        // Another salon's owner gets nothing.
+        const outsider = actorFromMember(
+          await db.salonMember.findUniqueOrThrow({
+            where: { id: "empty-owner" },
+            include: { branches: true, staff: { include: { branches: true } } },
+          }),
+        );
+        await assert.rejects(
+          previewVisitAvailability(db, outsider, "goo-neils-solo", query),
+          status(404),
+        );
+        await fixture.settle();
+      },
+    );
   } finally {
     await fixture.close();
   }

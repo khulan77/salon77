@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Booking, PrismaClient } from "@prisma/client";
-import type { Actor } from "../access";
+import { type Actor, refreshActor } from "../access";
 import { HttpError } from "../errors";
 import {
   customerInput,
@@ -19,6 +19,7 @@ import {
   bookingConflict,
   lockStaff,
   publicReceipt,
+  requireBookingRole,
   resolveContext,
   resources,
   slots,
@@ -105,6 +106,34 @@ export async function visitAvailability(
 ) {
   const input = visitAvailabilitySchema.parse(raw);
   const scope = await resolveContext(db, { slug });
+  const { results, slots } = await visitSlots(db, scope, input, clock.now?.());
+  return {
+    durationMinutes: Math.max(...results.map((r) => r.service.durationMinutes)),
+    slots: slots.map((s) => ({ startAt: s.startAt })),
+  };
+}
+// The salon's own team previews its booking page before approval: the member
+// is checked, then free times are computed exactly as guests will see them.
+// The public API keeps refusing unapproved salons.
+export async function previewVisitAvailability(
+  db: Database,
+  actor: Actor,
+  slug: string,
+  raw: unknown,
+  clock: Clock = {},
+) {
+  const input = visitAvailabilitySchema.parse(raw);
+  const current = await refreshActor(db, actor);
+  requireBookingRole(current);
+  const salon = await db.salon.findFirst({
+    where: { id: current.salonId, slug },
+    select: { id: true },
+  });
+  if (!salon) throw new HttpError(404, "Салон олдсонгүй.");
+  const scope = await resolveContext(db, {
+    slug,
+    previewUserId: current.userId,
+  });
   const { results, slots } = await visitSlots(db, scope, input, clock.now?.());
   return {
     durationMinutes: Math.max(...results.map((r) => r.service.durationMinutes)),
