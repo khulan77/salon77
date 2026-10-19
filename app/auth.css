@@ -318,3 +318,215 @@ a.ax-submit {
     margin-bottom: 20px;
   }
 }
+
+/* Reference-inspired sign-in layout; other authentication screens retain their styling. */
+.ax-signin {
+  --ax-muted: #737373;
+  --ax-line: #dedede;
+  --ax-gold-ink: #525252;
+  min-height: 100svh;
+  font-family: "Inter Variable", Inter, Arial, sans-serif;
+}
+.ax-signin .ax-aside {
+  min-height: 100svh;
+  padding: clamp(28px, 2.95vw, 64px);
+  background: #141416;
+}
+.ax-signin .ax-copy {
+  position: relative;
+  max-width: 570px;
+  margin-block: auto;
+  padding-block: 72px;
+  border: 0;
+}
+.ax-signin .ax-aside h1 {
+  color: var(--ax-gold);
+  font-family: inherit;
+  font-size: clamp(34px, 3vw, 64px);
+  font-weight: 500;
+  line-height: 1.13;
+  letter-spacing: -0.045em;
+}
+.ax-signin .ax-aside h1 em,
+.ax-signin .ax-aside h1 u {
+  display: block;
+  font-style: normal;
+  font-weight: inherit;
+  text-decoration: none;
+  color: inherit;
+}
+.ax-signin .ax-aside h1 br {
+  display: none;
+}
+.ax-description {
+  max-width: 390px;
+  margin: 26px 0 0;
+  font-size: 16px;
+  line-height: 1.9;
+  color: #a3a3a8;
+}
+.ax-tagline {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #929298;
+}
+.ax-star {
+  position: absolute;
+  right: 4.5%;
+  bottom: 14%;
+  width: clamp(64px, 6.2vw, 120px);
+  height: auto;
+  color: #5a5a60;
+}
+.ax-signin .ax-main {
+  justify-content: center;
+  padding: 64px clamp(28px, 5vw, 96px);
+}
+.ax-signin .ax-form {
+  width: min(400px, 100%);
+  padding-block: 24px;
+}
+.ax-signin .ax-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: #737373;
+}
+.ax-signin .ax-form h2 {
+  margin-top: 18px;
+  font-family: inherit;
+  font-size: clamp(28px, 2.1vw, 36px);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.045em;
+}
+.ax-signin .ax-form h2 span {
+  color: inherit;
+}
+.ax-signin .ax-lead {
+  margin: 16px 0 34px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.ax-signin .ax-field {
+  gap: 9px;
+}
+.ax-signin .ax-field > label,
+.ax-signin .ax-label-row > label {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #626262;
+}
+.ax-signin .ax-input > svg {
+  display: none;
+}
+.ax-signin .ax-input input {
+  min-height: 48px;
+  border-radius: 5px;
+  padding-left: 14px;
+  background: #fff;
+  font-size: 14px;
+}
+.ax-signin .ax-input input::placeholder {
+  color: #919191;
+}
+.ax-signin .ax-forgot {
+  min-height: 24px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.ax-signin .ax-submit {
+  min-height: 48px;
+  margin-top: 0;
+  border-radius: 5px;
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+.ax-signin .ax-switch {
+  margin-top: 20px;
+  font-size: 13px;
+}
+.ax-signin .ax-switch a {
+  font-weight: 500;
+}
+@media (min-width: 768px) and (max-width: 960px) {
+  .ax-signin {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .ax-signin .ax-aside h1 {
+    font-size: 32px;
+  }
+  .ax-signin .ax-star {
+    bottom: 12%;
+  }
+}
+@media (max-width: 767px) {
+  .ax-signin {
+    grid-template-rows: auto 1fr;
+  }
+  .ax-signin .ax-aside {
+    min-height: auto;
+    padding: 20px 24px;
+  }
+  .ax-signin .ax-star,
+  .ax-signin .ax-tagline {
+    display: none;
+  }
+  .ax-signin .ax-main {
+    padding: 40px 24px;
+  }
+  .ax-signin .ax-form {
+    padding-block: 16px;
+  }
+  .ax-signin .ax-input input {
+    font-size: 16px;
+  }
+}
+/* Platform two-step check: the authenticator QR code and secret. */
+.ax-mfa-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid var(--ax-line);
+  border-radius: 12px;
+  text-align: center;
+}
+.ax-mfa-setup img {
+  width: 180px;
+  height: 180px;
+  background: #fff;
+}
+.ax-mfa-setup small {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ax-muted);
+}
+.ax-mfa-setup code {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  word-break: break-all;
+  color: var(--ax-ink);
+}
+.ax-form form + form {
+  margin-top: 14px;
+}
+.ax-link-button {
+  align-self: center;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  color: var(--ax-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}

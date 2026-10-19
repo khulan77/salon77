@@ -1,5 +1,5 @@
 import { BookingSettings } from "@/components/booking-settings";
-import { SettingsTabs } from "@/components/settings-tabs";
+import { SettingsTabs, isSettingsSection } from "@/components/settings-tabs";
 import { discountedPrice } from "@/lib/pricing";
 import { smsDelivers } from "@/lib/notifications/provider";
 import { inviteEmailReady } from "@/lib/notifications/platform-email";
@@ -58,6 +58,7 @@ export default async function Page({
     from?: string;
     to?: string;
     branchId?: string;
+    tab?: string;
   }>;
 }) {
   const { module } = await params;
@@ -95,7 +96,6 @@ export default async function Page({
         ? db.salon.findUnique({
             where: { id: salonId },
             select: {
-              coverUrl: true,
               instagram: true,
               facebook: true,
               phone: true,
@@ -124,33 +124,31 @@ export default async function Page({
         : [],
       salonId && role === "SALON_OWNER" ? profileChecklist(db, salonId) : null,
     ]);
+    const { tab } = await searchParams;
     return (
-      <>
-        <SettingsTabs active="/settings" />
-        {checklist && <ProfileChecklist items={checklist} />}
-        <BookingSettings
-          preview={data.preview}
-          salonName={data.salonName}
-          slug={data.slug}
-          salonId={data.salonId}
-          logoUrl={data.logoUrl}
-          instagram={salon?.instagram ?? ""}
-          facebook={salon?.facebook ?? ""}
-          phone={salon?.phone ?? ""}
-          description={salon?.description ?? ""}
-          serviceTypes={salon?.serviceTypes ?? []}
-          origin={await requestOrigin()}
-          coverUrl={salon?.coverUrl ?? null}
-          branches={data.branches.filter((b) => b.active)}
-          smsReady={smsDelivers()}
-          services={services.map((s) => ({
-            name: s.name,
-            durationMinutes: s.durationMinutes,
-            listPriceMnt: s.priceMnt,
-            priceMnt: discountedPrice(s.priceMnt, s.discountPercent),
-          }))}
-        />
-      </>
+      <BookingSettings
+        section={isSettingsSection(tab) ? tab : "salon"}
+        checklist={checklist && <ProfileChecklist items={checklist} />}
+        preview={data.preview}
+        salonName={data.salonName}
+        slug={data.slug}
+        salonId={data.salonId}
+        logoUrl={data.logoUrl}
+        instagram={salon?.instagram ?? ""}
+        facebook={salon?.facebook ?? ""}
+        phone={salon?.phone ?? ""}
+        description={salon?.description ?? ""}
+        serviceTypes={salon?.serviceTypes ?? []}
+        origin={await requestOrigin()}
+        branches={data.branches.filter((b) => b.active)}
+        smsReady={smsDelivers()}
+        services={services.map((s) => ({
+          name: s.name,
+          durationMinutes: s.durationMinutes,
+          listPriceMnt: s.priceMnt,
+          priceMnt: discountedPrice(s.priceMnt, s.discountPercent),
+        }))}
+      />
     );
   }
   if (module === "timesheet") {

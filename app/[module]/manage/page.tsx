@@ -1,4 +1,5 @@
 import { bookingThemeStyle } from "@/lib/booking-themes";
+import "@fontsource-variable/source-serif-4";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { configured } from "@/lib/env";
@@ -33,8 +34,8 @@ export default async function ManagePage({
     <>
       <main
         className="pb-page"
-        data-booking-theme={visit?.bookingTheme ?? "LIGHT"}
-        style={bookingThemeStyle(visit?.bookingTheme ?? "LIGHT")}
+        data-booking-theme={visit?.bookingTheme ?? "CLASSIC"}
+        style={bookingThemeStyle(visit?.bookingTheme ?? "CLASSIC")}
       >
         <ManageVisit slug={slug} token={token ?? ""} initial={visit} />
       </main>

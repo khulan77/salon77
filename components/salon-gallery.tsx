@@ -58,43 +58,6 @@ export function SalonGallery({
     </>
   );
 }
-// Work photos: a grid of results; a tap opens them full screen.
-export function WorkGallery({
-  name,
-  photos,
-}: {
-  name: string;
-  photos: string[];
-}) {
-  const [open, setOpen] = useState<number | null>(null);
-  if (!photos.length) return null;
-  return (
-    <section className="pb-work" aria-labelledby="pb-work-title">
-      <h2 id="pb-work-title">Хийсэн ажлууд</h2>
-      <div className="pb-work-grid">
-        {photos.map((src, i) => (
-          <button
-            key={src}
-            type="button"
-            aria-label={`${name} · хийсэн ажил ${i + 1}: томоор харах`}
-            onClick={() => setOpen(i)}
-          >
-            <Image
-              src={src}
-              alt={`${name} · хийсэн ажил ${i + 1}`}
-              fill
-              unoptimized={!optimizable(src)}
-              sizes="(max-width: 700px) 33vw, 180px"
-            />
-          </button>
-        ))}
-      </div>
-      {open !== null && (
-        <Viewer name={name} photos={photos} open={open} setOpen={setOpen} />
-      )}
-    </section>
-  );
-}
 function Viewer({
   name,
   photos,

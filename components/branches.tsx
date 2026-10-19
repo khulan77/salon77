@@ -12,6 +12,7 @@ import { MapPin, Plus, Pencil, Power, X, ArrowRight } from "lucide-react";
 import type { AdminData, BranchView } from "@/lib/admin-data";
 import { Button } from "./ui/button";
 import { DistrictSelect } from "./district-select";
+import { LocationPicker } from "./location-picker";
 import { BranchGallery } from "./branch-gallery";
 import { normalizeDistrict } from "@/lib/districts";
 export function Branches({
@@ -26,6 +27,8 @@ export function Branches({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  // The district picked in the open form, so its location map can follow.
+  const [picked, setPicked] = useState({ form: "", district: "" });
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (editing) dialog.current?.showModal();
@@ -112,6 +115,9 @@ export function Branches({
     }
   }
   const values = editing && editing !== "new" ? editing : null;
+  const formKey = values?.id ?? "new";
+  const district =
+    picked.form === formKey ? picked.district : (values?.district ?? "");
   return (
     <>
       <div className="page-heading">
@@ -269,7 +275,13 @@ export function Branches({
               />
             </label>
             <div className="form-grid">
-              <DistrictSelect name="district" stored={values?.district} />
+              <DistrictSelect
+                name="district"
+                stored={values?.district}
+                onChange={(e) =>
+                  setPicked({ form: formKey, district: e.target.value })
+                }
+              />
               <label className="field">
                 Утасны дугаар
                 <input
@@ -317,30 +329,16 @@ export function Branches({
                 placeholder="Гудамж, байр, давхар"
               />
             </label>
-            <div className="form-grid">
-              <label className="field">
-                Өргөрөг · заавал биш
-                <input
-                  name="latitude"
-                  type="number"
-                  step="any"
-                  min={-90}
-                  max={90}
-                  defaultValue={values?.latitude ?? ""}
-                />
-              </label>
-              <label className="field">
-                Уртраг · заавал биш
-                <input
-                  name="longitude"
-                  type="number"
-                  step="any"
-                  min={-180}
-                  max={180}
-                  defaultValue={values?.longitude ?? ""}
-                />
-              </label>
-            </div>
+            {editing && (
+              <LocationPicker
+                initial={
+                  values?.latitude != null && values.longitude != null
+                    ? { lat: values.latitude, lng: values.longitude }
+                    : null
+                }
+                district={district}
+              />
+            )}
             {data.preview && (
               <div className="notice">
                 Та танилцах горимд байна. Салбар нэмэхээсээ өмнө бүртгүүлж,

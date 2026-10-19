@@ -4,6 +4,9 @@ import { assertPlatformAdmin } from "@/lib/services/platform";
 import { pricePerBranch } from "@/lib/services/billing";
 import { emailSetup } from "@/lib/notifications/platform-email";
 import { PriceForm } from "@/components/platform/price-form";
+import { NoticeForm } from "@/components/platform/notice-form";
+import { listNotices } from "@/lib/services/notices";
+import { formatTimeAgo } from "@/lib/ui-language";
 const problems = {
   missing: "RESEND_FROM тохируулаагүй байна.",
   "free-mail":
@@ -15,7 +18,11 @@ const problems = {
 export default async function PlatformSettings() {
   const adminId = await platformAdminId();
   await assertPlatformAdmin(db, adminId);
-  const [price, mail] = [await pricePerBranch(db), emailSetup()];
+  const [price, notices, mail] = [
+    await pricePerBranch(db),
+    await listNotices(db, adminId),
+    emailSetup(),
+  ];
   const rows = [
     {
       title: "Шинэ салон бүртгүүлэх үед танд",
@@ -52,7 +59,7 @@ export default async function PlatformSettings() {
     <>
       <div className="pf-heading">
         <h1>Тохиргоо</h1>
-        <p>Сарын үнэ болон платформын имэйл илгээлт.</p>
+        <p>Сарын үнэ, салонуудад мэдэгдэл болон платформын имэйл илгээлт.</p>
       </div>
       <section className="pf-panel pf-price-panel" aria-labelledby="pf-price">
         <div>
@@ -63,6 +70,28 @@ export default async function PlatformSettings() {
           </p>
         </div>
         <PriceForm price={price} />
+      </section>
+      <section className="pf-panel" aria-labelledby="pf-notices">
+        <div className="pf-panel-head">
+          <h2 id="pf-notices">
+            Салонуудад мэдэгдэл <span>{notices.length}</span>
+          </h2>
+        </div>
+        <NoticeForm ownerMail={mail.ownerMail} />
+        {notices.length > 0 && (
+          <ul className="pf-notice-list">
+            {notices.map((n) => (
+              <li key={n.id}>
+                <strong>{n.title}</strong>
+                <p>{n.message}</p>
+                <small>
+                  {formatTimeAgo(n.createdAt)}
+                  {n.emailed > 0 && ` · ${n.emailed} эзэнд имэйлээр очсон`}
+                </small>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
       <section className="pf-panel" aria-labelledby="pf-mail">
         <div className="pf-panel-head">

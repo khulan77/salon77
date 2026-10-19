@@ -31,7 +31,7 @@ import {
 } from "@/lib/ui-language";
 import { depositAmount } from "@/lib/booking-settings";
 import { DepositInstructions } from "./deposit-instructions";
-import { SalonGallery, WorkGallery } from "./salon-gallery";
+import { SalonGallery } from "./salon-gallery";
 type Service = PublicCatalog["services"][number];
 type Step = "menu" | "time" | "details" | "done";
 const MAX_SERVICES = 2;
@@ -71,8 +71,6 @@ export function PublicBooking({
   catalog: PublicCatalog;
 }) {
   const { salon, policy } = catalog;
-  // The gallery shows the salon's work; the top photo is the branch's own.
-  const work = salon.images.map((i) => i.url);
   const [step, setStep] = useState<Step>("menu");
   const [branchId, setBranchId] = useState(catalog.branches[0]?.id ?? "");
   const [category, setCategory] = useState("all");
@@ -105,12 +103,10 @@ export function PublicBooking({
     setPicked([]);
     setStaff({});
   }
-  // The picked branch's own photos; otherwise the salon's cover or first work photo.
+  // The picked branch's own photos; without them the cover shows initials.
   const heroPhotos = branch?.images.length
     ? branch.images.map((i) => i.url)
-    : [branch?.imageUrl ?? salon.coverUrl ?? work[0]].filter(
-        (url): url is string => Boolean(url),
-      );
+    : [branch?.imageUrl].filter((url): url is string => Boolean(url));
   const offered = catalog.services.filter((s) =>
     s.branchIds.includes(branchId),
   );
@@ -447,9 +443,42 @@ export function PublicBooking({
     }))
     .filter((g) => g.times.length);
   return (
-    <div className="pb">
+    <div className={`pb ${step === "menu" ? "pb-split" : ""}`}>
       {step === "menu" ? (
-        hero
+        <aside className="pb-side">
+          {hero}
+          <StaffProfiles
+            staff={catalog.staff.filter((p) => p.branchIds.includes(branchId))}
+            services={catalog.services}
+          />
+          {catalog.reviews.latest.length > 0 && (
+            <section
+              className="pb-reviews"
+              id="pb-reviews"
+              aria-labelledby="pb-reviews-title"
+            >
+              <h2 id="pb-reviews-title">
+                Сэтгэгдлүүд
+                <span>
+                  <Star size={14} /> {catalog.reviews.average?.toFixed(1)} ·{" "}
+                  {catalog.reviews.count} үнэлгээ
+                </span>
+              </h2>
+              <ul>
+                {catalog.reviews.latest.map((r) => (
+                  <li key={r.id}>
+                    <div>
+                      <strong>{r.customerName}</strong>
+                      <Stars value={r.rating} />
+                    </div>
+                    <p>{r.comment}</p>
+                    <small>{r.serviceName}</small>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </aside>
       ) : (
         <div className="pb-topbar">
           <button
@@ -468,354 +497,326 @@ export function PublicBooking({
           </div>
         </div>
       )}
-      {step === "menu" && <WorkGallery name={salon.name} photos={work} />}
-      {step === "menu" && (
-        <StaffProfiles
-          staff={catalog.staff.filter((p) => p.branchIds.includes(branchId))}
-          services={catalog.services}
-        />
-      )}
-      {step === "menu" && catalog.reviews.latest.length > 0 && (
-        <section
-          className="pb-reviews"
-          id="pb-reviews"
-          aria-labelledby="pb-reviews-title"
-        >
-          <h2 id="pb-reviews-title">
-            Сэтгэгдлүүд
-            <span>
-              <Star size={14} /> {catalog.reviews.average?.toFixed(1)} ·{" "}
-              {catalog.reviews.count} үнэлгээ
-            </span>
-          </h2>
-          <ul>
-            {catalog.reviews.latest.map((r) => (
-              <li key={r.id}>
-                <div>
-                  <strong>{r.customerName}</strong>
-                  <Stars value={r.rating} />
-                </div>
-                <p>{r.comment}</p>
-                <small>{r.serviceName}</small>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      <ol className="pb-progress" aria-label="Захиалгын алхмууд">
-        {(["menu", "time", "details"] as const).map((s, i) => (
-          <li
-            key={s}
-            aria-current={step === s ? "step" : undefined}
-            className={
-              ["menu", "time", "details"].indexOf(step) >= i ? "on" : ""
-            }
-          >
-            {["Үйлчилгээ", "Цаг", "Мэдээлэл"][i]}
-          </li>
-        ))}
-      </ol>
-      {(error || slotError) && (
-        <p className="pb-error" role="alert">
-          {error || slotError}
-        </p>
-      )}
-      {step === "menu" && (
-        <section aria-labelledby="pb-services">
-          <h2 id="pb-services" className="pb-heading">
-            Үйлчилгээ сонгох
-            <small>Нэг удаад 2 хүртэл үйлчилгээг 2 ажилтан зэрэг хийнэ.</small>
-          </h2>
-          {/* One category needs no filter. */}
-          {catalog.categories.filter((c) =>
-            offered.some((s) => s.categoryId === c.id),
-          ).length > 1 && (
-            <div className="pb-tabs" role="group" aria-label="Ангилал">
-              <button
-                type="button"
-                aria-pressed={category === "all"}
-                onClick={() => setCategory("all")}
-              >
-                Бүгд
-              </button>
-              {catalog.categories
-                .filter((c) => offered.some((s) => s.categoryId === c.id))
-                .map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    aria-pressed={category === c.id}
-                    onClick={() => setCategory(c.id)}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-            </div>
-          )}
-          {offered.length ? (
-            <ul className="pb-services">
-              {offered
-                .filter((s) => category === "all" || s.categoryId === category)
-                .map((s) => {
-                  const on = picked.includes(s.id),
-                    full = !on && picked.length >= MAX_SERVICES;
-                  return (
-                    <li key={s.id}>
-                      <button
-                        type="button"
-                        className={`pb-service ${on ? "is-on" : ""}`}
-                        aria-pressed={on}
-                        disabled={full}
-                        onClick={() => toggle(s.id)}
-                      >
-                        {s.imageUrl && (
-                          <span className="pb-service-photo">
-                            <Image
-                              src={s.imageUrl}
-                              alt=""
-                              fill
-                              unoptimized={!optimizable(s.imageUrl)}
-                              sizes="72px"
-                            />
-                          </span>
-                        )}
-                        <div className="pb-service-text">
-                          <strong>{s.name}</strong>
-                          {s.description && <p>{s.description}</p>}
-                          <span className="pb-meta">
-                            <Clock3 size={12} />{" "}
-                            {formatDuration(s.durationMinutes)}
-                          </span>
-                        </div>
-                        <div className="pb-price">
-                          {s.listPriceMnt > s.priceMnt && (
-                            <>
-                              <span className="pb-sale">
-                                −
-                                {Math.round(
-                                  100 - (s.priceMnt / s.listPriceMnt) * 100,
-                                )}
-                                %
-                              </span>
-                              <s>{formatMnt(s.listPriceMnt)}</s>
-                            </>
-                          )}
-                          <b
-                            className={
-                              s.listPriceMnt > s.priceMnt ? "sale-text" : ""
-                            }
-                          >
-                            {formatMnt(s.priceMnt)}
-                          </b>
-                        </div>
-                        <span className="pb-add" aria-hidden="true">
-                          {on ? <Check size={15} /> : <Plus size={15} />}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-            </ul>
-          ) : (
-            <p className="pb-empty">
-              Энэ салбарт онлайн захиалгатай үйлчилгээ алга.
-            </p>
-          )}
-        </section>
-      )}
-      {step === "time" && (
-        <section aria-label="Ажилтан, цаг сонгох">
-          {chosen.map((s) => (
-            <div className="pb-block" key={s.id}>
-              <h2 className="pb-heading">
-                {s.name}
-                <small>Хэн хийх вэ?</small>
-              </h2>
-              <div
-                className="pb-staff"
-                role="group"
-                aria-label={`${s.name} ажилтан`}
-              >
+      <div className="pb-flow">
+        <ol className="pb-progress" aria-label="Захиалгын алхмууд">
+          {(["menu", "time", "details"] as const).map((s, i) => (
+            <li
+              key={s}
+              aria-current={step === s ? "step" : undefined}
+              className={
+                ["menu", "time", "details"].indexOf(step) >= i ? "on" : ""
+              }
+            >
+              {["Үйлчилгээ", "Цаг", "Мэдээлэл"][i]}
+            </li>
+          ))}
+        </ol>
+        {(error || slotError) && (
+          <p className="pb-error" role="alert">
+            {error || slotError}
+          </p>
+        )}
+        {step === "menu" && (
+          <section aria-labelledby="pb-services">
+            <h2 id="pb-services" className="pb-heading">
+              Үйлчилгээ сонгох
+              <small>
+                Нэг удаад 2 хүртэл үйлчилгээг 2 ажилтан зэрэг хийнэ.
+              </small>
+            </h2>
+            {/* One category needs no filter. */}
+            {catalog.categories.filter((c) =>
+              offered.some((s) => s.categoryId === c.id),
+            ).length > 1 && (
+              <div className="pb-tabs" role="group" aria-label="Ангилал">
                 <button
                   type="button"
-                  aria-pressed={!staff[s.id]}
-                  onClick={() => {
-                    setStartAt("");
-                    setStaff((m) => {
-                      const next = { ...m };
-                      delete next[s.id];
-                      return next;
-                    });
-                  }}
+                  aria-pressed={category === "all"}
+                  onClick={() => setCategory("all")}
                 >
-                  <span className="pb-avatar any">
-                    <UserRound size={16} />
-                  </span>
-                  Аль ч ажилтан
+                  Бүгд
                 </button>
-                {eligible(s.id).map((p) => (
+                {catalog.categories
+                  .filter((c) => offered.some((s) => s.categoryId === c.id))
+                  .map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      aria-pressed={category === c.id}
+                      onClick={() => setCategory(c.id)}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+              </div>
+            )}
+            {offered.length ? (
+              <ul className="pb-services">
+                {offered
+                  .filter(
+                    (s) => category === "all" || s.categoryId === category,
+                  )
+                  .map((s) => {
+                    const on = picked.includes(s.id),
+                      full = !on && picked.length >= MAX_SERVICES;
+                    return (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          className={`pb-service ${on ? "is-on" : ""}`}
+                          aria-pressed={on}
+                          disabled={full}
+                          onClick={() => toggle(s.id)}
+                        >
+                          {s.imageUrl && (
+                            <span className="pb-service-photo">
+                              <Image
+                                src={s.imageUrl}
+                                alt=""
+                                fill
+                                unoptimized={!optimizable(s.imageUrl)}
+                                sizes="72px"
+                              />
+                            </span>
+                          )}
+                          <div className="pb-service-text">
+                            <strong>{s.name}</strong>
+                            {s.description && <p>{s.description}</p>}
+                            <span className="pb-meta">
+                              <Clock3 size={12} />{" "}
+                              {formatDuration(s.durationMinutes)}
+                            </span>
+                          </div>
+                          <div className="pb-price">
+                            {s.listPriceMnt > s.priceMnt && (
+                              <>
+                                <span className="pb-sale">
+                                  −
+                                  {Math.round(
+                                    100 - (s.priceMnt / s.listPriceMnt) * 100,
+                                  )}
+                                  %
+                                </span>
+                                <s>{formatMnt(s.listPriceMnt)}</s>
+                              </>
+                            )}
+                            <b
+                              className={
+                                s.listPriceMnt > s.priceMnt ? "sale-text" : ""
+                              }
+                            >
+                              {formatMnt(s.priceMnt)}
+                            </b>
+                          </div>
+                          <span className="pb-add" aria-hidden="true">
+                            {on ? <Check size={15} /> : <Plus size={15} />}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+              </ul>
+            ) : (
+              <p className="pb-empty">
+                Энэ салбарт онлайн захиалгатай үйлчилгээ алга.
+              </p>
+            )}
+          </section>
+        )}
+        {step === "time" && (
+          <section aria-label="Ажилтан, цаг сонгох">
+            {chosen.map((s) => (
+              <div className="pb-block" key={s.id}>
+                <h2 className="pb-heading">
+                  {s.name}
+                  <small>Хэн хийх вэ?</small>
+                </h2>
+                <div
+                  className="pb-staff"
+                  role="group"
+                  aria-label={`${s.name} ажилтан`}
+                >
                   <button
-                    key={p.id}
                     type="button"
-                    aria-pressed={staff[s.id] === p.id}
+                    aria-pressed={!staff[s.id]}
                     onClick={() => {
                       setStartAt("");
-                      setStaff((m) => ({ ...m, [s.id]: p.id }));
+                      setStaff((m) => {
+                        const next = { ...m };
+                        delete next[s.id];
+                        return next;
+                      });
                     }}
                   >
-                    <span
-                      className={`pb-avatar tone-${tone(p.id)}`}
-                      aria-hidden="true"
-                    >
-                      {p.imageUrl ? (
-                        <Image
-                          src={p.imageUrl}
-                          alt=""
-                          fill
-                          unoptimized={!optimizable(p.imageUrl)}
-                          sizes="54px"
-                        />
-                      ) : (
-                        initials(p.name)
-                      )}
+                    <span className="pb-avatar any">
+                      <UserRound size={16} />
                     </span>
-                    {p.name}
-                    {p.title && <small>{p.title}</small>}
+                    Аль ч ажилтан
                   </button>
-                ))}
-              </div>
-            </div>
-          ))}
-          {sameStaff && (
-            <p className="pb-error" role="alert">
-              Хоёр үйлчилгээг зэрэг хийх тул өөр өөр ажилтан сонгоно уу.
-            </p>
-          )}
-          <h2 className="pb-heading">Өдөр</h2>
-          <div className="pb-days" role="group" aria-label="Өдөр сонгох">
-            {days.map((d) => (
-              <button
-                key={d}
-                type="button"
-                aria-pressed={d === date}
-                aria-label={d}
-                onClick={() => {
-                  setDate(d);
-                  setStartAt("");
-                }}
-              >
-                <small>{d === today ? "Өнөөдөр" : dayLabel(d)}</small>
-                <b>{Number(d.slice(8))}</b>
-                <small>{Number(d.slice(5, 7))}-р сар</small>
-              </button>
-            ))}
-          </div>
-          <h2 className="pb-heading">
-            Цаг
-            <small>
-              {chosen.length > 1
-                ? `Хоёр үйлчилгээ зэрэг эхэлнэ · ${formatDuration(longest)}`
-                : formatDuration(longest)}
-            </small>
-          </h2>
-          {catalog.preview && (
-            <p className="pb-preview-note" role="note">
-              Урьдчилан харах: үйлчлүүлэгчид яг ийм цаг харагдана
-            </p>
-          )}
-          {loading ? (
-            <p className="pb-empty" role="status">
-              Сул цаг хайж байна…
-            </p>
-          ) : grouped.length ? (
-            grouped.map((g) => (
-              <div key={g.label} className="pb-block">
-                <span className="pb-period">{g.label}</span>
-                <div className="pb-times" role="group" aria-label={g.label}>
-                  {g.times.map((s) => (
+                  {eligible(s.id).map((p) => (
                     <button
-                      key={s}
+                      key={p.id}
                       type="button"
-                      aria-pressed={s === startAt}
-                      onClick={() => setStartAt(s)}
+                      aria-pressed={staff[s.id] === p.id}
+                      onClick={() => {
+                        setStartAt("");
+                        setStaff((m) => ({ ...m, [s.id]: p.id }));
+                      }}
                     >
-                      {localStamp(s).slice(11)}
+                      <span
+                        className={`pb-avatar tone-${tone(p.id)}`}
+                        aria-hidden="true"
+                      >
+                        {p.imageUrl ? (
+                          <Image
+                            src={p.imageUrl}
+                            alt=""
+                            fill
+                            unoptimized={!optimizable(p.imageUrl)}
+                            sizes="54px"
+                          />
+                        ) : (
+                          initials(p.name)
+                        )}
+                      </span>
+                      {p.name}
+                      {p.title && <small>{p.title}</small>}
                     </button>
                   ))}
                 </div>
               </div>
-            ))
-          ) : (
-            !sameStaff && (
-              <p className="pb-empty">
-                Энэ өдөр сул цаг алга. Өөр өдөр сонгоно уу.
-              </p>
-            )
-          )}
-        </section>
-      )}
-      {step === "details" && (
-        <form id="pb-details" onSubmit={submit} className="pb-form">
-          {/* Honeypot: invisible to people and skipped by keyboard and screen readers. */}
-          <input
-            ref={trap}
-            name="website"
-            tabIndex={-1}
-            autoComplete="off"
-            aria-hidden="true"
-            className="pb-trap"
-          />
-          <div className="pb-summary">
-            <span>
-              <CalendarDays size={14} />
-              {startAt && friendlyTime(startAt)} · {branch?.name}
-            </span>
-            {chosen.map((s) => (
-              <div key={s.id}>
-                <span>
-                  {s.name}
-                  <small>
-                    {catalog.staff.find((p) => p.id === staff[s.id])?.name ??
-                      "Аль ч ажилтан"}
-                  </small>
-                </span>
-                <b>{formatMnt(s.priceMnt)}</b>
-              </div>
             ))}
-          </div>
-          <label className="field">
-            Нэр
+            {sameStaff && (
+              <p className="pb-error" role="alert">
+                Хоёр үйлчилгээг зэрэг хийх тул өөр өөр ажилтан сонгоно уу.
+              </p>
+            )}
+            <h2 className="pb-heading">Өдөр</h2>
+            <div className="pb-days" role="group" aria-label="Өдөр сонгох">
+              {days.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={d === date}
+                  aria-label={d}
+                  onClick={() => {
+                    setDate(d);
+                    setStartAt("");
+                  }}
+                >
+                  <small>{d === today ? "Өнөөдөр" : dayLabel(d)}</small>
+                  <b>{Number(d.slice(8))}</b>
+                  <small>{Number(d.slice(5, 7))}-р сар</small>
+                </button>
+              ))}
+            </div>
+            <h2 className="pb-heading">
+              Цаг
+              <small>
+                {chosen.length > 1
+                  ? `Хоёр үйлчилгээ зэрэг эхэлнэ · ${formatDuration(longest)}`
+                  : formatDuration(longest)}
+              </small>
+            </h2>
+            {catalog.preview && (
+              <p className="pb-preview-note" role="note">
+                Урьдчилан харах: үйлчлүүлэгчид яг ийм цаг харагдана
+              </p>
+            )}
+            {loading ? (
+              <p className="pb-empty" role="status">
+                Сул цаг хайж байна…
+              </p>
+            ) : grouped.length ? (
+              grouped.map((g) => (
+                <div key={g.label} className="pb-block">
+                  <span className="pb-period">{g.label}</span>
+                  <div className="pb-times" role="group" aria-label={g.label}>
+                    {g.times.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        aria-pressed={s === startAt}
+                        onClick={() => setStartAt(s)}
+                      >
+                        {localStamp(s).slice(11)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              !sameStaff && (
+                <p className="pb-empty">
+                  Энэ өдөр сул цаг алга. Өөр өдөр сонгоно уу.
+                </p>
+              )
+            )}
+          </section>
+        )}
+        {step === "details" && (
+          <form id="pb-details" onSubmit={submit} className="pb-form">
+            {/* Honeypot: invisible to people and skipped by keyboard and screen readers. */}
             <input
-              required
-              maxLength={100}
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Таны нэр"
+              ref={trap}
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              className="pb-trap"
             />
-          </label>
-          <label className="field">
-            Утасны дугаар
-            <input
-              required
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              maxLength={40}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="8811 2233"
-            />
-          </label>
-          <p className="pb-note">
-            {deposit > 0
-              ? `Захиалсны дараа ${formatMnt(deposit)} урьдчилгаа шилжүүлэх дансны мэдээлэл гарна. Мөнгө орсны дараа салон баталгаажуулна.`
-              : policy.bookingConfirmationMode === "AUTO_CONFIRM"
-                ? "Захиалга шууд баталгаажна."
-                : "Салон захиалгыг шалгаад баталгаажуулна."}
-          </p>
-        </form>
-      )}
+            <div className="pb-summary">
+              <span>
+                <CalendarDays size={14} />
+                {startAt && friendlyTime(startAt)} · {branch?.name}
+              </span>
+              {chosen.map((s) => (
+                <div key={s.id}>
+                  <span>
+                    {s.name}
+                    <small>
+                      {catalog.staff.find((p) => p.id === staff[s.id])?.name ??
+                        "Аль ч ажилтан"}
+                    </small>
+                  </span>
+                  <b>{formatMnt(s.priceMnt)}</b>
+                </div>
+              ))}
+            </div>
+            <label className="field">
+              Нэр
+              <input
+                required
+                maxLength={100}
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Таны нэр"
+              />
+            </label>
+            <label className="field">
+              Утасны дугаар
+              <input
+                required
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                maxLength={40}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="8811 2233"
+              />
+            </label>
+            <p className="pb-note">
+              {deposit > 0
+                ? `Захиалсны дараа ${formatMnt(deposit)} урьдчилгаа шилжүүлэх дансны мэдээлэл гарна. Мөнгө орсны дараа салон баталгаажуулна.`
+                : policy.bookingConfirmationMode === "AUTO_CONFIRM"
+                  ? "Захиалга шууд баталгаажна."
+                  : "Салон захиалгыг шалгаад баталгаажуулна."}
+            </p>
+          </form>
+        )}
+      </div>
       {chosen.length > 0 && (
         <div className="pb-bar">
           <div>

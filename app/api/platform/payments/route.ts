@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { identity } from "@/lib/auth";
+import { platformAdmin } from "@/lib/auth";
 import { failure, sameOrigin } from "@/lib/http";
 import { recordPayment } from "@/lib/services/billing";
 // The operator records a received monthly fee; access extends by 30 days.
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const user = await identity();
+    const user = await platformAdmin();
     const id = z
       .string()
       .min(1)

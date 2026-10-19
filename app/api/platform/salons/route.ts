@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { identity } from "@/lib/auth";
+import { platformAdmin } from "@/lib/auth";
 import { failure, sameOrigin } from "@/lib/http";
 import {
   approvalRecipient,
@@ -16,7 +16,7 @@ import { setSalonPrice } from "@/lib/services/billing";
 export async function PATCH(request: Request) {
   try {
     sameOrigin(request);
-    const user = await identity();
+    const user = await platformAdmin();
     const id = z
       .string()
       .min(1)
@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     sameOrigin(request);
-    const user = await identity();
+    const user = await platformAdmin();
     const id = z
       .string()
       .min(1)

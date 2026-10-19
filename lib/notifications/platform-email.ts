@@ -288,3 +288,43 @@ export async function sendInvitationEmail(
     return false;
   }
 }
+export function noticeEmail(
+  notice: { title: string; message: string },
+  appUrl = siteUrl(),
+) {
+  return {
+    subject: `Salon77: ${notice.title}`,
+    text: [
+      "Сайн байна уу,",
+      "",
+      notice.message,
+      "",
+      `Удирдлагын хэсэг: ${appUrl}/sign-in`,
+      "Асуух зүйл байвал энэ имэйлд хариу бичээрэй.",
+      "",
+      "Salon77",
+    ].join("\n"),
+  };
+}
+// One email per owner, after the response; returns how many went out.
+// Nothing is sent without a verified sender (see ownerEmailConfig).
+export function notifyNotice(
+  notice: { title: string; message: string },
+  recipients: string[],
+  done: (sent: number) => Promise<void>,
+) {
+  if (!recipients.length || !ownerEmailConfig(recipients[0])) return false;
+  after(async () => {
+    let sent = 0;
+    for (const to of recipients) {
+      try {
+        await sendPlatformEmail(noticeEmail(notice), ownerEmailConfig(to)!);
+        sent++;
+      } catch {
+        console.error("Salon77 notice email failed");
+      }
+    }
+    await done(sent).catch(() => undefined);
+  });
+  return true;
+}

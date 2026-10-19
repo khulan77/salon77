@@ -126,6 +126,8 @@ export async function platformOverview(
     daily,
     weekly,
     pending,
+    onlineMonth,
+    takings,
   ] = await Promise.all([
     db.salon.groupBy({ by: ["status"], _count: { _all: true } }),
     db.salon.count({ where: { createdAt: { gte: ago(7) } } }),
@@ -140,6 +142,12 @@ export async function platformOverview(
     onlinePerDay(db, now, 30),
     salonsPerWeek(db, now, 12),
     db.salon.count({ where: { reviewStatus: "PENDING" } }),
+    online(monthStart(now)),
+    // Every salon's completed bookings this Ulaanbaatar month.
+    db.booking.aggregate({
+      where: { status: "COMPLETED", startAt: { gte: monthStart(now) } },
+      _sum: { priceSnapshot: true, extraMnt: true },
+    }),
   ]);
   const status = (s: string) =>
     byStatus.find((r) => r.status === s)?._count._all ?? 0;
@@ -155,7 +163,13 @@ export async function platformOverview(
     branches,
     services,
     staff,
-    onlineBookings: { today: onlineToday, days7: online7, days30: online30 },
+    onlineBookings: {
+      today: onlineToday,
+      days7: online7,
+      days30: online30,
+      month: onlineMonth,
+    },
+    revenueMonth: (takings._sum.priceSnapshot ?? 0) + (takings._sum.extraMnt ?? 0),
     bookings30,
     daily,
     weekly,

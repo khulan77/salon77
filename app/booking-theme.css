@@ -170,7 +170,7 @@
 }
 .booking-theme-options {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 12px;
   margin-top: 18px;
 }
@@ -447,4 +447,191 @@
 /* The page's own background runs straight into the Salon77 footer. */
 .pb-page[data-booking-theme] + .site-footer {
   margin-top: 0;
+}
+/* Admin design on the booking page: white cards on quiet lines, serif
+   titles closed by the highlight dot, solid actions. Only the palette
+   changes between themes. */
+.pb-page[data-booking-theme]
+  :is(
+    .pb-hero-body,
+    .pb-service,
+    .pb-summary,
+    .pb-ticket,
+    .pb-reviews li,
+    .pb-masters > ul button,
+    .pb-empty,
+    .pb-closed,
+    .pb-staff button,
+    .pb-days button,
+    .pb-times button,
+    .pb-branches button,
+    .pb-tabs button,
+    .pb-contact a,
+    .pb-back
+  ) {
+  border-color: var(--line);
+}
+.pb-page[data-booking-theme] .pb-hero-body {
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+.pb-page[data-booking-theme] .pb-hero h1 {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.pb-page[data-booking-theme] .pb-hero h1::after,
+.pb-page[data-booking-theme] .pb-done h1::after {
+  content: ".";
+  color: var(--highlight);
+}
+.pb-page[data-booking-theme] :is(.pb-heading, .pb-masters h2, .pb-reviews h2) {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.pb-page[data-booking-theme] .pb-heading small {
+  font-family: Inter, system-ui, sans-serif;
+  letter-spacing: 0;
+}
+.pb-page[data-booking-theme] .pb-service {
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.pb-page[data-booking-theme] .pb-service:hover:not(:disabled) {
+  border-color: var(--border);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+.pb-page[data-booking-theme] .pb-service.is-on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+/* Progress: three slim steps, numbered, the current one in the accent. */
+.pb-page[data-booking-theme] .pb-progress {
+  counter-reset: pb-step;
+  margin: 22px 0 6px;
+}
+.pb-page[data-booking-theme] .pb-progress li {
+  counter-increment: pb-step;
+  border-top-width: 2px;
+  border-top-color: var(--line);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.pb-page[data-booking-theme] .pb-progress li::before {
+  content: counter(pb-step) ". ";
+}
+.pb-page[data-booking-theme] .pb-progress li.on {
+  border-top-color: var(--accent);
+}
+.pb-page[data-booking-theme] .pb-progress li[aria-current="step"] {
+  color: var(--foreground);
+  font-weight: 650;
+}
+.pb-page[data-booking-theme] .pb-cover span {
+  font-family: var(--pb-heading-font);
+  font-weight: 600;
+}
+.pb-page[data-booking-theme] .pb-primary {
+  border-radius: 8px;
+  font-weight: 600;
+}
+.pb-page[data-booking-theme] .pb :is(.pb-bar, .pb-topbar) {
+  border-color: var(--line);
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+/* Settings: the live phone preview in the chosen palette. */
+.phone-frame .phone-body {
+  color: var(--foreground);
+}
+.phone-frame .phone-cover {
+  background: linear-gradient(
+    135deg,
+    var(--accent-soft),
+    color-mix(in srgb, var(--accent) 28%, var(--accent-soft))
+  );
+  color: var(--accent);
+  font-family: var(--pb-heading-font);
+}
+.phone-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.phone-logo {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.phone-logo img {
+  object-fit: cover;
+}
+.phone-frame .phone-salon {
+  font-family: var(--pb-heading-font);
+  font-weight: 600;
+}
+.phone-frame .phone-salon i,
+.btp-title i {
+  font-style: normal;
+  color: var(--highlight);
+}
+.phone-frame .phone-body > p,
+.phone-frame .phone-service span,
+.phone-frame .phone-note {
+  color: var(--muted);
+}
+.phone-frame .phone-service {
+  background: var(--surface);
+  border-color: var(--line);
+}
+.phone-frame .phone-steps i {
+  background: var(--line);
+}
+.phone-frame .phone-steps i.on,
+.phone-frame .phone-button {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.btp-card,
+.btp-service {
+  border-color: var(--line);
+}
+.btp-title {
+  font-weight: 600;
+}
+/* Desktop: salon, masters and reviews in a sticky column on the left; the
+   booking steps on the right. Phones keep the single column. */
+@media (min-width: 980px) {
+  .pb.pb-split {
+    display: grid;
+    grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+    gap: 0 40px;
+    align-items: start;
+    max-width: 1080px;
+    padding: 32px 24px 140px;
+  }
+  .pb-split .pb-side {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .pb-split .pb-hero {
+    margin: 0 0 18px;
+  }
+  .pb-split .pb-flow > .pb-progress:first-child {
+    margin-top: 4px;
+  }
+  .pb-page[data-booking-theme] .pb-split .pb-bar {
+    max-width: 1080px;
+    left: 0;
+    right: 0;
+    border-radius: 12px 12px 0 0;
+  }
 }

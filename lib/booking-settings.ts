@@ -5,7 +5,7 @@ const bankText = z.string().trim().max(100);
 export const REMINDER_OPTIONS = [2880, 1440, 180, 120, 60] as const;
 export const bookingSettingsSchema = z
   .object({
-    bookingTheme: z.enum(bookingThemeKeys).default("LIGHT"),
+    bookingTheme: z.enum(bookingThemeKeys).default("CLASSIC"),
     publicBookingEnabled: z.boolean(),
     bookingConfirmationMode: z.enum(["AUTO_CONFIRM", "MANUAL_CONFIRM"]),
     advanceBookingDays: z.number().int().min(0).max(365),
@@ -56,7 +56,7 @@ export const bookingSettingsSchema = z
   });
 export type BookingPolicy = z.infer<typeof bookingSettingsSchema>;
 export const defaultBookingSettings: BookingPolicy = {
-  bookingTheme: "LIGHT",
+  bookingTheme: "CLASSIC",
   publicBookingEnabled: true,
   bookingConfirmationMode: "MANUAL_CONFIRM",
   advanceBookingDays: 365,

@@ -16,6 +16,7 @@ import { actorFromMember, branchWhere } from "./access";
 import { invitationStatus } from "./services/team";
 import { db } from "./db";
 import { setupProgress } from "./services/staff";
+import { unseenNotices } from "./services/notices";
 export type BranchView = {
   id: string;
   name: string;
@@ -43,6 +44,8 @@ export type AdminData = {
   name: string;
   email: string;
   branches: BranchView[];
+  // Platform announcements this member has not dismissed.
+  notices: { id: string; title: string; message: string; createdAt: string }[];
 };
 // Only the team and staff pages need the member and invitation lists, and only
 // the calendar the setup checklist, so the shared layout does not load them.
@@ -82,6 +85,7 @@ const previewData: AdminData = {
   name: "Салоны эзэн",
   email: "Танилцах горим",
   branches: [],
+  notices: [],
 };
 // The signed-in member, once per request; anyone without admin access is sent
 // where they belong.
@@ -114,10 +118,13 @@ export async function adminActor() {
 export const adminData = cache(async (): Promise<AdminData> => {
   if (!configured) return previewData;
   const member = await adminMember();
-  const branches = await db.branch.findMany({
-    where: branchWhere(actorFromMember(member)),
-    orderBy: { createdAt: "asc" },
-  });
+  const [branches, notices] = await Promise.all([
+    db.branch.findMany({
+      where: branchWhere(actorFromMember(member)),
+      orderBy: { createdAt: "asc" },
+    }),
+    unseenNotices(db, member),
+  ]);
   const billing = billingState(member.salon);
   return {
     preview: false,
@@ -135,6 +142,7 @@ export const adminData = cache(async (): Promise<AdminData> => {
     name: member.user.name ?? "Салоны эзэн",
     email: member.user.email,
     branches,
+    notices,
   };
 });
 export async function teamLists(): Promise<

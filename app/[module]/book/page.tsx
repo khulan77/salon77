@@ -1,4 +1,5 @@
 import { bookingThemeStyle } from "@/lib/booking-themes";
+import "@fontsource-variable/source-serif-4";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -42,7 +43,7 @@ export async function generateMetadata({
     .filter(Boolean)
     .join(" · ")
     .slice(0, 200);
-  const image = branch?.imageUrl ?? salon.coverUrl ?? salon.images[0]?.url;
+  const image = branch?.imageUrl ?? salon.logoUrl;
   const url = siteUrl() ? `${siteUrl()}/${slug}/book` : undefined;
   return {
     title: `${salon.name} · Цаг захиалах`,
@@ -131,7 +132,7 @@ function structuredData(catalog: PublicCatalog, slug: string) {
           },
         }
       : {}),
-    ...(salon.coverUrl ? { image: salon.coverUrl } : {}),
+    ...(branch?.imageUrl ? { image: branch.imageUrl } : {}),
     ...(reviews.average !== null
       ? {
           aggregateRating: {

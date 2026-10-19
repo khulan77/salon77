@@ -69,7 +69,14 @@
     min-width: 44px;
   }
   .app-shell
-    :is(.nav-item, .settings-tabs a, .check-field, .switch, .option-card) {
+    :is(
+      .nav-item,
+      .settings-tabs a,
+      .settings-tabs button,
+      .check-field,
+      .switch,
+      .option-card
+    ) {
     min-height: 44px;
   }
   :is(.main-footer, .profile-checklist, .onboarding-container) a,

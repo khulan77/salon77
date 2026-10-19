@@ -97,6 +97,16 @@ export default async function PlatformHome({
   ];
   const stats = [
     [
+      "Салонуудын энэ сарын орлого",
+      formatMnt(overview.revenueMonth),
+      "Бүх салоны дууссан захиалгын нийлбэр",
+    ],
+    [
+      "Сайтаар авсан захиалга",
+      overview.onlineBookings.month,
+      "Энэ сард бүх салонд онлайнаар ирсэн",
+    ],
+    [
       "Нийт салон",
       overview.salons.total,
       `${overview.salons.active} идэвхтэй · ${overview.salons.suspended} зогсоосон · ${overview.salons.pending} хүлээгдэж буй`,
@@ -261,7 +271,9 @@ export default async function PlatformHome({
                   <th>Салбар</th>
                   <th>Төлбөрийн төлөв</th>
                   <th>Сарын төлбөр</th>
-                  <th>Салоны орлого, хэрэглээ</th>
+                  <th>Энэ сарын орлого</th>
+                  <th>Сайтаар авсан захиалга</th>
+                  <th>Хэрэглээ</th>
                   <th>Үйлдэл</th>
                 </tr>
               </thead>
@@ -323,16 +335,19 @@ export default async function PlatformHome({
                         />
                       )}
                     </td>
-                    <td>
+                    <td className="num">
                       <b>{formatMnt(s.revenueMonth)}</b>
-                      <small>Энэ сарын орлого</small>
+                      <small>Дууссан захиалгаар</small>
+                    </td>
+                    <td className="num">
+                      <b>{s.onlineMonth}</b>
+                      <small>Энэ сард · 30 хоногт {s.online30}</small>
+                      <small>Нийт {s.bookings} захиалга</small>
+                    </td>
+                    <td>
                       <small>
                         {s.branches} салбар · {s.services} үйлчилгээ · {s.staff}{" "}
                         ажилтан
-                      </small>
-                      <small>
-                        Энэ сард {s.onlineMonth} онлайн · {s.bookings} нийт
-                        захиалга
                       </small>
                       <small>
                         {s.ownerLastLoginAt

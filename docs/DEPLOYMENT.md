@@ -45,6 +45,7 @@ Check: you can sign up locally and receive the confirmation email from your SMTP
 | `DIRECTORY_MIN_SALONS`                 | optional; listed salons needed before `/` shows the directory (default 0)                       | —          |
 | `RESEND_API_KEY`                       | optional; Resend key for platform and owner emails (see 2c)                                     | **secret** |
 | `PLATFORM_ALERT_EMAIL`                 | `salon77.mn@gmail.com`; gets new-salon and new-feedback alerts                                  | —          |
+| `PLATFORM_ADMIN_EMAILS`                | **required**; comma-separated emails allowed on `/platform` (nobody gets in while unset)        | —          |
 | `RESEND_FROM`                          | sender on a domain verified in Resend, e.g. `Salon77 <hello@salon77.mn>`; never a Gmail address | —          |
 | `RESEND_REPLY_TO`                      | optional; reply-to address, default `salon77.mn@gmail.com`                                      | —          |
 
@@ -142,7 +143,11 @@ In Supabase → SQL Editor, once, with your own login email:
 UPDATE "User" SET "isSuperAdmin" = true WHERE email = '<your email>';
 ```
 
-Check: `https://<your-domain>/platform` opens for you and returns 404 for anyone else.
+Set `PLATFORM_ADMIN_EMAILS` to the same email in Vercel. All three must hold: the email is listed, the `User` row is a super admin, and the session passed an authenticator-app code (TOTP) within the last 12 hours.
+
+On the first visit `/platform` sends you to `/platform-verify`: scan the QR code with Google Authenticator (or similar) and enter the 6-digit code. Keep the secret shown under the QR somewhere safe. A lost phone is recovered in Supabase → Authentication → Users → your user → delete the MFA factor, then enrol again.
+
+Check: `https://<your-domain>/platform` opens for you after the code and returns 404 for anyone else.
 
 ## 6. Smoke test on production
 

@@ -43,6 +43,7 @@ import { Logo } from "@/components/logo";
 import { initials, tone } from "@/lib/avatar";
 import { optimizable } from "@/lib/image";
 import { TRIAL_DAYS } from "@/lib/billing";
+import { SalonMap } from "@/components/salon-map";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Salon77 · Гоо сайхны салонд онлайнаар цаг захиалах",
@@ -110,6 +111,7 @@ const emptyDirectory = (
   stats: { salons: 0, services: 0, bookingsToday: 0 },
   categories: [],
   areas: [],
+  pins: [],
   popular: [],
   salons: [],
 });
@@ -251,8 +253,12 @@ export default async function HomePage({
             <label className="hx-field">
               <MapPin size={18} aria-hidden="true" />
               <span>
-                <small>Байршил</small>
-                <select name="district" defaultValue={data.district}>
+                <small>Байршил (дүүрэг)</small>
+                <select
+                  name="district"
+                  defaultValue={data.district}
+                  aria-label="Дүүрэг сонгох"
+                >
                   <option value="">Бүх дүүрэг</option>
                   {data.districts.map((d) => (
                     <option key={d} value={d}>
@@ -407,6 +413,7 @@ export default async function HomePage({
         </section>
         {data.areas.length > 0 && (
           <section
+            id="map"
             className="hx-section hx-near"
             aria-labelledby="hx-near-title"
           >
@@ -414,40 +421,78 @@ export default async function HomePage({
               <span className="hx-eyebrow">
                 <Navigation size={12} /> Байршлаар хайх
               </span>
-              <h2 id="hx-near-title">Таны ойролцоох гоо сайхны салонууд</h2>
+              <h2 id="hx-near-title">Дүүргээр салон хайх</h2>
               <p className="hx-sub">
-                Дүүргээ сонгоод хамгийн ойр байрлах салоноо олоорой.
+                Өөрт ойр дүүргээ сонговол тухайн дүүрэгт байрлах салонууд
+                газрын зураг болон дээрх жагсаалтад шүүгдэж гарна.
               </p>
-              <ol className="hx-areas">
-                {data.areas.slice(0, 4).map((a, i) => (
-                  <li key={a.name}>
-                    <Link href={url({ district: a.name }, "#salons")}>
-                      <span className="hx-area-no">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span>
-                        <strong>{a.name}</strong>
-                        <small>{a.salons} салон</small>
-                      </span>
-                      <ArrowRight size={16} aria-hidden="true" />
-                    </Link>
-                  </li>
-                ))}
-              </ol>
+              <ul className="hx-areas">
+                {data.areas.map((a) => {
+                  const active = data.district === a.name;
+                  return (
+                    <li key={a.name}>
+                      <Link
+                        href={url(
+                          {
+                            query: data.query,
+                            filter: data.filter,
+                            district: active ? "" : a.name,
+                          },
+                          "#map",
+                        )}
+                        aria-current={active ? "true" : undefined}
+                      >
+                        <span className="hx-area-no" aria-hidden="true">
+                          {active ? <Check size={14} /> : <MapPin size={14} />}
+                        </span>
+                        <span>
+                          <strong>{a.name}</strong>
+                          <small>
+                            {a.salons} салон
+                            {active && " · Сонгосон, дахин дарж болиулна"}
+                          </small>
+                        </span>
+                        <ArrowRight size={16} aria-hidden="true" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              {data.district && (
+                <p className="hx-sub">
+                  <Link
+                    href={url(
+                      { query: data.query, filter: data.filter },
+                      "#map",
+                    )}
+                  >
+                    Бүх дүүргийн салоныг харах
+                  </Link>
+                </p>
+              )}
             </div>
             <div className="hx-map">
-              <iframe
-                title="Улаанбаатарын газрын зураг"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=106.78%2C47.86%2C107.06%2C47.97&layer=mapnik"
-                loading="lazy"
-              />
+              <SalonMap pins={data.pins} district={data.district} />
               <div className="hx-map-card">
                 <span>
                   <MapPin size={16} />
                 </span>
                 <div>
-                  <strong>{data.stats.salons} баталгаажсан салон</strong>
-                  <small>Улаанбаатар хотод онлайнаар цаг авч байна</small>
+                  <strong>
+                    {data.district
+                      ? `${data.district}: ${data.total} салон`
+                      : `${data.stats.salons} баталгаажсан салон`}
+                  </strong>
+                  <small>
+                    {data.pins.length
+                      ? "Цэг дээр дарж салоны мэдээллийг харна уу"
+                      : data.district
+                        ? "Энэ дүүргийн салонууд байршлаа газрын зурагт оруулаагүй байна"
+                        : "Улаанбаатар хотод онлайнаар цаг авч байна"}
+                  </small>
+                  {data.district && data.total > 0 && (
+                    <Link href="#salons">Жагсаалтаар харах</Link>
+                  )}
                 </div>
               </div>
             </div>

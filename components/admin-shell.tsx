@@ -23,6 +23,7 @@ import { navigation, modules } from "@/lib/navigation";
 import { signOut } from "@/app/auth/actions";
 import type { AdminData } from "@/lib/admin-data";
 import { ActivityBell } from "./activity-bell";
+import { NoticeBanner } from "./notice-banner";
 import { Logo } from "@/components/logo";
 export function AdminShell({
   data,
@@ -35,6 +36,8 @@ export function AdminShell({
   const approved = data.billing.state !== "PENDING";
   // The calendar uses the full viewport height, so it drops the page footer.
   const fullHeight = path === "/calendar" || path === "/bookings";
+  // The report fits one screen on desktop, so it drops the footer too.
+  const fitScreen = path === "/reports";
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
@@ -170,6 +173,7 @@ export function AdminShell({
             </div>
           </div>
         </header>
+        <NoticeBanner notices={data.notices} />
         {!approved && !data.preview && (
           <aside className="billing-banner calm" role="status">
             <CalendarClock size={18} />
@@ -209,11 +213,17 @@ export function AdminShell({
             </aside>
           )}
         <main
-          className={fullHeight ? "page-content full-height" : "page-content"}
+          className={
+            fullHeight
+              ? "page-content full-height"
+              : fitScreen
+                ? "page-content fit-screen"
+                : "page-content"
+          }
         >
           {children}
         </main>
-        {!fullHeight && (
+        {!fullHeight && !fitScreen && (
           <footer className="main-footer">
             <span>© {new Date().getFullYear()} Salon77</span>
             <span>

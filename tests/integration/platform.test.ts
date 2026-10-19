@@ -82,7 +82,12 @@ test("platform console", { timeout: 120000 }, async (t) => {
         new30: 2,
       });
       assert.equal(o.branches, 3);
-      assert.deepEqual(o.onlineBookings, { today: 2, days7: 2, days30: 2 });
+      assert.deepEqual(o.onlineBookings, {
+        today: 2,
+        days7: 2,
+        days30: 2,
+        month: 2,
+      });
       assert.equal(o.bookings30, 3);
       assert.equal(o.daily.length, 30);
       assert.equal(o.daily.at(-1)?.count, 2);

@@ -175,6 +175,29 @@ export async function listDirectory(
         },
       }),
     ]);
+  // Map pins: every matching salon's branches with coordinates, not just this
+  // page. A chosen district keeps only the branches inside it.
+  const pinned = await db.branch.findMany({
+    where: {
+      active: true,
+      latitude: { not: null },
+      longitude: { not: null },
+      salon: where,
+      ...(input.district
+        ? { district: { in: spellings(input.district) } }
+        : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      salon: { select: { name: true, slug: true } },
+    },
+    orderBy: { createdAt: "asc" },
+    take: 500,
+  });
   const ids = salons.map((s) => s.id);
   const [services, ratings] = await Promise.all([
     db.service.findMany({
@@ -229,6 +252,15 @@ export async function listDirectory(
         b.salonId,
       ]),
     ),
+    pins: pinned.map((b) => ({
+      id: b.id,
+      salon: b.salon.name,
+      slug: b.salon.slug,
+      branch: b.name,
+      address: b.address,
+      lat: b.latitude!,
+      lng: b.longitude!,
+    })),
     popular: [...byCategory.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .slice(0, 8)

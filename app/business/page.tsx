@@ -18,7 +18,6 @@ import {
   Link2,
   MessageCircle,
   NotebookPen,
-  Receipt,
   Scissors,
   Sparkles,
   Star,
@@ -40,6 +39,7 @@ import { formatMnt } from "@/lib/ui-language";
 import { smsDelivers } from "@/lib/notifications/provider";
 import { PERIOD_DAYS, TRIAL_DAYS, monthlyAmount } from "@/lib/billing";
 import { pricePerBranch } from "@/lib/services/billing";
+import { BusinessShowcase } from "@/components/business-showcase";
 import { SignupPrep } from "@/components/signup-prep";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -280,7 +280,13 @@ async function branchPrice() {
   return pricePerBranch(db).catch(() => null);
 }
 // Footer shortcuts into the directory by service type.
-const footerTypes: ServiceType[] = ["HAIR", "NAILS", "LASHES", "SKIN", "MASSAGE"];
+const footerTypes: ServiceType[] = [
+  "HAIR",
+  "NAILS",
+  "LASHES",
+  "SKIN",
+  "MASSAGE",
+];
 export default async function BusinessPage() {
   // Messages are promised only once a real SMS gateway delivers them.
   const sms = smsDelivers();
@@ -402,202 +408,42 @@ export default async function BusinessPage() {
             </div>
           </div>
         </section>
-        <section id="problems" className="lp-section">
+        <section
+          id="problems"
+          className="lp-section bx-solutions"
+          aria-labelledby="bx-solutions-title"
+        >
           <div className="lp-heading">
-            <span className="lp-eyebrow">ТАНД ТАНИЛ УУ?</span>
-            <h2>Салон бүрт тулгардаг дөрвөн бэрхшээл</h2>
-            <p>Salon77 эдгээрийг нэг дор шийднэ.</p>
+            <span className="lp-eyebrow">АСУУДАЛ БА ШИЙДЭЛ</span>
+            <h2 id="bx-solutions-title">Төвөгтэй ажлыг хялбар болгоё</h2>
+            <p>Танд танил дөрвөн асуудал. Өдөр бүр ашиглах дөрвөн шийдэл.</p>
           </div>
-          <div className="lp-pains">
-            {pains.map((p) => (
-              <article key={p.id} className="lp-pain">
-                <div className="lp-pain-art" aria-hidden="true">
-                  <PainArt id={p.id} />
-                </div>
-                <div className="lp-pain-copy">
-                  <h3>
-                    <p.icon size={17} />
-                    {p.title}
-                  </h3>
-                  <p>{p.text}</p>
-                </div>
-                <div className="lp-fix">
-                  <span className="lp-fix-label">
-                    <Check size={13} strokeWidth={3} /> Salon77-д
-                  </span>
-                  <p>{p.fix}</p>
-                  <div className="lp-shot" aria-hidden="true">
-                    <FixShot id={p.id} sms={sms} />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          <BusinessShowcase
+            items={pains.map((p) => ({
+              id: p.id,
+              title: p.title,
+              problem: p.text,
+              solution: p.fix,
+              preview:
+                p.id === "double" || p.id === "revenue" ? (
+                  <SolutionPreview id={p.id} />
+                ) : (
+                  <FixShot id={p.id} sms={sms} />
+                ),
+            }))}
+          />
           <p className="lp-sample-note">
             Зураг дээрх нэр, тоо нь жишээ.
             {!sms && " Мессеж сануулга удахгүй нэмэгдэнэ."}
           </p>
-        </section>
-        <section id="product" className="lp-section">
-          <div className="lp-heading">
-            <span className="lp-eyebrow">НЭГ ДЭЛГЭЦЭЭС</span>
-            <h2>Орлого, захиалга, ажилтнаа тоогоор хараарай</h2>
+          <div className="bx-supporting-heading">
+            <h3>Өдөр тутмын бусад ажлаа ч нэг дороос</h3>
             <p>
-              Тайлан, календарь, үйлчилгээ болон ажилтнаар орсон орлого бүгд
-              автоматаар бодогдоно. Дэвтэр, тооны машин хэрэггүй.
+              Ажилтны ирц, барааны үлдэгдэл, үйлчлүүлэгчийн түүхээ хамт
+              хөтлөөрэй.
             </p>
           </div>
-          <div className="lp-bento">
-            <article className="lp-tile">
-              <header>
-                <span className="lp-icon">
-                  <CalendarDays size={19} />
-                </span>
-                <div>
-                  <h3>Календарь</h3>
-                  <p>Өдөр, долоо хоногоор харна.</p>
-                </div>
-              </header>
-              <div className="lp-laptop" aria-hidden="true">
-                <div className="lp-laptop-screen">
-                  <div className="lp-window-bar">
-                    <i />
-                    <i />
-                    <i />
-                    <span>Календарь · 7 хоног</span>
-                  </div>
-                  <div className="lp-wk">
-                    <div className="lp-wk-times">
-                      {[0, 2, 4, 6, 8].map((h) => (
-                        <span key={h}>{weekTime(h)}</span>
-                      ))}
-                    </div>
-                    {week.map((d) => (
-                      <div key={d.day} className={d.date === 9 ? "today" : ""}>
-                        <span>{d.day}</span>
-                        <b>{d.date}</b>
-                        <div className="lp-wk-track">
-                          {d.events.map(([start, length, tone, name]) => (
-                            <i
-                              key={start}
-                              className={`tone-${tone}`}
-                              style={{
-                                top: `${(start / WEEK_HOURS) * 100}%`,
-                                height: `calc(${(length / WEEK_HOURS) * 100}% - 2px)`,
-                              }}
-                            >
-                              <small>{weekTime(start)}</small>
-                              <em>{name}</em>
-                            </i>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="lp-laptop-base" />
-              </div>
-            </article>
-            <article className="lp-tile">
-              <header>
-                <span className="lp-icon">
-                  <ChartNoAxesCombined size={19} />
-                </span>
-                <div>
-                  <h3>Орлогын тайлан</h3>
-                  <p>Өдөр, сар, салбараар шүүнэ.</p>
-                </div>
-              </header>
-              <div className="lp-report" aria-hidden="true">
-                <div className="lp-report-top">
-                  <div>
-                    <span>Энэ сарын орлого</span>
-                    <strong>{formatMnt(showcaseRevenue)}</strong>
-                  </div>
-                  <em>
-                    <TrendingUp size={13} /> +18%
-                  </em>
-                </div>
-                <div className="lp-bars">
-                  {revenueBars.map((h, i) => (
-                    <i
-                      key={i}
-                      className={h === 100 ? "peak" : ""}
-                      style={{ height: `${h}%` }}
-                    />
-                  ))}
-                </div>
-                <div className="lp-report-stats">
-                  <div>
-                    <span>Дууссан захиалга</span>
-                    <b>{showcaseCount}</b>
-                  </div>
-                  <div>
-                    <span>Дундаж дүн</span>
-                    <b>
-                      {formatMnt(Math.round(showcaseRevenue / showcaseCount))}
-                    </b>
-                  </div>
-                  <div>
-                    <span>Ирээгүй</span>
-                    <b>6</b>
-                  </div>
-                </div>
-              </div>
-            </article>
-            <article className="lp-tile">
-              <header>
-                <span className="lp-icon">
-                  <Scissors size={19} />
-                </span>
-                <div>
-                  <h3>Үйлчилгээгээр орсон орлого</h3>
-                  <p>Аль үйлчилгээ их орлоготойг харна.</p>
-                </div>
-              </header>
-              <ul className="lp-breakdown" aria-hidden="true">
-                {byService.map((s) => (
-                  <li key={s.name} className={`tone-${s.tone}`}>
-                    <div>
-                      <strong>{s.name}</strong>
-                      <span>{s.count} удаа</span>
-                      <b>{formatMnt(s.revenue)}</b>
-                    </div>
-                    <span className="lp-breakdown-track">
-                      <span
-                        style={{
-                          width: `${(s.revenue / byService[0].revenue) * 100}%`,
-                        }}
-                      />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </article>
-            <article className="lp-tile">
-              <header>
-                <span className="lp-icon">
-                  <UserRound size={19} />
-                </span>
-                <div>
-                  <h3>Ажилтнаар орсон орлого</h3>
-                  <p>Хэн хэдийг оруулсныг харна.</p>
-                </div>
-              </header>
-              <ul className="lp-staff" aria-hidden="true">
-                {byStaff.map((s, i) => (
-                  <li key={s.name}>
-                    <span className="lp-avatar">{s.name[0]}</span>
-                    <div>
-                      <strong>{s.name}</strong>
-                      <span>{s.count} үйлчилгээ</span>
-                    </div>
-                    <b>{formatMnt(s.revenue)}</b>
-                    {i === 0 && <em>Тэргүүлэгч</em>}
-                  </li>
-                ))}
-              </ul>
-            </article>
+          <div className="lp-bento bx-supporting-tools">
             <article className="lp-tile">
               <header>
                 <span className="lp-icon">
@@ -890,58 +736,169 @@ export default async function BusinessPage() {
           </Link>
         </section>
       </main>
-      <HomeFooter
-        categories={footerTypes.map((t) => SERVICE_TYPES[t])}
-      />
+      <HomeFooter categories={footerTypes.map((t) => SERVICE_TYPES[t])} />
     </div>
   );
 }
-// Small drawings of each pain; decorative, the card text carries the meaning.
-function PainArt({ id }: { id: PainId }) {
-  if (id === "messages")
-    return (
-      <div className="lp-art-chat">
-        <i>Сайн байна уу, маргааш 3 цагт сул уу?</i>
-        <i>Үнэ нь хэд вэ?</i>
-        <i>Хариу өгөөч…</i>
-        <b>+12</b>
-      </div>
-    );
-  if (id === "double")
-    return (
-      <div className="lp-art-book">
-        <i>
-          <span>13:00</span> Оюун · үс засалт
-        </i>
-        <i className="clash">
-          <span>14:00</span> Сараа · гел
-        </i>
-        <i className="clash">
-          <span>14:00</span> Номин · маникюр
-        </i>
-        <i>
-          <span>15:30</span> ???
-        </i>
-      </div>
-    );
-  if (id === "noshow")
-    return (
-      <div className="lp-art-empty">
-        <UserX size={26} />
-        <div>
-          <span>15:00 · Сормуус</span>
-          <strong>Хүлээсээр…</strong>
-        </div>
-      </div>
-    );
+// Product previews sit beside the problem they solve.
+function SolutionPreview({ id }: { id: "double" | "revenue" }) {
   return (
-    <div className="lp-art-cash">
-      <Receipt size={22} />
-      <NotebookPen size={22} />
-      <div>
-        <span>Энэ сарын орлого</span>
-        <strong>? ₮</strong>
-      </div>
+    <div className="bx-solution-preview">
+      {id === "double" ? (
+        <article className="lp-tile">
+          <header>
+            <span className="lp-icon">
+              <CalendarDays size={19} />
+            </span>
+            <div>
+              <h3>Календарь</h3>
+              <p>Өдөр, долоо хоногоор харна.</p>
+            </div>
+          </header>
+          <div className="lp-laptop" aria-hidden="true">
+            <div className="lp-laptop-screen">
+              <div className="lp-window-bar">
+                <i />
+                <i />
+                <i />
+                <span>Календарь · 7 хоног</span>
+              </div>
+              <div className="lp-wk">
+                <div className="lp-wk-times">
+                  {[0, 2, 4, 6, 8].map((h) => (
+                    <span key={h}>{weekTime(h)}</span>
+                  ))}
+                </div>
+                {week.map((d) => (
+                  <div key={d.day} className={d.date === 9 ? "today" : ""}>
+                    <span>{d.day}</span>
+                    <b>{d.date}</b>
+                    <div className="lp-wk-track">
+                      {d.events.map(([start, length, tone, name]) => (
+                        <i
+                          key={start}
+                          className={`tone-${tone}`}
+                          style={{
+                            top: `${(start / WEEK_HOURS) * 100}%`,
+                            height: `calc(${(length / WEEK_HOURS) * 100}% - 2px)`,
+                          }}
+                        >
+                          <small>{weekTime(start)}</small>
+                          <em>{name}</em>
+                        </i>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="lp-laptop-base" />
+          </div>
+        </article>
+      ) : (
+        <>
+          <article className="lp-tile">
+            <header>
+              <span className="lp-icon">
+                <ChartNoAxesCombined size={19} />
+              </span>
+              <div>
+                <h3>Орлогын тайлан</h3>
+                <p>Өдөр, сар, салбараар шүүнэ.</p>
+              </div>
+            </header>
+            <div className="lp-report" aria-hidden="true">
+              <div className="lp-report-top">
+                <div>
+                  <span>Энэ сарын орлого</span>
+                  <strong>{formatMnt(showcaseRevenue)}</strong>
+                </div>
+                <em>
+                  <TrendingUp size={13} /> +18%
+                </em>
+              </div>
+              <div className="lp-bars">
+                {revenueBars.map((h, i) => (
+                  <i
+                    key={i}
+                    className={h === 100 ? "peak" : ""}
+                    style={{ height: `${h}%` }}
+                  />
+                ))}
+              </div>
+              <div className="lp-report-stats">
+                <div>
+                  <span>Дууссан захиалга</span>
+                  <b>{showcaseCount}</b>
+                </div>
+                <div>
+                  <span>Дундаж дүн</span>
+                  <b>
+                    {formatMnt(Math.round(showcaseRevenue / showcaseCount))}
+                  </b>
+                </div>
+                <div>
+                  <span>Ирээгүй</span>
+                  <b>6</b>
+                </div>
+              </div>
+            </div>
+          </article>
+          <article className="lp-tile">
+            <header>
+              <span className="lp-icon">
+                <Scissors size={19} />
+              </span>
+              <div>
+                <h3>Үйлчилгээгээр орсон орлого</h3>
+                <p>Аль үйлчилгээ их орлоготойг харна.</p>
+              </div>
+            </header>
+            <ul className="lp-breakdown" aria-hidden="true">
+              {byService.map((s) => (
+                <li key={s.name} className={`tone-${s.tone}`}>
+                  <div>
+                    <strong>{s.name}</strong>
+                    <span>{s.count} удаа</span>
+                    <b>{formatMnt(s.revenue)}</b>
+                  </div>
+                  <span className="lp-breakdown-track">
+                    <span
+                      style={{
+                        width: `${(s.revenue / byService[0].revenue) * 100}%`,
+                      }}
+                    />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </article>
+          <article className="lp-tile">
+            <header>
+              <span className="lp-icon">
+                <UserRound size={19} />
+              </span>
+              <div>
+                <h3>Ажилтнаар орсон орлого</h3>
+                <p>Хэн хэдийг оруулсныг харна.</p>
+              </div>
+            </header>
+            <ul className="lp-staff" aria-hidden="true">
+              {byStaff.map((s, i) => (
+                <li key={s.name}>
+                  <span className="lp-avatar">{s.name[0]}</span>
+                  <div>
+                    <strong>{s.name}</strong>
+                    <span>{s.count} үйлчилгээ</span>
+                  </div>
+                  <b>{formatMnt(s.revenue)}</b>
+                  {i === 0 && <em>Тэргүүлэгч</em>}
+                </li>
+              ))}
+            </ul>
+          </article>
+        </>
+      )}
     </div>
   );
 }

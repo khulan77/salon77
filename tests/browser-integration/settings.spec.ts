@@ -13,6 +13,9 @@ test("settings preview and deposit instructions for guests", async ({
   await page.getByRole("button", { name: "Нэвтрэх", exact: true }).click();
   await expect(page).toHaveURL(/\/(calendar|schedules)$/);
   await page.goto("/settings");
+  const tabs = page.getByRole("navigation", { name: "Тохиргооны хэсгүүд" });
+  await tabs.getByRole("button", { name: "Захиалгын хуудас" }).click();
+  await expect(page).toHaveURL(/\/settings\?tab=page$/);
   // The shareable link opens this salon's own booking page.
   const share = page.getByRole("textbox", { name: "Захиалгын линк" });
   await expect(share).toHaveValue(/^https?:\/\/[^/]+\/salon-a\/book$/);
@@ -21,6 +24,7 @@ test("settings preview and deposit instructions for guests", async ({
     page.getByRole("img", { name: "Захиалгын линкийн QR код" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "QR татах" })).toBeEnabled();
+  await tabs.getByRole("button", { name: "Салоны мэдээлэл" }).click();
   await expect(page.getByRole("region", { name: "Салоны лого" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Лого оруулах" }),
@@ -35,6 +39,7 @@ test("settings preview and deposit instructions for guests", async ({
   });
   await expect(preview).toContainText("Туршилтын салон");
   await expect(preview).toContainText("Цаг сонгох");
+  await tabs.getByRole("button", { name: "Захиалгын нөхцөл" }).click();
   await page.getByRole("checkbox", { name: "Урьдчилгаа авах" }).check();
   await page.getByLabel("Банк", { exact: true }).fill("Хаан банк");
   await page.getByLabel("Дансны дугаар", { exact: true }).fill("5000123456");

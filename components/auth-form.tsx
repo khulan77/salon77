@@ -34,7 +34,7 @@ export function AuthForm({
   const [state, action, pending] = useActionState(authenticate, {});
   const [shown, setShown] = useState(false);
   return (
-    <AuthShell>
+    <AuthShell minimal={!signup}>
       <div className="ax-form">
         <span className="ax-eyebrow">Шинэ боломжийн эхлэл</span>
         <h2>
@@ -157,9 +157,15 @@ export function AuthForm({
   );
 }
 // The obsidian panel with the logo and headline, and the white form side.
-function AuthShell({ children }: { children: React.ReactNode }) {
+export function AuthShell({
+  children,
+  minimal = false,
+}: {
+  children: React.ReactNode;
+  minimal?: boolean;
+}) {
   return (
-    <div className="ax">
+    <div className={`ax${minimal ? " ax-signin" : ""}`}>
       <aside className="ax-aside">
         <Logo href="/" size="lg" tone="light" className="ax-brand" />
         <div className="ax-copy">
@@ -168,24 +174,50 @@ function AuthShell({ children }: { children: React.ReactNode }) {
             <br />
             Бид ажлыг тань <u>хөнгөвчилье.</u>
           </h1>
+          {minimal && (
+            <p className="ax-description">
+              Салоныхоо ажлыг нэг дороос, илүү хялбараар удирдаарай.
+            </p>
+          )}
         </div>
+        {minimal && (
+          <>
+            <svg
+              className="ax-star"
+              viewBox="0 0 120 120"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M60 0v120M0 60h120M18 18l84 84M18 102l84-84"
+                stroke="currentColor"
+                strokeWidth="6"
+              />
+            </svg>
+            <p className="ax-tagline">Таны салон. Таны баг. Таны боломж.</p>
+          </>
+        )}
       </aside>
       <main className="ax-main">
-        <div className="ax-help">
-          Асуух зүйл байна уу?{" "}
-          <Link href="/business#faq">
-            Тусламж <ArrowUpRight size={15} />
-          </Link>
-        </div>
+        {!minimal && (
+          <div className="ax-help">
+            Асуух зүйл байна уу?{" "}
+            <Link href="/business#faq">
+              Тусламж <ArrowUpRight size={15} />
+            </Link>
+          </div>
+        )}
         {children}
-        <footer className="ax-legal">
-          © {new Date().getFullYear()} Salon77. Бүх эрх хуулиар хамгаалагдсан.
-        </footer>
+        {!minimal && (
+          <footer className="ax-legal">
+            © {new Date().getFullYear()} Salon77. Бүх эрх хуулиар хамгаалагдсан.
+          </footer>
+        )}
       </main>
     </div>
   );
 }
-function Messages({ state }: { state: { error?: string; success?: string } }) {
+export function Messages({ state }: { state: { error?: string; success?: string } }) {
   return (
     <>
       {state.error && (

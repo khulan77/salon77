@@ -54,79 +54,77 @@ export function RevenueReport({
     "Дууссан захиалга бүртгэгдэхээр энд тооцоо гарна. Цаг нь өнгөрсөн баталгаажсан захиалга автоматаар «Дууссан» болно.";
   return (
     <div className={`revenue-report ${pending ? "is-loading" : ""}`}>
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">
-            <span className="tiny-line" /> ОРЛОГЫН ТАЙЛАН
+      <div className="report-top">
+        <div className="page-heading">
+          <div>
+            <div className="eyebrow">
+              <span className="tiny-line" /> ОРЛОГЫН ТАЙЛАН
+            </div>
+            <h1>
+              Тайлан<span className="heading-dot">.</span>
+            </h1>
+            <p>
+              {branchName} · {range}
+            </p>
           </div>
-          <h1>
-            Тайлан<span className="heading-dot">.</span>
-          </h1>
-          <p>
-            {branchName} · {range}
-          </p>
         </div>
-      </div>
-      <div className="report-filters">
-        <div className="segmented" role="group" aria-label="Хугацаа сонгох">
-          {presets().map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              aria-pressed={p.from === report.from && p.to === report.to}
-              onClick={() => go({ from: p.from, to: p.to })}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="report-filters">
+          <div className="segmented" role="group" aria-label="Хугацаа сонгох">
+            {presets().map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                aria-pressed={p.from === report.from && p.to === report.to}
+                onClick={() => go({ from: p.from, to: p.to })}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <label className="field">
+            Эхлэх
+            <input
+              type="date"
+              value={report.from}
+              onChange={(e) => e.target.value && go({ from: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            Дуусах
+            <input
+              type="date"
+              value={report.to}
+              min={report.from}
+              onChange={(e) => e.target.value && go({ to: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            Салбар
+            <span className="select-wrap">
+              <MapPin size={15} />
+              <select
+                value={report.branchId ?? ""}
+                onChange={(e) => go({ branchId: e.target.value || undefined })}
+              >
+                <option value="">Бүх салбар</option>
+                {branches
+                  .filter((b) => b.active)
+                  .map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+              </select>
+              <ChevronDown size={13} />
+            </span>
+          </label>
         </div>
-        <label className="field">
-          Эхлэх
-          <input
-            type="date"
-            value={report.from}
-            onChange={(e) => e.target.value && go({ from: e.target.value })}
-          />
-        </label>
-        <label className="field">
-          Дуусах
-          <input
-            type="date"
-            value={report.to}
-            min={report.from}
-            onChange={(e) => e.target.value && go({ to: e.target.value })}
-          />
-        </label>
-        <label className="field">
-          Салбар
-          <span className="select-wrap">
-            <MapPin size={15} />
-            <select
-              value={report.branchId ?? ""}
-              onChange={(e) => go({ branchId: e.target.value || undefined })}
-            >
-              <option value="">Бүх салбар</option>
-              {branches
-                .filter((b) => b.active)
-                .map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-            </select>
-            <ChevronDown size={13} />
-          </span>
-        </label>
       </div>
       <section className="report-summary" aria-label="Орлогын үзүүлэлтүүд">
         <article className="report-hero">
           <span>Орсон орлого</span>
-          {report.completed || preview ? (
-            <strong>{formatMnt(report.revenue)}</strong>
-          ) : (
-            <p className="report-hero-empty">{emptyNote}</p>
-          )}
-          <p>{range}</p>
+          <strong>{formatMnt(report.revenue)}</strong>
+          <p>{report.completed || preview ? range : "Дууссан захиалга алга"}</p>
         </article>
         <article className="report-expected">
           <span>Хүлээгдэж буй</span>
@@ -149,68 +147,75 @@ export function RevenueReport({
           </article>
         ))}
       </section>
-      <section className="panel report-panel">
-        <div className="report-panel-heading">
-          <h2>
-            {report.granularity === "day" ? "Өдрөөр" : "Сараар"}{" "}
-            <span>
-              {report.series.length}{" "}
-              {report.granularity === "day" ? "өдөр" : "сар"}
+      <div className="report-body">
+        <section className="panel report-panel report-chart-panel">
+          <div className="report-panel-heading">
+            <h2>
+              {report.granularity === "day" ? "Өдрөөр" : "Сараар"}{" "}
+              <span>
+                {report.series.length}{" "}
+                {report.granularity === "day" ? "өдөр" : "сар"}
+              </span>
+            </h2>
+            <span className="chart-legend">
+              <i className="legend-average" /> Дундаж{" "}
+              {averageLabel(report.series)}
             </span>
-          </h2>
-          <span className="chart-legend">
-            <i className="legend-average" /> Дундаж{" "}
-            {averageLabel(report.series)}
-          </span>
-        </div>
-        <RevenueChart series={report.series} granularity={report.granularity} />
-      </section>
-      <section className="panel report-panel">
-        <div className="report-panel-heading">
-          <div className="report-breakdown-title">
-            <h2>Задаргаа</h2>
-            <div className="segmented" role="group" aria-label="Задаргаа">
-              <button
-                type="button"
-                aria-pressed={view === "service"}
-                onClick={() => setView("service")}
-              >
-                Үйлчилгээгээр
-              </button>
-              <button
-                type="button"
-                aria-pressed={view === "staff"}
-                onClick={() => setView("staff")}
-              >
-                Ажилтнаар
-              </button>
-            </div>
           </div>
-          <span className="chart-legend">
-            {rows.length} мөр · {formatMnt(report.revenue)}
-          </span>
-        </div>
-        {rows.length ? (
-          <ul className="breakdown-list">
-            {rows.map((r) => (
-              <li key={r.key}>
-                <div>
-                  <strong>{r.name}</strong>
-                  <span>{r.count} удаа</span>
-                  <b>{formatMnt(r.revenue)}</b>
-                </div>
-                <span className="breakdown-track">
-                  <span style={{ width: `${(r.revenue / top) * 100}%` }} />
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="report-empty">
-            {preview ? "Танилцах горимд жишээ орлого харуулахгүй." : emptyNote}
-          </p>
-        )}
-      </section>
+          <RevenueChart
+            series={report.series}
+            granularity={report.granularity}
+          />
+        </section>
+        <section className="panel report-panel report-breakdown-panel">
+          <div className="report-panel-heading">
+            <div className="report-breakdown-title">
+              <h2>Задаргаа</h2>
+              <div className="segmented" role="group" aria-label="Задаргаа">
+                <button
+                  type="button"
+                  aria-pressed={view === "service"}
+                  onClick={() => setView("service")}
+                >
+                  Үйлчилгээгээр
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={view === "staff"}
+                  onClick={() => setView("staff")}
+                >
+                  Ажилтнаар
+                </button>
+              </div>
+            </div>
+            <span className="chart-legend">
+              {rows.length} мөр · {formatMnt(report.revenue)}
+            </span>
+          </div>
+          {rows.length ? (
+            <ul className="breakdown-list">
+              {rows.map((r) => (
+                <li key={r.key}>
+                  <div>
+                    <strong>{r.name}</strong>
+                    <span>{r.count} удаа</span>
+                    <b>{formatMnt(r.revenue)}</b>
+                  </div>
+                  <span className="breakdown-track">
+                    <span style={{ width: `${(r.revenue / top) * 100}%` }} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="report-empty">
+              {preview
+                ? "Танилцах горимд жишээ орлого харуулахгүй."
+                : emptyNote}
+            </p>
+          )}
+        </section>
+      </div>
       <p className="report-note">
         Орсон орлогыг «Дууссан» төлөвтэй захиалгын үнээр, хүлээгдэж буйг
         баталгаажсан боловч дуусаагүй захиалгаар, захиалгын өдрөөр тооцно. Энэ

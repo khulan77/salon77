@@ -10,7 +10,7 @@ export const metadata = {
   referrer: "no-referrer",
   robots: { index: false, follow: false },
 };
-// Open without signing in: the invited person creates their own password here.
+
 export default async function Page({
   searchParams,
 }: {

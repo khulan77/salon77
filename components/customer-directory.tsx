@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import type { customerDetail, listCustomers } from "@/lib/services/customers";
 import { localStamp } from "@/lib/business-time";
 import { statusLabels } from "@/lib/booking-validation";
-import { Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
 import { formatMnt, formatDayLabel, userFacingError } from "@/lib/ui-language";
-import { tone } from "@/lib/avatar";
+import { initials } from "@/lib/avatar";
 import { requestJson } from "@/lib/client-request";
 import { Button } from "./ui/button";
 import { FeatureDialog, Feedback } from "./ui/feature-dialog";
@@ -137,105 +137,130 @@ export function CustomerDirectory({
         </div>
       )}
       {!selected && <Feedback error={error} message={message} />}
-      <label className="field customer-search">
-        Хайх
-        <input
-          placeholder="Нэр эсвэл утасны дугаар"
-          value={search}
-          maxLength={100}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(0);
-          }}
-        />
-      </label>
-      {!loading && result.total > 0 && (
-        <p className="customer-count">Нийт {result.total} бүртгэлтэй</p>
-      )}
+      <div className="customer-toolbar">
+        <label className="customer-search-box">
+          <Search size={15} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Үйлчлүүлэгч хайх"
+            placeholder="Нэр эсвэл утасны дугаараар хайх"
+            value={search}
+            maxLength={100}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+          />
+        </label>
+        {!loading && result.total > 0 && (
+          <span className="customer-count">
+            Нийт <b>{result.total}</b> үйлчлүүлэгч
+          </span>
+        )}
+      </div>
       {loading && !result.total && !result.customers.length ? (
-        <p role="status">Ачаалж байна…</p>
+        <p role="status" className="customer-loading">
+          Ачаалж байна…
+        </p>
       ) : result.customers.length ? (
-        <ul
-          className={`panel customer-list ${loading ? "is-refreshing" : ""}`}
+        <div
+          className={`panel customer-table ${loading ? "is-refreshing" : ""}`}
           aria-busy={loading}
         >
-          {result.customers.map((c) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                className="customer-row"
-                onClick={() => {
-                  setDetail(null);
-                  setError("");
-                  setHistoryPage(0);
-                  setSelected(c.id);
-                }}
-              >
-                <span className={`customer-avatar tone-${tone(c.id)}`}>
-                  {(c.name.trim()[0] ?? "?").toUpperCase()}
-                </span>
-                <span className="customer-main">
-                  <strong>{c.name}</strong>
-                  <span>
-                    {formatPhone(c.phone)}
-                    {c.lastAt && (
-                      <>
-                        <i aria-hidden>·</i>
-                        {relativeDay(c.lastAt)}
-                      </>
-                    )}
-                  </span>
-                  {c.lastService && (
-                    <em className={`customer-tag tone-${tone(c.lastService)}`}>
-                      {c.lastService}
-                    </em>
-                  )}
-                </span>
-                <span className="customer-stats">
-                  <b>{c.visits} удаа</b>
-                  <small>{formatMnt(c.spentMnt)}</small>
-                </span>
-              </button>
-              {owner && (
+          <div className="customer-head" aria-hidden="true">
+            <span>Үйлчлүүлэгч</span>
+            <span>Сүүлд ирсэн</span>
+            <span>Сүүлийн үйлчилгээ</span>
+            <span>Ирсэн</span>
+            <span>Нийт зарцуулсан</span>
+          </div>
+          <ul className="customer-list">
+            {result.customers.map((c) => (
+              <li key={c.id}>
                 <button
                   type="button"
-                  className="customer-delete"
-                  aria-label={`${c.name} устгах`}
-                  title="Устгах"
-                  disabled={preview}
-                  onClick={() => remove(c)}
+                  className="customer-row"
+                  onClick={() => {
+                    setDetail(null);
+                    setError("");
+                    setHistoryPage(0);
+                    setSelected(c.id);
+                  }}
                 >
-                  <Trash2 size={16} />
+                  <span className="customer-who">
+                    <span className="customer-avatar" aria-hidden="true">
+                      {initials(c.name)}
+                    </span>
+                    <span>
+                      <strong>{c.name}</strong>
+                      <small>{formatPhone(c.phone)}</small>
+                    </span>
+                  </span>
+                  <span className="customer-cell">
+                    {c.lastAt ? relativeDay(c.lastAt) : "—"}
+                  </span>
+                  <span className="customer-cell customer-service">
+                    {c.lastService || "—"}
+                  </span>
+                  <span className="customer-cell customer-visits">
+                    {c.visits} удаа
+                  </span>
+                  <span className="customer-cell customer-spent">
+                    {formatMnt(c.spentMnt)}
+                  </span>
                 </button>
-              )}
-            </li>
-          ))}
-        </ul>
+                {owner && (
+                  <button
+                    type="button"
+                    className="customer-delete"
+                    aria-label={`${c.name} устгах`}
+                    title="Устгах"
+                    disabled={preview}
+                    onClick={() => remove(c)}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : (
         <section className="panel empty-page">
           <h2>Үйлчлүүлэгч олдсонгүй.</h2>
-          <p>Шинэ захиалга үүсгэх үед үйлчлүүлэгчээ бүртгээрэй.</p>
+          <p>
+            {search
+              ? "Өөр нэр эсвэл дугаараар хайгаад үзээрэй."
+              : "Шинэ захиалга үүсгэх үед үйлчлүүлэгч автоматаар бүртгэгдэнэ."}
+          </p>
         </section>
       )}
-      <div className="form-actions">
-        <Button
-          variant="outline"
-          disabled={!page}
-          onClick={() => setPage(page - 1)}
-        >
-          Өмнөх
-        </Button>
-        <span>
-          {page + 1} / {Math.max(1, Math.ceil(result.total / 30))}
-        </span>
-        <Button
-          variant="outline"
-          disabled={(page + 1) * 30 >= result.total}
-          onClick={() => setPage(page + 1)}
-        >
-          Дараах
-        </Button>
-      </div>
+      {result.total > 30 && (
+        <nav className="customer-pager" aria-label="Хуудаслалт">
+          <span>
+            {page * 30 + 1}–{Math.min((page + 1) * 30, result.total)} /{" "}
+            {result.total}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Өмнөх хуудас"
+            disabled={!page}
+            onClick={() => setPage(page - 1)}
+          >
+            <ChevronLeft size={16} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Дараах хуудас"
+            disabled={(page + 1) * 30 >= result.total}
+            onClick={() => setPage(page + 1)}
+          >
+            <ChevronRight size={16} />
+          </Button>
+        </nav>
+      )}
       <FeatureDialog
         open={!!selected}
         title="Үйлчлүүлэгчийн дэлгэрэнгүй"
@@ -316,37 +341,54 @@ export function CustomerDirectory({
                 </>
               )}
             </form>
-            <h3 className="history-title">Захиалгын түүх ба ирэх захиалгууд</h3>
-            {detail.history.map((b) => (
-              <article className="time-off-row" key={b.id}>
-                <div>
-                  <strong>{localStamp(b.startAt).replace("T", " ")}</strong>
-                  <p>
-                    {b.serviceName} · {b.priceMnt.toLocaleString("en-US")}₮
-                  </p>
-                  <p>
-                    {b.staffName} · {b.branchName} · {statusLabels[b.status]}
-                  </p>
-                </div>
-              </article>
-            ))}
-            {!detail.history.length && <p>Одоогоор захиалга алга.</p>}
-            <div className="form-actions">
-              <Button
-                variant="outline"
-                disabled={!historyPage}
-                onClick={() => setHistoryPage(historyPage - 1)}
-              >
-                Өмнөх
-              </Button>
-              <Button
-                variant="outline"
-                disabled={(historyPage + 1) * 30 >= detail.total}
-                onClick={() => setHistoryPage(historyPage + 1)}
-              >
-                Дараах
-              </Button>
-            </div>
+            <h3 className="history-title">
+              Захиалгын түүх
+              <span>{detail.total}</span>
+            </h3>
+            {detail.history.length ? (
+              <ul className="customer-history">
+                {detail.history.map((b) => (
+                  <li key={b.id}>
+                    <div>
+                      <strong>{b.serviceName}</strong>
+                      <small>
+                        {formatDayLabel(localStamp(b.startAt).slice(0, 10))} ·{" "}
+                        {localStamp(b.startAt).slice(11)} · {b.staffName} ·{" "}
+                        {b.branchName}
+                      </small>
+                    </div>
+                    <div>
+                      <b>{formatMnt(b.priceMnt)}</b>
+                      <span
+                        className={`customer-status status-${b.status.toLowerCase()}`}
+                      >
+                        {statusLabels[b.status]}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="customer-history-empty">Одоогоор захиалга алга.</p>
+            )}
+            {detail.total > 30 && (
+              <div className="form-actions">
+                <Button
+                  variant="outline"
+                  disabled={!historyPage}
+                  onClick={() => setHistoryPage(historyPage - 1)}
+                >
+                  Өмнөх
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={(historyPage + 1) * 30 >= detail.total}
+                  onClick={() => setHistoryPage(historyPage + 1)}
+                >
+                  Дараах
+                </Button>
+              </div>
+            )}
           </>
         ) : (
           !error && <p role="status">Ачаалж байна…</p>

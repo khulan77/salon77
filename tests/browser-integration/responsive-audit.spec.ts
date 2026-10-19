@@ -166,7 +166,7 @@ async function chooseTheme(page: Page, label: string) {
   // Settings load after the page; a dev-server reload (another edit landing)
   // can interrupt that, so try a few times.
   for (let attempt = 0; ; attempt++) {
-    await page.goto("/settings");
+    await page.goto("/settings?tab=page");
     try {
       await choice.waitFor({ timeout: 30000 });
       break;
@@ -210,16 +210,16 @@ test("responsive audit", async ({ browser }) => {
   ])
     await capture(owner, name, url);
   for (const [key, label] of [
-    ["light", "Цайвар"],
-    ["dark", "Бараан"],
-    ["pink", "Зөөлөн ягаан"],
-    ["natural", "Байгалийн"],
-    ["gold", "Алтлаг"],
+    ["classic", "Хар алтлаг"],
+    ["green", "Ногоон"],
+    ["rose", "Сарнай"],
+    ["violet", "Нил ягаан"],
+    ["blue", "Цэнхэр"],
   ]) {
     await chooseTheme(owner, label);
     await capture(owner, `book-${key}`, "/salon-a/book");
   }
-  await chooseTheme(owner, "Цайвар");
+  await chooseTheme(owner, "Хар алтлаг");
   await owner.close();
   const operator = await browser.newPage();
   await signIn(operator, "platform@example.test");

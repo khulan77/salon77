@@ -136,7 +136,7 @@ async function main() {
       }
       const encode = (v: unknown) =>
         Buffer.from(JSON.stringify(v)).toString("base64url");
-      const token = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: user.id, email: user.email, aud: "authenticated", role: "authenticated", exp: Math.floor(Date.now() / 1000) + 3600, iat: Math.floor(Date.now() / 1000) })}.local-test-signature`;
+      const token = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: user.id, email: user.email, aud: "authenticated", role: "authenticated", aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }], exp: Math.floor(Date.now() / 1000) + 3600, iat: Math.floor(Date.now() / 1000) })}.local-test-signature`;
       sessions.set(token, user);
       res.end(
         JSON.stringify({
@@ -188,6 +188,8 @@ async function main() {
         // Never email the real operator from tests, whatever .env holds.
         RESEND_API_KEY: "",
         PLATFORM_ALERT_EMAIL: "",
+        // The fixture's sessions carry a fresh authenticator check (aal2).
+        PLATFORM_ADMIN_EMAILS: "platform@example.test",
         // Every browser test books as a guest from 127.0.0.1; production
         // limits are covered by tests/integration/protection.test.ts.
         RATE_LIMIT_BOOKINGS: "1000",

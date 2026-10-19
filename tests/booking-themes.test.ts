@@ -31,11 +31,12 @@ for (const [name, p] of Object.entries(bookingThemes)) {
     assert.match(p.label, /^[А-Яа-яӨөҮүЁё ]+$/u);
   });
 }
-test("service recommendations have deterministic priority and a light fallback", () => {
-  assert.equal(recommendedBookingTheme(["HAIR", "NAILS"]), "DARK");
-  assert.equal(recommendedBookingTheme(["LASHES"]), "PINK");
-  assert.equal(recommendedBookingTheme(["SKIN"]), "NATURAL");
-  assert.equal(recommendedBookingTheme(["MASSAGE"]), "NATURAL");
-  assert.equal(recommendedBookingTheme(["OTHER"]), "LIGHT");
-  assert.equal(recommendedBookingTheme([]), "LIGHT");
+test("service recommendations have deterministic priority and a classic fallback", () => {
+  assert.equal(recommendedBookingTheme(["HAIR", "NAILS"]), "ROSE");
+  assert.equal(recommendedBookingTheme(["LASHES"]), "ROSE");
+  assert.equal(recommendedBookingTheme(["SKIN"]), "GREEN");
+  assert.equal(recommendedBookingTheme(["MASSAGE"]), "GREEN");
+  assert.equal(recommendedBookingTheme(["HAIR"]), "CLASSIC");
+  assert.equal(recommendedBookingTheme(["OTHER"]), "CLASSIC");
+  assert.equal(recommendedBookingTheme([]), "CLASSIC");
 });

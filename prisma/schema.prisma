@@ -45,6 +45,7 @@ model User {
   platformActions PlatformAuditLog[]
   feedback        Feedback[]
   payments        SalonPayment[]
+  notices         PlatformNotice[]
   createdAt       DateTime           @default(now())
   memberships     SalonMember[]
 }
@@ -119,6 +120,8 @@ model SalonMember {
 
   // Last time this member opened the activity bell.
   activitySeenAt DateTime?
+  // Last time this member dismissed the platform's announcements.
+  noticeSeenAt   DateTime?
 
   @@unique([salonId, userId])
   @@unique([id, salonId])
@@ -468,16 +471,17 @@ enum BookingConfirmationMode {
   MANUAL_CONFIRM
 }
 
+// Colour palettes of the booking page; the layout is the same for all.
 enum BookingTheme {
-  LIGHT
-  DARK
-  PINK
-  NATURAL
-  GOLD
+  CLASSIC
+  GREEN
+  ROSE
+  VIOLET
+  BLUE
 }
 
 model BookingSettings {
-  bookingTheme                BookingTheme            @default(LIGHT)
+  bookingTheme                BookingTheme            @default(CLASSIC)
   salonId                     String                  @id
   publicBookingEnabled        Boolean                 @default(true)
   bookingConfirmationMode     BookingConfirmationMode @default(MANUAL_CONFIRM)
@@ -752,4 +756,19 @@ model Review {
 enum RenewalChoice {
   CONTINUE
   STOP
+}
+
+// An announcement from the platform operator to every salon, shown on the
+// salon dashboard and, with a verified sender, emailed to each owner.
+model PlatformNotice {
+  id          String   @id @default(cuid())
+  title       String
+  message     String
+  createdById String   @db.Uuid
+  // Owners the email reached; 0 when mail to owners is not set up.
+  emailed     Int      @default(0)
+  createdAt   DateTime @default(now())
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([createdAt])
 }

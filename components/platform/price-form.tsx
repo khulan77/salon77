@@ -10,14 +10,19 @@ export function PriceForm({ price }: { price: number | null }) {
   const [value, setValue] = useState(price === null ? "" : String(price));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notify, setNotify] = useState(true);
+  const [notice, setNotice] = useState("");
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await requestJson("/api/platform/settings", "PATCH", {
-        pricePerBranchMnt: Number(value),
-      });
+      const saved = await requestJson<{ notified: boolean }>(
+        "/api/platform/settings",
+        "PATCH",
+        { pricePerBranchMnt: Number(value), notify: notify && price !== null },
+      );
+      setNotice(saved.notified ? "Салонуудад үнийн өөрчлөлтийг мэдэгдлээ." : "");
       setEditing(false);
       router.refresh();
     } catch (e) {
@@ -34,6 +39,7 @@ export function PriceForm({ price }: { price: number | null }) {
         <button type="button" onClick={() => setEditing(true)}>
           Өөрчлөх
         </button>
+        {notice && <p role="status">{notice}</p>}
       </div>
     );
   return (
@@ -52,6 +58,16 @@ export function PriceForm({ price }: { price: number | null }) {
           placeholder="Жишээ: 149000"
         />
       </label>
+      {price !== null && (
+        <label className="pf-check">
+          <input
+            type="checkbox"
+            checked={notify}
+            onChange={(e) => setNotify(e.target.checked)}
+          />
+          <span>Үнэ өөрчлөгдвөл бүх салонд мэдэгдэх</span>
+        </label>
+      )}
       <button type="submit" className="pf-primary" disabled={busy}>
         {busy ? "Хадгалж байна…" : "Хадгалах"}
       </button>

@@ -1,12 +1,13 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { db } from "./db";
 import { supabase } from "./supabase";
 import { configured } from "./env";
 import { permits } from "./permissions";
 import { HttpError } from "./errors";
 import { billingState } from "./billing";
+import { platformEmailAllowed, platformMfaFresh } from "./platform-access";
 export { HttpError } from "./errors";
 export async function identity() {
   if (!configured)
@@ -20,9 +21,6 @@ export async function identity() {
   if (!user || !user.email) throw new HttpError(401, "Нэвтэрнэ үү.");
   return user;
 }
-// The signed-in user from the session JWT, verified locally against the
-// project's signing keys (no Auth server round trip). Membership is still
-// checked in the database on every request, so removed access applies at once.
 export const sessionUser = cache(async () => {
   if (!configured) return identity();
   const { data } = await (await supabase()).auth.getClaims();
@@ -31,7 +29,8 @@ export const sessionUser = cache(async () => {
     throw new HttpError(401, "Нэвтэрнэ үү.");
   return { id: claims.sub, email: claims.email };
 });
-// Layout and page ask for the member in the same render; load it once.
+
+
 const sessionMember = cache(async () => {
   const user = await sessionUser();
   const selected = (await cookies()).get("salon77-tenant")?.value;
@@ -55,9 +54,8 @@ export const salonSuspended = "Салон тань түр хаагдсан ба�
 export const salonUnpaid = "Салоны төлбөрийн хугацаа дууссан байна.";
 export const salonUnapproved =
   "Салон тань баталгаажсаны дараа энэ хэсэг нээгдэнэ.";
-// Until the platform approves the salon, only its application is reachable;
-// once its trial or paid month runs out, only the billing page. The options
-// open those two paths.
+
+  
 export async function membership({ unapproved = false, unpaid = false } = {}) {
   const member = await sessionMember();
   if (!member) throw new HttpError(403, noSalonAccess);
@@ -87,16 +85,36 @@ export async function isPlatformOperator(userId: string) {
   });
   return Boolean(row?.isSuperAdmin);
 }
-// Platform console: a verified session whose User row is a super admin.
-// Anything else looks like a missing page.
+// Platform console: a session confirmed with the Auth server, an allowed
+// email, a super-admin User row and a fresh authenticator code. `verified`
+// is false while only the code is missing.
+export const platformSession = cache(async () => {
+  if (!configured) return null;
+  const client = await supabase();
+  const [{ data: user }, { data: claims }] = await Promise.all([
+    client.auth.getUser(),
+    client.auth.getClaims(),
+  ]);
+  const email = user.user?.email;
+  if (!user.user || !email || claims?.claims.sub !== user.user.id) return null;
+  if (!platformEmailAllowed(email)) return null;
+  if (!(await isPlatformOperator(user.user.id))) return null;
+  return {
+    id: user.user.id,
+    email,
+    verified: platformMfaFresh(claims.claims),
+  };
+});
+// Anything short of an operator looks like a missing page.
 export async function platformAdminId(): Promise<string> {
-  if (!configured) notFound();
-  const user = await identity().catch(() => null);
-  if (!user) notFound();
-  const row = await db.user.findUnique({
-    where: { id: user.id },
-    select: { isSuperAdmin: true },
-  });
-  if (!row?.isSuperAdmin) notFound();
-  return user.id;
+  const session = await platformSession();
+  if (!session) notFound();
+  if (!session.verified) redirect("/platform-verify");
+  return session.id;
+}
+// The same rules for the console's API routes.
+export async function platformAdmin() {
+  const session = await platformSession();
+  if (!session?.verified) throw new HttpError(404, "Хуудас олдсонгүй.");
+  return session;
 }
