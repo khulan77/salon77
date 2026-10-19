@@ -1,3 +1,5 @@
+import "@fontsource-variable/source-serif-4";
+import "@/app/admin-theme.css";
 import { redirect } from "next/navigation";
 import { Lock, Phone } from "lucide-react";
 import { sessionUser } from "@/lib/auth";

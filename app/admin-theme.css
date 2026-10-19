@@ -1,7 +1,10 @@
 /* Salon admin in the Salon77 brand of /home, /business and sign-in:
    obsidian actions, champagne highlights, serif page titles. Only the brand
-   tokens change inside .app-shell, so every rule built on them follows. */
-.app-shell {
+   tokens change inside .app-shell, so every rule built on them follows.
+   The salon's own pages outside the shell (onboarding, application review,
+   billing, suspended) share the same brand. */
+.app-shell,
+.onboarding-page {
   --brand-50: #faf6ef;
   --brand-100: #f3ead9;
   --brand-200: #e6d3b3;
@@ -42,19 +45,23 @@
   background: #b0925f;
 }
 /* Page titles speak in the editorial serif; the closing dot is gold. */
-.app-shell :is(.page-heading h1, .calendar-date-title > span:first-child) {
+.app-shell :is(.page-heading h1, .calendar-date-title > span:first-child),
+.onboarding-page h1 {
   font-family: var(--admin-serif);
   font-weight: 600;
   letter-spacing: -0.02em;
 }
-.app-shell .heading-dot {
+.app-shell .heading-dot,
+.onboarding-page .heading-dot {
   color: #c5a880;
 }
-.app-shell .eyebrow {
+.app-shell .eyebrow,
+.onboarding-page .eyebrow {
   color: #725b38;
 }
 /* Primary buttons: obsidian without the rose glow. */
-.app-shell .button-primary {
+.app-shell .button-primary,
+.onboarding-page .button-primary {
   box-shadow: none;
 }
 /* Removing a team member reads as a destructive action. */

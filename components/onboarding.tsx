@@ -1,4 +1,6 @@
 "use client";
+import "@fontsource-variable/source-serif-4";
+import "@/app/admin-theme.css";
 import { bookingThemes, recommendedBookingTheme } from "@/lib/booking-themes";
 import { userFacingError } from "@/lib/ui-language";
 import {

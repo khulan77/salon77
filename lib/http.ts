@@ -41,9 +41,14 @@ export function failure(error: unknown) {
       },
       { status: 409 },
     );
+  // The Prisma code and target (table, column or constraint) say what failed
+  // without logging the request's personal data.
   console.error(
     "Salon77 request failed",
     error instanceof Error ? error.name : "Unknown error",
+    error instanceof Prisma.PrismaClientKnownRequestError
+      ? { code: error.code, meta: error.meta }
+      : "",
   );
   return Response.json(
     { error: "Алдаа гарлаа. Дахин оролдоно уу." },

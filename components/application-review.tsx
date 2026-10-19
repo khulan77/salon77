@@ -1,4 +1,6 @@
 "use client";
+import "@fontsource-variable/source-serif-4";
+import "@/app/admin-theme.css";
 import { signOut } from "@/app/auth/actions";
 import { useState } from "react";
 import Link from "next/link";

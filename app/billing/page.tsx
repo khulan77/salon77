@@ -1,3 +1,5 @@
+import "@fontsource-variable/source-serif-4";
+import "@/app/admin-theme.css";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarClock, Lock, Phone } from "lucide-react";
