@@ -33,12 +33,14 @@ import { configured } from "@/lib/env";
 import { sessionUser } from "@/lib/auth";
 import { site } from "@/lib/site";
 import { HomeFooter } from "@/components/home-footer";
+import { AccountMenu } from "@/components/account-menu";
 import { Logo } from "@/components/logo";
 import { SERVICE_TYPES, type ServiceType } from "@/lib/salon-application";
 import { formatMnt } from "@/lib/ui-language";
 import { smsDelivers } from "@/lib/notifications/provider";
 import { PERIOD_DAYS, TRIAL_DAYS, monthlyAmount } from "@/lib/billing";
 import { pricePerBranch } from "@/lib/services/billing";
+import { BusinessMobileNav } from "@/components/business-mobile-nav";
 import { BusinessShowcase } from "@/components/business-showcase";
 import { SignupPrep } from "@/components/signup-prep";
 export const dynamic = "force-dynamic";
@@ -306,13 +308,11 @@ export default async function BusinessPage() {
         <div className="lp-nav-actions">
           {/* Signed-in owners keep a way back to their salon admin. */}
           {/* Signed-in owners keep a way back to their salon admin. */}
-          <Link href={signedIn ? start : "/sign-in"} className="bx-nav-link">
-            <UserRound size={17} aria-hidden="true" />
-            <span>{signedIn ? "Миний салон" : "Нэвтрэх"}</span>
-          </Link>
+          <AccountMenu signedIn={signedIn} dashboardHref={start} />
           <Link href={signedIn ? "#pricing" : start} className="bx-nav-cta">
             {TRIAL_DAYS} хоног үнэгүй <ArrowRight size={16} />
           </Link>
+          <BusinessMobileNav />
         </div>
       </header>
       <main>
@@ -703,7 +703,7 @@ export default async function BusinessPage() {
             </div>
           </div>
         </section>
-        <section id="prepare" className="lp-section">
+        <section id="prepare" className="lp-section bx-prepare">
           <div className="lp-heading">
             <span className="lp-eyebrow">БҮРТГҮҮЛЭХЭЭС ӨМНӨ</span>
             <h2>Юу бэлдэх вэ?</h2>
@@ -712,7 +712,7 @@ export default async function BusinessPage() {
               саадгүй болно.
             </p>
           </div>
-          <SignupPrep heading="h3" />
+          <SignupPrep heading="h3" variant="business" />
         </section>
         <section id="faq" className="lp-section lp-faq">
           <div className="lp-heading">

@@ -16,7 +16,7 @@ export function HomeFooter({ categories }: { categories: string[] }) {
           </p>
           <span className="hx-footer-tag">Салоны цаг захиалгын систем</span>
         </div>
-        <nav aria-label="Үйлчилгээнүүд">
+        <nav className="hx-footer-services" aria-label="Үйлчилгээнүүд">
           <h3>Үйлчилгээнүүд</h3>
           {categories.map((c) => (
             <Link
@@ -27,7 +27,7 @@ export function HomeFooter({ categories }: { categories: string[] }) {
             </Link>
           ))}
         </nav>
-        <nav aria-label="Салонуудад">
+        <nav className="hx-footer-business" aria-label="Салонуудад">
           <h3>Салонуудад</h3>
           <Link href="/business">Бизнесээ бүртгүүлэх</Link>
           <Link href="/business#pricing">Үнэ</Link>

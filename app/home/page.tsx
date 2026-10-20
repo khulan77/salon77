@@ -39,6 +39,7 @@ import {
 } from "@/lib/services/directory";
 import { formatDuration, formatMnt } from "@/lib/ui-language";
 import { HomeFooter } from "@/components/home-footer";
+import { AccountMenu } from "@/components/account-menu";
 import { Logo } from "@/components/logo";
 import { initials, tone } from "@/lib/avatar";
 import { optimizable } from "@/lib/image";
@@ -205,7 +206,7 @@ export default async function HomePage({
           </nav>
         </details>
         <div className="hx-nav-actions">
-          <Link href="/business" className="hx-pill">
+          <Link href="/business" className="hx-pill hx-business-link">
             <Store size={16} /> Бизнесээ бүртгүүлэх
           </Link>
           {viewer && (
@@ -213,13 +214,7 @@ export default async function HomePage({
               <Bell size={18} />
             </Link>
           )}
-          <Link
-            href={viewer ? "/" : "/sign-in"}
-            className="hx-square dark"
-            aria-label={viewer ? "Миний хэсэг" : "Нэвтрэх"}
-          >
-            <UserRound size={18} />
-          </Link>
+          <AccountMenu signedIn={Boolean(viewer)} />
         </div>
       </header>
       <main>
@@ -423,8 +418,8 @@ export default async function HomePage({
               </span>
               <h2 id="hx-near-title">Дүүргээр салон хайх</h2>
               <p className="hx-sub">
-                Өөрт ойр дүүргээ сонговол тухайн дүүрэгт байрлах салонууд
-                газрын зураг болон дээрх жагсаалтад шүүгдэж гарна.
+                Өөрт ойр дүүргээ сонговол тухайн дүүрэгт байрлах салонууд газрын
+                зураг болон дээрх жагсаалтад шүүгдэж гарна.
               </p>
               <ul className="hx-areas">
                 {data.areas.map((a) => {

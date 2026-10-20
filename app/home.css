@@ -1333,3 +1333,123 @@
     display: none;
   }
 }
+
+/* Directory-only spacing and explicit account actions. */
+.hx {
+  --hx-page-gutter: 24px;
+}
+.hx > .hx-nav {
+  padding-inline: calc(var(--hx-page-gutter) + 20px);
+  gap: 16px;
+}
+.hx .hx-section {
+  max-width: 1440px;
+  padding-inline: var(--hx-page-gutter);
+}
+.hx .hx-cta {
+  max-width: 1392px;
+  margin-inline: max(var(--hx-page-gutter), calc((100% - 1392px) / 2));
+}
+.hx .hx-footer-inner,
+.hx .hx-footer-bottom {
+  max-width: 1440px;
+  padding-inline: var(--hx-page-gutter);
+}
+.hx-auth-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.hx-auth-links a,
+.hx-account-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.hx .hx-auth-links a {
+  min-width: 100px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-weight: 600;
+  transition:
+    background 160ms,
+    border-color 160ms,
+    box-shadow 160ms;
+}
+.hx .hx-signin-link {
+  border-color: var(--hx-line-2);
+  background: #fff;
+  color: var(--hx-ink);
+}
+.hx .hx-signin-link:hover {
+  border-color: #b6aa97;
+  background: #f5f2ec;
+}
+.hx .hx-signup-link,
+.hx .hx-account-link {
+  background: var(--hx-ink);
+  color: #fff;
+}
+.hx .hx-signup-link:hover,
+.hx .hx-account-link:hover {
+  background: #34343a;
+  box-shadow: 0 3px 10px rgb(18 19 22 / 12%);
+}
+.hx-auth-links a:focus-visible,
+.hx-account-link:focus-visible {
+  outline: 2px solid #9a7d52;
+  outline-offset: 3px;
+}
+@media (max-width: 1180px) {
+  .hx > .hx-nav .hx-nav-search {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .hx > .hx-nav .hx-city {
+    display: none;
+  }
+  .hx > .hx-nav .hx-business-link {
+    font-size: 11px;
+    padding-inline: 12px;
+    letter-spacing: 0;
+  }
+}
+@media (max-width: 600px) {
+  .hx {
+    --hx-page-gutter: 16px;
+  }
+  .hx > .hx-nav {
+    gap: 8px;
+    height: 64px;
+  }
+  .hx > .hx-nav .hx-business-link {
+    display: none;
+  }
+  .hx > .hx-nav .logo-word {
+    display: none;
+  }
+  .hx > .hx-nav .logo-mark {
+    width: 36px;
+    height: 36px;
+  }
+  .hx-auth-links {
+    gap: 8px;
+  }
+  .hx .hx-auth-links a {
+    min-width: 0;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+  .hx .hx-nav-actions {
+    gap: 8px;
+  }
+}

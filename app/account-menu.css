@@ -1,0 +1,100 @@
+.account-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.account-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #dedad3;
+  border-radius: 12px;
+  background: #fff;
+  color: #29261f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.account-menu-trigger:hover,
+.account-menu-trigger[aria-expanded="true"] {
+  background: #f2eee7;
+  border-color: #baa98c;
+}
+.account-menu-trigger[aria-expanded="true"] > svg:last-child {
+  transform: rotate(180deg);
+}
+.account-menu-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 230px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid #e5dfd5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 14px 38px #2520181c;
+  z-index: 40;
+  animation: account-menu-in 160ms ease-out;
+}
+.account-menu-panel > p {
+  padding: 8px 12px;
+  margin: 0;
+  color: #9b8d78;
+  font-size: 11px;
+}
+.account-menu .account-menu-panel a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  color: #3e3930;
+  text-decoration: none;
+  font-size: 13px;
+}
+.account-menu-panel a:hover {
+  background: #f6f2eb;
+}
+.account-menu-panel a span {
+  flex: 1;
+}
+.account-menu :focus-visible {
+  outline: 2px solid #98784e;
+  outline-offset: 2px;
+}
+@keyframes account-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 380px) {
+  .account-menu-trigger {
+    padding-inline: 9px;
+    gap: 5px;
+    font-size: 12px;
+  }
+  .lp.bx .account-menu-trigger > svg:first-child {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .account-menu-panel {
+    animation: none;
+  }
+}
+@media (max-width: 600px) {
+  .lp.bx .lp-nav-actions > .bx-nav-cta {
+    display: none;
+  }
+}

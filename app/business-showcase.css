@@ -360,3 +360,57 @@
     animation: none;
   }
 }
+
+@media (max-width: 1100px) {
+  .bs-slide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bs-story {
+    padding: 28px;
+  }
+  .bs-dashboard {
+    margin: 0 20px 20px;
+  }
+  .bs-dashboard-body {
+    min-height: 0;
+  }
+  .bs-tab-number {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .bs-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bs-selector button {
+    min-height: 48px;
+    font-size: 12px;
+  }
+  .bs-story {
+    padding: 22px;
+  }
+  .bs-story h3 {
+    font-size: 25px;
+  }
+  .bs-navigation {
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .bs-screen-revenue {
+    max-height: 460px;
+  }
+  .bs-screen .lp-wk {
+    min-width: 480px;
+  }
+  .bs-screen .lp-laptop-screen {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .bs-screen .lp-report-top strong {
+    font-size: 30px;
+    overflow-wrap: anywhere;
+  }
+  .bs-screen .lp-report-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
