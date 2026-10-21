@@ -4,6 +4,7 @@ import { HttpError } from "../errors";
 import { type Actor, refreshActor, requireOwner } from "../access";
 import { assertPlatformAdmin, monthStart, platformNotFound } from "./platform";
 import { billingState, monthlyFee, nextPeriod } from "../billing";
+import type { BylClient, RemoteCheckout } from "../payments/byl";
 type Database = Prisma.TransactionClient;
 export async function pricePerBranch(db: Database) {
   const row = await db.platformSetting.findUnique({
@@ -308,4 +309,149 @@ export async function chooseRenewal(
     });
     return { choice };
   });
+}
+// A payment page stays in use while it is open for the same amount, so a
+// double click or a second visit does not open another one.
+const REUSE_MS = 7 * 86400000;
+// The owner opens a Byl page for the next 30 days. The amount is computed
+// here, like an operator-recorded payment, and fixed on the checkout.
+export async function openCheckout(
+  db: PrismaClient,
+  actor: Actor,
+  byl: BylClient,
+  now = new Date(),
+) {
+  const current = await refreshActor(db, actor);
+  requireOwner(current);
+  const salon = await db.salon.findUniqueOrThrow({
+    where: { id: current.salonId },
+    select: {
+      name: true,
+      slug: true,
+      reviewStatus: true,
+      trialEndsAt: true,
+      paidUntil: true,
+      monthlyPriceMnt: true,
+      _count: { select: { branches: { where: { active: true } } } },
+    },
+  });
+  const { state } = billingState(salon, now);
+  if (state === "PENDING" || state === "FREE")
+    throw new HttpError(409, "Танай салонд төлбөр шаардлагагүй байна.");
+  const branches = Math.max(1, salon._count.branches);
+  const amountMnt = monthlyFee(
+    salon.monthlyPriceMnt,
+    await pricePerBranch(db),
+    branches,
+  );
+  if (!amountMnt)
+    throw new HttpError(
+      409,
+      "Сарын төлбөрийн дүн хараахан тогтоогдоогүй байна.",
+    );
+  const open = await db.billingCheckout.findFirst({
+    where: {
+      salonId: current.salonId,
+      status: "OPEN",
+      amountMnt,
+      createdAt: { gt: new Date(+now - REUSE_MS) },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { url: true },
+  });
+  if (open) return { url: open.url };
+  const base = process.env.APP_URL?.replace(/\/$/, "");
+  const remote = await byl.create({
+    amountMnt,
+    name: `Salon77 · ${salon.name} · 30 хоног`,
+    reference: salon.slug.slice(0, 48),
+    successUrl: base && `${base}/billing?paid=1`,
+    cancelUrl: base && `${base}/billing`,
+  });
+  await db.billingCheckout.create({
+    data: {
+      salonId: current.salonId,
+      bylId: remote.id,
+      url: remote.url,
+      amountMnt,
+      branches,
+    },
+  });
+  return { url: remote.url };
+}
+// Applies Byl's view of one checkout. Safe to repeat: webhooks can arrive
+// twice and the billing page asks again when the owner returns.
+export async function settleCheckout(
+  db: PrismaClient,
+  remote: RemoteCheckout,
+  now = new Date(),
+) {
+  return db.$transaction(
+    async (tx) => {
+      const row = await tx.billingCheckout.findUnique({
+        where: { bylId: remote.id },
+      });
+      if (!row || row.status !== "OPEN") return row?.status ?? null;
+      if (remote.status === "expired") {
+        await tx.billingCheckout.update({
+          where: { id: row.id },
+          data: { status: "EXPIRED" },
+        });
+        return "EXPIRED";
+      }
+      if (remote.status !== "complete") return "OPEN";
+      if (remote.amountTotal < row.amountMnt) {
+        console.error("Byl checkout paid less than due", remote.id);
+        return "OPEN";
+      }
+      const salon = await tx.salon.findUniqueOrThrow({
+        where: { id: row.salonId },
+        select: { reviewStatus: true, trialEndsAt: true, paidUntil: true },
+      });
+      const period = nextPeriod(salon, now);
+      const payment = await tx.salonPayment.create({
+        data: {
+          salonId: row.salonId,
+          amountMnt: row.amountMnt,
+          branches: row.branches,
+          periodStart: period.start,
+          periodEnd: period.end,
+          note: "Онлайн төлбөр (Byl)",
+        },
+      });
+      await tx.billingCheckout.update({
+        where: { id: row.id },
+        data: { status: "PAID", paymentId: payment.id, paidAt: now },
+      });
+      await tx.salon.update({
+        where: { id: row.salonId },
+        data: {
+          paidUntil: period.end,
+          renewalChoice: "CONTINUE",
+          renewalChosenAt: now,
+        },
+      });
+      return "PAID";
+    },
+    { isolationLevel: "Serializable" },
+  );
+}
+// The owner can land back on /billing before Byl's webhook does; this asks
+// Byl about the salon's latest open pages directly.
+export async function checkOpenCheckouts(
+  db: PrismaClient,
+  salonId: string,
+  byl: BylClient,
+  now = new Date(),
+) {
+  const open = await db.billingCheckout.findMany({
+    where: { salonId, status: "OPEN" },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+    select: { bylId: true },
+  });
+  for (const { bylId } of open) {
+    const remote = await byl.get(bylId).catch(() => null);
+    if (remote) await settleCheckout(db, remote, now);
+  }
 }

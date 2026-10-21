@@ -25,6 +25,7 @@ import type { AdminData } from "@/lib/admin-data";
 import { ActivityBell } from "./activity-bell";
 import { NoticeBanner } from "./notice-banner";
 import { Logo } from "@/components/logo";
+import { roleLabel } from "@/lib/ui-language";
 export function AdminShell({
   data,
   children,
@@ -43,6 +44,9 @@ export function AdminShell({
   const [query, setQuery] = useState("");
   const [profile, setProfile] = useState(false);
   const current = modules.find((i) => i.href === path)?.title ?? "Календарь";
+  // Every screen states whose permissions are in effect.
+  const role = data.preview ? "Танилцах горим" : roleLabel(data.role);
+  const roleTone = data.role === "SALON_OWNER" ? "owner" : "member";
   return (
     <div className="app-shell">
       {open && (
@@ -64,7 +68,7 @@ export function AdminShell({
           </div>
           <div>
             <strong>{data.salonName}</strong>
-            <span>Салоны удирдлага</span>
+            <span>{data.preview ? role : `${role} эрхээр`}</span>
           </div>
           <ChevronsUpDown size={14} />
         </div>
@@ -141,6 +145,9 @@ export function AdminShell({
               <CircleHelp size={18} />
             </Link>
             <span className="header-divider" />
+            <span className={`role-badge ${roleTone}`} title="Таны эрх">
+              {role}
+            </span>
             <div className="profile-wrap">
               <button
                 className="profile-button"
@@ -157,6 +164,7 @@ export function AdminShell({
                 <div className="profile-popover">
                   <strong>{data.name}</strong>
                   <p>{data.email}</p>
+                  <span className={`role-badge ${roleTone}`}>{role}</span>
                   {data.preview ? (
                     <Link href="/sign-in">
                       Нэвтрэх <ArrowRight size={15} />

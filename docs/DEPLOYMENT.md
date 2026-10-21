@@ -47,6 +47,9 @@ Check: you can sign up locally and receive the confirmation email from your SMTP
 | `PLATFORM_ALERT_EMAIL`                 | `salon77.mn@gmail.com`; gets new-salon and new-feedback alerts                                  | —          |
 | `PLATFORM_ADMIN_EMAILS`                | **required**; comma-separated emails allowed on `/platform` (nobody gets in while unset)        | —          |
 | `RESEND_FROM`                          | sender on a domain verified in Resend, e.g. `Salon77 <hello@salon77.mn>`; never a Gmail address | —          |
+| `BYL_TOKEN`                            | optional; Byl API token (see 2d)                                                                | **secret** |
+| `BYL_PROJECT_ID`                       | optional; Byl project ID (see 2d)                                                               | —          |
+| `BYL_SIGNING_SECRET`                   | optional; Byl webhook signing secret (see 2d)                                                   | **secret** |
 | `RESEND_REPLY_TO`                      | optional; reply-to address, default `salon77.mn@gmail.com`                                      | —          |
 
 Never set `RATE_LIMIT_*` overrides in production unless you mean to loosen protection.
@@ -97,6 +100,18 @@ Without a verified domain (no `RESEND_FROM`, or a Gmail one):
 - **Does not work:** approval and send-back emails to owners, and receptionist invitation emails. Nothing is sent. Owners still see the decision and the reason on their application page, and owners copy the invitation link instead.
 
 `/platform/settings` shows the same status live: sender, reply-to, alert address, and a tick or cross for each kind of email.
+
+## 2d. Online monthly fees (Byl)
+
+Owners pay the monthly fee on `/billing` through Byl (byl.mn), which covers QPay, SocialPay, Pocket and bank apps. Without the three `BYL_*` variables the page shows only the bank transfer, and the operator records payments by hand as before.
+
+1. byl.mn: register, verify the business, add a primary bank account, and pick a plan (live mode needs an active Byl subscription).
+2. Create a project. Note its **Project ID** → `BYL_PROJECT_ID`; create an **API token** → `BYL_TOKEN`.
+3. Webhooks → add endpoint `https://<your-domain>/api/payments/byl` with the event `checkout.completed`. Copy its **Signing secret** → `BYL_SIGNING_SECRET`.
+4. `APP_URL` must be set so Byl returns the owner to `/billing` after paying.
+5. Apply migration `202610250042_byl_checkout` (`bun run db:migrate`) before deploying.
+
+Check: in Byl test mode (each payment capped at ₮100) give a test salon a ₮100 fee on `/platform`, pay it from `/billing`, and confirm the salon's paid period moves 30 days and the payment appears in its history. The webhook and the return to `/billing` both record it; it is recorded once.
 
 ## 2b. Region and database connection (speed)
 

@@ -11,7 +11,8 @@ import {
 import type { Inbox } from "@/lib/services/activity";
 import { localStamp } from "@/lib/business-time";
 import { formatTimeAgo } from "@/lib/ui-language";
-const POLL_MS = 60000;
+// Polls while the tab is visible and refreshes the moment it becomes visible again.
+const POLL_MS = 15000;
 const kinds = {
   ONLINE_CREATED: { icon: CalendarPlus, text: "Шинэ онлайн захиалга" },
   CUSTOMER_CANCELLED: { icon: CalendarX, text: "Үйлчлүүлэгч цуцалсан" },
@@ -35,10 +36,19 @@ export function ActivityBell() {
   }, []);
   useEffect(() => {
     const first = setTimeout(load, 0);
-    const timer = setInterval(load, POLL_MS);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, POLL_MS);
+    const wake = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("focus", wake);
     return () => {
       clearTimeout(first);
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("focus", wake);
     };
   }, [load]);
   useEffect(() => {

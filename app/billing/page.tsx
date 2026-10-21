@@ -11,7 +11,8 @@ import {
 } from "@/lib/auth";
 import { configured } from "@/lib/env";
 import { db } from "@/lib/db";
-import { salonBilling } from "@/lib/services/billing";
+import { checkOpenCheckouts, salonBilling } from "@/lib/services/billing";
+import { bylClient } from "@/lib/payments/byl";
 import { site, formatSitePhone } from "@/lib/site";
 import { formatMnt } from "@/lib/ui-language";
 import { localStamp } from "@/lib/business-time";
@@ -19,6 +20,7 @@ import { signOut } from "@/app/auth/actions";
 import { Logo } from "@/components/logo";
 import { CopyValue } from "@/components/copy-value";
 import { RenewalChoice } from "@/components/renewal-choice";
+import { OnlinePay } from "@/components/online-pay";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Төлбөр · Salon77" };
 const date = (iso: string) => localStamp(iso).slice(0, 10).replace(/-/g, ".");
@@ -36,6 +38,10 @@ export default async function Page() {
       redirect("/onboarding/review");
     redirect("/onboarding");
   }
+  const byl = bylClient();
+  // Picks up a payment made moments ago, before Byl's webhook arrives.
+  if (byl)
+    await checkOpenCheckouts(db, member.salonId, byl).catch(() => undefined);
   const billing = await salonBilling(db, member.salonId);
   const expired = billing.state === "EXPIRED";
   const owner = member.role === "SALON_OWNER";
@@ -104,9 +110,19 @@ export default async function Page() {
               </div>
             </div>
           )}
+          {owner &&
+            byl &&
+            billing.state !== "FREE" &&
+            billing.amountMnt !== null && (
+              <OnlinePay amountMnt={billing.amountMnt} />
+            )}
           {owner && billing.state !== "FREE" && (
             <>
-              <div className="settings-subtitle">Төлбөр шилжүүлэх данс</div>
+              <div className="settings-subtitle">
+                {byl && billing.amountMnt !== null
+                  ? "Эсвэл дансаар шилжүүлэх"
+                  : "Төлбөр шилжүүлэх данс"}
+              </div>
               <dl className="billing-bank">
                 <div>
                   <dt>Банк</dt>
